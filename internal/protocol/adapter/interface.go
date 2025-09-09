@@ -2,7 +2,10 @@ package adapter
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"time"
 

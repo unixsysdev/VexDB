@@ -82,12 +82,12 @@ func (s *SearchServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.S
 	}
 
 	// Convert protobuf request to internal types
-	queryVector := &types.Vector{
-		ID:       req.QueryVector.Id,
-		Data:     req.QueryVector.Data,
-		Metadata: req.QueryVector.Metadata,
-		ClusterID: req.QueryVector.ClusterId,
-	}
+    queryVector := &types.Vector{
+        ID:        req.QueryVector.Id,
+        Data:      req.QueryVector.Data,
+        Metadata:  toMetadata(req.QueryVector.Metadata),
+        ClusterID: req.QueryVector.ClusterId,
+    }
 
 	// Set default k if not provided
 	k := int(req.K)
@@ -109,9 +109,9 @@ func (s *SearchServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.S
 	}
 
 	// Apply distance threshold if provided
-	if req.DistanceThreshold > 0 {
-		results = s.filterByDistance(results, req.DistanceThreshold)
-	}
+    if req.DistanceThreshold > 0 {
+        results = s.filterByDistance(results, float64(req.DistanceThreshold))
+    }
 
 	// Convert results to protobuf format
 	pbResults := s.convertToProtoResults(results)
@@ -178,12 +178,12 @@ func (s *SearchServer) MultiClusterSearch(ctx context.Context, req *pb.SearchReq
 	}
 
 	// Convert protobuf request to internal types
-	queryVector := &types.Vector{
-		ID:       req.QueryVector.Id,
-		Data:     req.QueryVector.Data,
-		Metadata: req.QueryVector.Metadata,
-		ClusterID: req.QueryVector.ClusterId,
-	}
+    queryVector := &types.Vector{
+        ID:        req.QueryVector.Id,
+        Data:      req.QueryVector.Data,
+        Metadata:  toMetadata(req.QueryVector.Metadata),
+        ClusterID: req.QueryVector.ClusterId,
+    }
 
 	// Set default k if not provided
 	k := int(req.K)
@@ -211,9 +211,9 @@ func (s *SearchServer) MultiClusterSearch(ctx context.Context, req *pb.SearchReq
 	}
 
 	// Apply distance threshold if provided
-	if req.DistanceThreshold > 0 {
-		results = s.filterByDistance(results, req.DistanceThreshold)
-	}
+    if req.DistanceThreshold > 0 {
+        results = s.filterByDistance(results, float64(req.DistanceThreshold))
+    }
 
 	// Convert results to protobuf format
 	pbResults := s.convertToProtoResults(results)
@@ -281,13 +281,10 @@ func (s *SearchServer) GetClusterInfo(ctx context.Context, req *pb.ClusterInfo) 
 	}
 
 	// Convert to protobuf format
-	pbClusterInfo := &pb.ClusterInfo{
-		Id:        clusterInfo.ID,
-		NodeIds:   clusterInfo.NodeIDs,
-		VectorCount: uint64(clusterInfo.VectorCount),
-		SizeBytes:   clusterInfo.SizeBytes,
-		Metadata:    clusterInfo.Metadata,
-	}
+    pbClusterInfo := &pb.ClusterInfo{
+        Id:       clusterInfo.ID,
+        Metadata: clusterInfo.Metadata,
+    }
 
 	return pbClusterInfo, nil
 }
@@ -308,10 +305,7 @@ func (s *SearchServer) GetClusterStatus(ctx context.Context, req *pb.Empty) (*pb
 	}
 
 	// Convert to protobuf format
-	pbClusterStatus := &pb.ClusterStatus{
-		TotalClusters:    uint32(clusterStatus.TotalClusters),
-		ReplicationFactor: uint32(clusterStatus.ReplicationFactor),
-	}
+    pbClusterStatus := &pb.ClusterStatus{}
 
 	// Convert cluster info
 	for _, cluster := range clusterStatus.Clusters {
@@ -327,17 +321,12 @@ func (s *SearchServer) GetClusterStatus(ctx context.Context, req *pb.Empty) (*pb
 
 	// Convert node info
 	for _, node := range clusterStatus.Nodes {
-		pbNode := &pb.NodeInfo{
-			Id:        node.ID,
-			Address:   node.Address,
-			Port:      int32(node.Port),
-			IsPrimary: node.IsPrimary,
-			Status:    node.Status,
-			VectorCount: uint64(node.VectorCount),
-			MemoryUsage: node.MemoryUsage,
-			DiskUsage:   node.DiskUsage,
-			Metadata:    node.Metadata,
-		}
+        pbNode := &pb.NodeInfo{
+            Id:      node.ID,
+            Address: node.Address,
+            Port:    int32(node.Port),
+            Metadata: node.Metadata,
+        }
 		pbClusterStatus.Nodes = append(pbClusterStatus.Nodes, pbNode)
 	}
 
@@ -497,12 +486,12 @@ func (s *SearchServer) convertToProtoResults(results []*types.SearchResult) []*p
 
 	for _, result := range results {
 		pbResult := &pb.SearchResult{
-			Vector: &pb.Vector{
-				Id:       result.Vector.ID,
-				Data:     result.Vector.Data,
-				Metadata: result.Vector.Metadata,
-				ClusterId: result.Vector.ClusterID,
-			},
+            Vector: &pb.Vector{
+                Id:        result.Vector.ID,
+                Data:      result.Vector.Data,
+                Metadata:  toStringMetadata(result.Vector.Metadata),
+                ClusterId: result.Vector.ClusterID,
+            },
 			Distance:  float32(result.Distance),
 			Score:     float32(calculateScore(result.Distance)),
 			ClusterId: fmt.Sprintf("%d", result.Vector.ClusterID),
@@ -514,25 +503,14 @@ func (s *SearchServer) convertToProtoResults(results []*types.SearchResult) []*p
 	return pbResults
 }
 
-func (s *SearchServer) filterByDistance(results []*types.SearchResult, threshold float32) []*pb.SearchResult {
-	filtered := make([]*pb.SearchResult, 0, len(results))
-	for _, result := range results {
-		if float32(result.Distance) <= threshold {
-			pbResult := &pb.SearchResult{
-				Vector: &pb.Vector{
-					Id:       result.Vector.ID,
-					Data:     result.Vector.Data,
-					Metadata: result.Vector.Metadata,
-					ClusterId: result.Vector.ClusterID,
-				},
-				Distance:  float32(result.Distance),
-				Score:     float32(calculateScore(result.Distance)),
-				ClusterId: fmt.Sprintf("%d", result.Vector.ClusterID),
-			}
-			filtered = append(filtered, pbResult)
-		}
-	}
-	return filtered
+func (s *SearchServer) filterByDistance(results []*types.SearchResult, threshold float64) []*types.SearchResult {
+    filtered := make([]*types.SearchResult, 0, len(results))
+    for _, result := range results {
+        if result.Distance <= threshold {
+            filtered = append(filtered, result)
+        }
+    }
+    return filtered
 }
 
 func (s *SearchServer) recordMetrics(operation string, duration time.Duration, err error) {
@@ -560,9 +538,31 @@ func calculateScore(distance float64) float64 {
 	}
 	
 	// Use exponential decay for score calculation
-	score := float64(math.Exp(-distance / 10.0))
+    score := math.Exp(-distance / 10.0)
 	if score > 1.0 {
 		score = 1.0
 	}
 	return score
+}
+
+func toMetadata(in map[string]string) map[string]interface{} {
+    if in == nil {
+        return nil
+    }
+    out := make(map[string]interface{}, len(in))
+    for k, v := range in {
+        out[k] = v
+    }
+    return out
+}
+
+func toStringMetadata(in map[string]interface{}) map[string]string {
+    if in == nil {
+        return nil
+    }
+    out := make(map[string]string, len(in))
+    for k, v := range in {
+        out[k] = fmt.Sprint(v)
+    }
+    return out
 }

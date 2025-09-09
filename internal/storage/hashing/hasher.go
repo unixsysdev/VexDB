@@ -73,7 +73,7 @@ func DefaultHasherConfig() *HasherConfig {
 // Hasher represents a vector hasher and cluster assigner
 type Hasher struct {
     config      *HasherConfig
-    cache       map[string]uint32 // vector_id -> cluster_id
+    cache       map[uint64]uint32 // hash -> cluster_id
     mu          sync.RWMutex
     logger      logging.Logger
     metrics     *metrics.StorageMetrics
@@ -126,14 +126,14 @@ func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 	
     hasher := &Hasher{
         config: hasherConfig,
-        cache:  make(map[string]uint32),
+        cache:  make(map[uint64]uint32),
         logger: logger,
         metrics: metrics,
     }
 	
 	// Pre-allocate cache if enabled
     if hasherConfig.EnableCache && hasherConfig.CacheSize > 0 {
-        hasher.cache = make(map[string]uint32, hasherConfig.CacheSize)
+        hasher.cache = make(map[uint64]uint32, hasherConfig.CacheSize)
     }
 	
 	hasher.logger.Info("Created hasher",
@@ -302,8 +302,14 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 	
 	// Check cache first
 	if h.config.EnableCache {
+		// Compute hash for cache lookup
+		hash, err := h.HashVector(vector)
+		if err != nil {
+			return 0, err
+		}
+		
 		h.mu.RLock()
-		if clusterID, exists := h.cache[vector.ID]; exists {
+		if clusterID, exists := h.cache[hash]; exists {
 			h.mu.RUnlock()
 			h.metrics.CacheHits.Inc("hashing", "cluster_assignment")
 			return clusterID, nil
@@ -328,7 +334,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 	// Update cache
 	if h.config.EnableCache {
 		h.mu.Lock()
-		h.cache[vector.ID] = clusterID
+		h.cache[hash] = clusterID
 		h.mu.Unlock()
 	}
 	
@@ -475,9 +481,9 @@ func (h *Hasher) UpdateConfig(config *HasherConfig) error {
 	
 	// Clear cache if cluster count changed
     if config.ClusterCount != h.config.ClusterCount {
-        h.cache = make(map[string]uint32)
+        h.cache = make(map[uint64]uint32)
         if config.EnableCache && config.CacheSize > 0 {
-            h.cache = make(map[string]uint32, config.CacheSize)
+            h.cache = make(map[uint64]uint32, config.CacheSize)
         }
     }
 	
@@ -493,9 +499,9 @@ func (h *Hasher) ClearCache() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	
-    h.cache = make(map[string]uint32)
+    h.cache = make(map[uint64]uint32)
     if h.config.EnableCache && h.config.CacheSize > 0 {
-        h.cache = make(map[string]uint32, h.config.CacheSize)
+        h.cache = make(map[uint64]uint32, h.config.CacheSize)
     }
 	
 	h.logger.Info("Cleared hasher cache")
@@ -527,9 +533,9 @@ func (h *Hasher) Validate() error {
 	
 	// Validate cache consistency
 	if h.config.EnableCache {
-		for vectorID, clusterID := range h.cache {
+		for hash, clusterID := range h.cache {
 			if clusterID >= h.config.ClusterCount {
-				return fmt.Errorf("%w: invalid cluster ID %d for vector %d", ErrInvalidClusterID, clusterID, vectorID)
+				return fmt.Errorf("%w: invalid cluster ID %d for hash %d", ErrInvalidClusterID, clusterID, hash)
 			}
 		}
 	}

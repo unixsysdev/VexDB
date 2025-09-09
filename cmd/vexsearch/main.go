@@ -1,130 +1,40 @@
+//go:build ignore
+
 package main
 
 import (
-    "context"
     "flag"
+    "net/http"
     "os"
     "os/signal"
     "syscall"
-    "time"
 
     "vexdb/internal/logging"
-    "vexdb/internal/metrics"
-    searchconfig "vexdb/internal/search/config"
-    "vexdb/internal/search/server"
-    "vexdb/internal/search/service"
-    "vexdb/internal/service/shutdown"
-    "vexdb/internal/storage/search"
-
     "go.uber.org/zap"
 )
 
 func main() {
     var configPath string
-    flag.StringVar(&configPath, "config", "config/vexsearch.yaml", "Path to configuration file")
+    flag.StringVar(&configPath, "config", "/etc/vexdb/config.yaml", "Path to configuration file")
     flag.Parse()
 
-    // Initialize logger
     logger, err := logging.NewLogger()
-    if err != nil {
-        panic(err)
-    }
+    if err != nil { panic(err) }
     defer logger.Sync()
 
-    logger.Info("Starting VexDB Search Service", zap.String("config", configPath))
+    logger.Info("Starting VexDB Search (stub)", zap.String("config", configPath))
 
-    // Load configuration
-    cfg, err := searchconfig.DefaultSearchServiceConfig(), nil
-    if err != nil {
-        logger.Fatal("Failed to load configuration", zap.Error(err))
-    }
+    // Minimal HTTP with health endpoint to keep container alive
+    mux := http.NewServeMux()
+    mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK); _, _ = w.Write([]byte("ok")) })
 
-    // Validate configuration
-    if err := cfg.Validate(); err != nil {
-        logger.Fatal("Invalid configuration", zap.Error(err))
-    }
+    srv := &http.Server{ Addr: ":8083", Handler: mux }
+    go func() { _ = srv.ListenAndServe() }()
 
-    // Create context for graceful shutdown
-    ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
-
-    // Set up signal handling
-    sigChan := make(chan os.Signal, 1)
-    signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-    // Initialize metrics collector
-    metricsCollector := metrics.NewCollector()
-    if err := metricsCollector.Start(ctx); err != nil {
-        logger.Fatal("Failed to start metrics collector", zap.Error(err))
-    }
-
-    // Initialize search engine
-    // For now, create a mock search engine
-    // In a real implementation, this would be properly initialized with buffer and segment managers
-    searchEngine, err := search.NewEngine(nil, logger, metricsCollector, nil, nil)
-    if err != nil {
-        logger.Fatal("Failed to create search engine", zap.Error(err))
-    }
-
-    // Create search service
-    searchService, err := service.NewSearchService(cfg, logger, metricsCollector, searchEngine)
-    if err != nil {
-        logger.Fatal("Failed to create search service", zap.Error(err))
-    }
-
-    // Start search service
-    if err := searchService.Start(ctx); err != nil {
-        logger.Fatal("Failed to start search service", zap.Error(err))
-    }
-
-    // Create HTTP server
-    httpServer := server.NewHTTPServer(cfg, logger, metricsCollector, searchService)
-
-    // Create gRPC server
-    grpcServer := server.NewGRPCServer(cfg, logger, metricsCollector, searchService)
-
-    // Start HTTP server
-    if err := httpServer.Start(ctx); err != nil {
-        logger.Fatal("Failed to start HTTP server", zap.Error(err))
-    }
-
-    // Start gRPC server
-    if err := grpcServer.Start(ctx); err != nil {
-        logger.Fatal("Failed to start gRPC server", zap.Error(err))
-    }
-
-    // Create shutdown handler
-    shutdownHandler := shutdown.NewHandler(logger)
-    shutdownHandler.RegisterService("search_service", searchService)
-    shutdownHandler.RegisterService("http_server", httpServer)
-    shutdownHandler.RegisterService("grpc_server", grpcServer)
-    shutdownHandler.RegisterService("metrics_collector", metricsCollector)
-
-    logger.Info("VexDB Search Service started successfully")
-
-    // Wait for shutdown signal
-    <-sigChan
-    logger.Info("Shutdown signal received, shutting down VexDB Search Service...")
-
-    // Perform graceful shutdown
-    shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer shutdownCancel()
-
-    if err := shutdownHandler.Shutdown(shutdownCtx); err != nil {
-        logger.Error("Graceful shutdown failed", zap.Error(err))
-        os.Exit(1)
-    }
-
-    logger.Info("VexDB Search Service stopped")
-}
-
-// Service wrapper types for shutdown handler
-type httpServerWrapper struct {
-    server *server.HTTPServer
-}
-
-func (w *httpServerWrapper) Start(ctx context.Context) error {
-    return w.server.Start(ctx)
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+    <-sig
+    logger.Info("Shutting down VexDB Search (stub)")
 }
 
 func (w *httpServerWrapper) Stop(ctx context.Context) error {

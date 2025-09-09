@@ -165,27 +165,21 @@ func (h *SearchHandler) handleSimilaritySearch(w http.ResponseWriter, r *http.Re
 	}
 
 	// Convert to internal types
-	queryVector := &types.Vector{
-		ID:     request.VectorID,
-		Data:   request.Vector,
-		Metadata: request.Metadata,
-	}
+    queryVector := &types.Vector{
+        ID:       request.VectorID,
+        Data:     toFloat32(request.Vector),
+        Metadata: toMetadata(request.Metadata),
+    }
 
 	// Build metadata filter if provided
-	var filter *types.MetadataFilter
-	if len(request.Filters) > 0 {
-		filter = &types.MetadataFilter{
-			Conditions: make([]*types.MetadataCondition, 0, len(request.Filters)),
-		}
-		for _, f := range request.Filters {
-			filter.Conditions = append(filter.Conditions, &types.MetadataCondition{
-				Key:      f.Key,
-				Operator: f.Operator,
-				Value:    f.Value,
-				Values:   f.Values,
-			})
-		}
-	}
+    var filter *types.MetadataFilter
+    if len(request.Filters) > 0 {
+        filter = &types.MetadataFilter{Conditions: make([]interface{}, 0, len(request.Filters))}
+        for _, f := range request.Filters {
+            cond := &types.MetadataCondition{Key: f.Key, Operator: f.Operator, Value: f.Value, Values: f.Values}
+            filter.Conditions = append(filter.Conditions, cond)
+        }
+    }
 
 	// Set default k if not provided
 	k := request.K

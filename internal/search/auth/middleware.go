@@ -1,18 +1,15 @@
 package auth
 
 import (
-	"context"
-	"crypto/subtle"
-	"encoding/base64"
-	"fmt"
-	"net/http"
-	"strings"
-	"time"
+    "context"
+    "crypto/subtle"
+    "encoding/base64"
+    "fmt"
+    "net/http"
+    "strings"
+    "time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/search/config"
-
-	"github.com/gorilla/mux"
+    "vexdb/internal/search/config"
 	"go.uber.org/zap"
 )
 
@@ -220,16 +217,9 @@ func (m *Middleware) sendUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("WWW-Authenticate", m.getAuthenticateHeader())
 	w.WriteHeader(http.StatusUnauthorized)
 
-	response := map[string]interface{}{
-		"success":   false,
-		"error":     "unauthorized",
-		"message":   message,
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-
-	// Simple JSON encoding - in production, use proper JSON marshaling
-	jsonResponse := fmt.Sprintf(`{"success":false,"error":"unauthorized","message":"%s","timestamp":"%s"}`,
-		message, time.Now().Format(time.RFC3339))
+    // Simple JSON encoding - in production, use proper JSON marshaling
+    jsonResponse := fmt.Sprintf(`{"success":false,"error":"unauthorized","message":"%s","timestamp":"%s"}`,
+        message, time.Now().Format(time.RFC3339))
 
 	w.Write([]byte(jsonResponse))
 }
@@ -331,16 +321,9 @@ func (m *RateLimitMiddleware) sendRateLimitExceeded(w http.ResponseWriter) {
 	w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(m.config.CleanupInterval).Unix()))
 	w.WriteHeader(http.StatusTooManyRequests)
 
-	response := map[string]interface{}{
-		"success":   false,
-		"error":     "rate_limit_exceeded",
-		"message":   "Rate limit exceeded. Please try again later.",
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-
-	// Simple JSON encoding - in production, use proper JSON marshaling
-	jsonResponse := fmt.Sprintf(`{"success":false,"error":"rate_limit_exceeded","message":"Rate limit exceeded. Please try again later.","timestamp":"%s"}`,
-		time.Now().Format(time.RFC3339))
+    // Simple JSON encoding - in production, use proper JSON marshaling
+    jsonResponse := fmt.Sprintf(`{"success":false,"error":"rate_limit_exceeded","message":"Rate limit exceeded. Please try again later.","timestamp":"%s"}`,
+        time.Now().Format(time.RFC3339))
 
 	w.Write([]byte(jsonResponse))
 }

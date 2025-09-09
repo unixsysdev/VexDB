@@ -158,10 +158,11 @@ func (m *MockSearchService) GetClusterInfo(ctx context.Context, clusterID string
 	
 	return &types.ClusterInfo{
 		ID:        clusterID,
-		NodeIDs:   []string{"node1", "node2"},
-		VectorCount: 1000,
-		SizeBytes:   1024 * 1024,
-		Metadata:    map[string]string{"region": "us-east-1"},
+		Name:      "test-cluster",
+		Config:    types.ClusterConfig{},
+		Metadata:  map[string]string{"region": "us-east-1"},
+		CreatedAt: time.Now().Unix(),
+		UpdatedAt: time.Now().Unix(),
 	}, nil
 }
 
@@ -172,26 +173,13 @@ func (m *MockSearchService) GetClusterStatus(ctx context.Context) (*types.Cluste
 	}
 	
 	return &types.ClusterStatus{
-		TotalClusters:    3,
-		ReplicationFactor: 2,
-		Clusters: []*types.ClusterInfo{
-			{
-				ID:        "cluster1",
-				NodeIDs:   []string{"node1", "node2"},
-				VectorCount: 1000,
-				SizeBytes:   1024 * 1024,
-			},
-		},
-		Nodes: []*types.NodeInfo{
-			{
-				ID:        "node1",
-				Address:   "localhost",
-				Port:      8080,
-				IsPrimary: true,
-				Status:    "healthy",
-				VectorCount: 500,
-			},
-		},
+		ID:        "test-cluster-status",
+		Status:    "active",
+		Health:    "healthy",
+		Message:   "Cluster is healthy",
+		Timestamp: time.Now().Unix(),
+		Nodes:     []string{"node1", "node2"},
+		Metrics:   map[string]interface{}{"vector_count": 1000},
 	}, nil
 }
 
