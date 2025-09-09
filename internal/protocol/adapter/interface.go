@@ -1,18 +1,14 @@
 package adapter
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"io"
-	"math/rand"
-	"net"
-	"time"
+    "context"
+    "errors"
+    "fmt"
+    "math/rand"
+    "time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+    "vexdb/internal/logging"
+    "vexdb/internal/metrics"
 )
 
 var (

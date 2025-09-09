@@ -6,7 +6,6 @@ import (
 	"math"
 	"time"
 
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/search/config"
 	"vexdb/internal/search/response"
@@ -19,7 +18,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+    "google.golang.org/grpc/status"
+    emptypb "google.golang.org/protobuf/types/known/emptypb"
+    timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // SearchServer implements the gRPC SearchService
@@ -290,7 +291,7 @@ func (s *SearchServer) GetClusterInfo(ctx context.Context, req *pb.ClusterInfo) 
 }
 
 // GetClusterStatus returns the status of all clusters
-func (s *SearchServer) GetClusterStatus(ctx context.Context, req *pb.Empty) (*pb.ClusterStatus, error) {
+func (s *SearchServer) GetClusterStatus(ctx context.Context, req *emptypb.Empty) (*pb.ClusterStatus, error) {
 	startTime := time.Now()
 	queryID := generateQueryID()
 
@@ -304,33 +305,10 @@ func (s *SearchServer) GetClusterStatus(ctx context.Context, req *pb.Empty) (*pb
 		return nil, status.Error(codes.Internal, "Failed to get cluster status")
 	}
 
-	// Convert to protobuf format
+    // Convert to protobuf format (limited internal fields available)
     pbClusterStatus := &pb.ClusterStatus{}
 
-	// Convert cluster info
-	for _, cluster := range clusterStatus.Clusters {
-		pbCluster := &pb.ClusterInfo{
-			Id:        cluster.ID,
-			NodeIds:   cluster.NodeIDs,
-			VectorCount: uint64(cluster.VectorCount),
-			SizeBytes:   cluster.SizeBytes,
-			Metadata:    cluster.Metadata,
-		}
-		pbClusterStatus.Clusters = append(pbClusterStatus.Clusters, pbCluster)
-	}
-
-	// Convert node info
-	for _, node := range clusterStatus.Nodes {
-        pbNode := &pb.NodeInfo{
-            Id:      node.ID,
-            Address: node.Address,
-            Port:    int32(node.Port),
-            Metadata: node.Metadata,
-        }
-		pbClusterStatus.Nodes = append(pbClusterStatus.Nodes, pbNode)
-	}
-
-	return pbClusterStatus, nil
+    return pbClusterStatus, nil
 }
 
 // HealthCheck performs a health check
@@ -349,13 +327,13 @@ func (s *SearchServer) HealthCheck(ctx context.Context, req *pb.HealthCheckReque
 	}
 
 	// Convert to protobuf format
-	pbHealthResponse := &pb.HealthCheckResponse{
-		Healthy:   healthStatus.Healthy,
-		Status:    healthStatus.Status,
-		Message:   healthStatus.Message,
-		Details:   healthStatus.Details,
-		Timestamp: logging.TimeToProtoTimestamp(time.Now()),
-	}
+    pbHealthResponse := &pb.HealthCheckResponse{
+        Healthy:   healthStatus.Status == "healthy",
+        Status:    healthStatus.Status,
+        Message:   healthStatus.Message,
+        Details:   healthStatus.Details,
+        Timestamp: timestamppb.Now(),
+    }
 
 	return pbHealthResponse, nil
 }
@@ -385,7 +363,7 @@ func (s *SearchServer) GetMetrics(ctx context.Context, req *pb.MetricsRequest) (
 		Success:   true,
 		Message:   "Metrics retrieved successfully",
 		Metrics:   pbMetrics,
-		Timestamp: logging.TimeToProtoTimestamp(time.Now()),
+		Timestamp: time.Now().Unix(),
 	}
 
 	return pbMetricsResponse, nil
@@ -415,7 +393,7 @@ func (s *SearchServer) UpdateConfig(ctx context.Context, req *pb.ConfigUpdateReq
 }
 
 // GetConfig returns the current configuration
-func (s *SearchServer) GetConfig(ctx context.Context, req *pb.Empty) (*pb.ConfigUpdateResponse, error) {
+func (s *SearchServer) GetConfig(ctx context.Context, req *emptypb.Empty) (*pb.ConfigUpdateResponse, error) {
 	startTime := time.Now()
 	queryID := generateQueryID()
 
@@ -432,14 +410,7 @@ func (s *SearchServer) GetConfig(ctx context.Context, req *pb.Empty) (*pb.Config
 	pbConfigResponse := &pb.ConfigUpdateResponse{
 		Success: true,
 		Message: "Configuration retrieved successfully",
-	}
-
-	// Convert config map
-	for key, value := range config {
-		if pbConfigResponse.AppliedUpdates == nil {
-			pbConfigResponse.AppliedUpdates = make(map[string]string)
-		}
-		pbConfigResponse.AppliedUpdates[key] = value
+		AppliedUpdates: config,
 	}
 
 	return pbConfigResponse, nil

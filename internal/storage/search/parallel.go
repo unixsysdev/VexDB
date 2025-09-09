@@ -8,6 +8,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
+	"vexdb/internal/storage/segment"
 	"vexdb/internal/types"
 
 	"go.uber.org/zap"
@@ -15,7 +16,7 @@ import (
 
 // ParallelSearchSegment represents a segment to be searched in parallel
 type ParallelSearchSegment struct {
-	Segment *Segment
+	Segment *segment.Segment
 	Query   *types.Vector
 	K       int
 }
@@ -192,7 +193,14 @@ func (p *ParallelSearch) searchSegment(ctx context.Context, segment ParallelSear
 	}
 
 	// Perform linear search on segment vectors
-	results := p.linear.SearchVectors(segment.Query, vectors, segment.K)
+	query := &SearchQuery{
+		QueryVector: segment.Query,
+		Limit:       segment.K,
+	}
+	results, err := p.linear.Search(query, vectors)
+	if err != nil {
+		return nil, err
+	}
 
 	return results, nil
 }

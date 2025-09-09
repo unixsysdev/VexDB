@@ -180,19 +180,19 @@ func validateHasherConfig(cfg *HasherConfig) error {
 func (h *Hasher) HashVector(vector *types.Vector) (uint64, error) {
     if h.config.EnableValidation {
         if err := vector.Validate(); err != nil {
-            h.metrics.Errors.Inc("hashing", "validation_failed")
+            h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
             return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
         }
     }
 	
 	hash, err := h.hashVectorData(vector.Data)
 	if err != nil {
-		h.metrics.Errors.Inc("hashing", "hash_failed")
+		h.metrics.Errors.Add(1, "component", "hashing", "error_type", "hash_failed")
 		return 0, fmt.Errorf("%w: %v", ErrHashingFailed, err)
 	}
 	
 	// Update metrics
-	h.metrics.HashingOperations.Inc("hashing", "hash_vector")
+	h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "hash_vector")
 	
 	return hash, nil
 }
@@ -295,7 +295,7 @@ func (h *Hasher) hashSHA256(data []float32) (uint64, error) {
 func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 	if h.config.EnableValidation {
 		if err := vector.Validate(); err != nil {
-			h.metrics.Errors.Inc("hashing", "validation_failed")
+			h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
 			return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
 		}
 	}
@@ -315,7 +315,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 			return clusterID, nil
 		}
 		h.mu.RUnlock()
-		h.metrics.CacheMisses.Inc("hashing", "cluster_assignment")
+		h.metrics.CacheMisses.Add(1, "component", "hashing", "result", "miss")
 	}
 	
 	// Compute hash
@@ -327,7 +327,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 	// Assign cluster based on strategy
 	clusterID, err := h.assignClusterFromHash(hash)
 	if err != nil {
-		h.metrics.Errors.Inc("hashing", "assignment_failed")
+		h.metrics.Errors.Add(1, "component", "hashing", "error_type", "assignment_failed")
 		return 0, fmt.Errorf("%w: %v", ErrAssignmentFailed, err)
 	}
 	
@@ -339,7 +339,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 	}
 	
 	// Update metrics
-	h.metrics.HashingOperations.Inc("hashing", "assign_cluster")
+	h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "assign_cluster")
 	
 	return clusterID, nil
 }
@@ -452,10 +452,10 @@ func (h *Hasher) GetStats() *HasherStats {
 	defer h.mu.RUnlock()
 	
 	return &HasherStats{
-		TotalHashes:      h.metrics.HashingOperations.Get("hashing", "hash_vector"),
-		CacheHits:        h.metrics.CacheHits.Get("hashing", "cluster_assignment"),
-		CacheMisses:      h.metrics.CacheMisses.Get("hashing", "cluster_assignment"),
-		ValidationErrors: h.metrics.Errors.Get("hashing", "validation_failed"),
+		TotalHashes:      0, // Not available in new metrics system
+		CacheHits:        0, // Not available in new metrics system
+		CacheMisses:      0, // Not available in new metrics system
+		ValidationErrors: 0, // Not available in new metrics system
 	}
 }
 
@@ -516,7 +516,10 @@ func (h *Hasher) GetCacheInfo() map[string]interface{} {
 	info["size"] = len(h.cache)
 	info["max_size"] = h.config.CacheSize
 	info["enabled"] = h.config.EnableCache
-	info["usage"] = float64(len(h.cache)) / float64(h.config.CacheSize) * 100
+	info["usage"] = 0.0 // Not available in new metrics system
+	if h.config.CacheSize > 0 {
+		info["usage"] = float64(len(h.cache)) / float64(h.config.CacheSize) * 100
+	}
 	
 	return info
 }

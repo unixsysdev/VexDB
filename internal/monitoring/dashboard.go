@@ -221,26 +221,26 @@ func (d *Dashboard) handleDashboard(w http.ResponseWriter, r *http.Request) {
     </div>
     <script>
         fetch('/api/v1/status')
-            .then(response => response.json())
-            .then(data => {
-                const statusDiv = document.getElementById('status');
-                statusDiv.innerHTML = \`
-                    <div class="metric">
-                        <strong>Service:</strong> ${data.service_name} v${data.service_version}
-                        <span class="status ${data.service_up ? 'healthy' : 'unhealthy'}">${data.service_up ? 'UP' : 'DOWN'}</span>
-                    </div>
-                    <div class="metric">
-                        <strong>Uptime:</strong> ${data.uptime}
-                    </div>
-                    <div class="metric">
-                        <strong>Health Checks:</strong> ${data.healthy_checks}/${data.total_checks} passed
-                    </div>
-                    <div class="metric">
-                        <strong>Active Alerts:</strong> ${data.active_alerts}
-                    </div>
-                \`;
+            .then(function(response){ return response.json(); })
+            .then(function(data){
+                var statusDiv = document.getElementById('status');
+                var html = ''+
+                  '<div class="metric">'+
+                    '<strong>Service:</strong> ' + (data.service_name || '') + ' v' + (data.service_version || '') +
+                    ' <span class="status ' + ((data.service_up)? 'healthy' : 'unhealthy') + '">' + ((data.service_up)? 'UP' : 'DOWN') + '</span>'+
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<strong>Uptime:</strong> ' + (data.uptime || '') +
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<strong>Health Checks:</strong> ' + (data.healthy_checks || 0) + '/' + (data.total_checks || 0) + ' passed'+
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<strong>Active Alerts:</strong> ' + (data.active_alerts || 0) +
+                  '</div>';
+                statusDiv.innerHTML = html;
             })
-            .catch(error => {
+            .catch(function(){
                 document.getElementById('status').innerHTML = '<div class="status unhealthy">Error loading status</div>';
             });
     </script>

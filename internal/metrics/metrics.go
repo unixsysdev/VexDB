@@ -22,6 +22,38 @@ type Metrics struct {
     mu         sync.RWMutex
 }
 
+// IngestionMetrics provides counters used by connection health monitoring and ingestion paths
+type IngestionMetrics struct {
+    totalConnections     *Counter
+    unhealthyConnections *Counter
+}
+
+// NewIngestionMetrics constructs ingestion-related metrics on top of Metrics
+func NewIngestionMetrics(m *Metrics) *IngestionMetrics {
+    return &IngestionMetrics{
+        totalConnections: m.NewCounter("connections_total", "Total connections by protocol", []string{"protocol"}),
+        unhealthyConnections: m.NewCounter("connections_unhealthy_total", "Unhealthy connections by protocol", []string{"protocol"}),
+    }
+}
+
+func (im *IngestionMetrics) IncrementConnectionCount(protocol string) {
+    if im == nil { return }
+    im.totalConnections.Inc(protocol)
+}
+
+func (im *IngestionMetrics) DecrementConnectionCount(protocol string) {
+    // Counters cannot decrement; expose as no-op to retain API compatibility
+}
+
+func (im *IngestionMetrics) IncrementUnhealthyConnections(protocol string) {
+    if im == nil { return }
+    im.unhealthyConnections.Inc(protocol)
+}
+
+func (im *IngestionMetrics) DecrementUnhealthyConnections(protocol string) {
+    // Counters cannot decrement; expose as no-op to retain API compatibility
+}
+
 // Config represents metrics configuration
 type Config struct {
 	Enabled      bool          `yaml:"enabled" json:"enabled"`

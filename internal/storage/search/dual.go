@@ -221,7 +221,14 @@ func (d *DualSearch) searchBuffer(ctx context.Context, query *types.Vector, k in
 	}
 
 	// Perform linear search on buffer vectors
-	results := d.linear.SearchVectors(query, vectors, k)
+	searchQuery := &SearchQuery{
+		QueryVector: query,
+		Limit:       k,
+	}
+	results, err := d.linear.Search(searchQuery, vectors)
+	if err != nil {
+		return nil, err
+	}
 
 	return results, nil
 }

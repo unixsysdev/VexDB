@@ -586,11 +586,12 @@ type ClusterStatus struct {
 
 // HealthStatus represents the health status of a service or component
 type HealthStatus struct {
-	Status    string            `json:"status" yaml:"status"` // "healthy", "unhealthy", "degraded"
-	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
-	Details   map[string]string `json:"details,omitempty" yaml:"details,omitempty"`
-	Timestamp int64             `json:"timestamp" yaml:"timestamp"`
-	Checks    []HealthCheck     `json:"checks,omitempty" yaml:"checks,omitempty"`
+    Healthy   bool              `json:"healthy" yaml:"healthy"`
+    Status    string            `json:"status" yaml:"status"` // "healthy", "unhealthy", "degraded"
+    Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
+    Details   map[string]string `json:"details,omitempty" yaml:"details,omitempty"`
+    Timestamp int64             `json:"timestamp" yaml:"timestamp"`
+    Checks    []HealthCheck     `json:"checks,omitempty" yaml:"checks,omitempty"`
 }
 
 // HealthCheck represents a single health check result

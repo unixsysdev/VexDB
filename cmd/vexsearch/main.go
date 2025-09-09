@@ -1,104 +1,174 @@
-//go:build ignore
-
 package main
 
 import (
-    "flag"
-    "net/http"
-    "os"
-    "os/signal"
-    "syscall"
+	"context"
+	"flag"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-    "vexdb/internal/logging"
-    "go.uber.org/zap"
+	"vexdb/internal/config"
+	logging2 "vexdb/internal/logging"
+	"vexdb/internal/metrics"
+	searchconfig "vexdb/internal/search/config"
+	"vexdb/internal/search/server"
+	"vexdb/internal/search/service"
+	"vexdb/internal/storage/search"
+
+	"go.uber.org/zap"
 )
 
 func main() {
-    var configPath string
-    flag.StringVar(&configPath, "config", "/etc/vexdb/config.yaml", "Path to configuration file")
-    flag.Parse()
+	var configPath string
+	flag.StringVar(&configPath, "config", "config/vexsearch.yaml", "Path to configuration file")
+	flag.Parse()
 
-    logger, err := logging.NewLogger()
-    if err != nil { panic(err) }
-    defer logger.Sync()
+	// Initialize logger
+	logger, err := logging2.NewLogger()
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
 
-    logger.Info("Starting VexDB Search (stub)", zap.String("config", configPath))
+	logger.Info("Starting VexDB Search Service", zap.String("config", configPath))
 
-    // Minimal HTTP with health endpoint to keep container alive
-    mux := http.NewServeMux()
-    mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK); _, _ = w.Write([]byte("ok")) })
+	// Load configuration
+	searchConfig, err := loadConfig(configPath)
+	if err != nil {
+		logger.Fatal("Failed to load configuration", zap.Error(err))
+	}
 
-    srv := &http.Server{ Addr: ":8083", Handler: mux }
-    go func() { _ = srv.ListenAndServe() }()
+	// Validate configuration
+	if err := searchConfig.Validate(); err != nil {
+		logger.Fatal("Invalid configuration", zap.Error(err))
+	}
 
-    sig := make(chan os.Signal, 1)
-    signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-    <-sig
-    logger.Info("Shutting down VexDB Search (stub)")
+	// Initialize metrics
+	metricsCollector, err := metrics.NewMetrics(searchConfig)
+	if err != nil {
+		logger.Fatal("Failed to initialize metrics", zap.Error(err))
+	}
+
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// TODO: Initialize storage engine and search components
+	// For now, we'll create mock components
+	searchEngine, err := createMockSearchEngine(logger, metricsCollector)
+	if err != nil {
+		logger.Fatal("Failed to create search engine", zap.Error(err))
+	}
+
+	// Create search service
+	searchService, err := service.NewSearchService(searchConfig, logger, metricsCollector, searchEngine)
+	if err != nil {
+		logger.Fatal("Failed to create search service", zap.Error(err))
+	}
+
+	// Create HTTP server
+	httpServer := server.NewHTTPServer(searchConfig, logger, metricsCollector, searchService)
+
+	// Create gRPC server
+	grpcServer := server.NewGRPCServer(searchConfig, logger, metricsCollector, searchService)
+
+	// Start services
+	if err := startServices(ctx, searchService, httpServer, grpcServer); err != nil {
+		logger.Fatal("Failed to start services", zap.Error(err))
+	}
+
+	logger.Info("VexDB Search Service started successfully")
+
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for shutdown signal
+	<-sigChan
+	logger.Info("Shutting down VexDB Search Service...")
+
+	// Graceful shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+
+	if err := stopServices(shutdownCtx, searchService, httpServer, grpcServer); err != nil {
+		logger.Error("Error during shutdown", zap.Error(err))
+	}
+
+	logger.Info("VexDB Search Service stopped")
 }
 
-func (w *httpServerWrapper) Stop(ctx context.Context) error {
-    return w.server.Stop(ctx)
+// loadConfig loads the search service configuration
+func loadConfig(configPath string) (*searchconfig.SearchServiceConfig, error) {
+	// Try to load from file
+	cfg, err := config.LoadConfig("search", configPath)
+	if err != nil {
+		// If file doesn't exist, use default configuration
+		logger, _ := logging2.NewLogger()
+		logger.Warn("Failed to load configuration file, using default configuration", zap.Error(err))
+		return searchconfig.DefaultSearchServiceConfig(), nil
+	}
+
+	// Convert to search service configuration
+	searchCfg, ok := cfg.(*searchconfig.SearchServiceConfig)
+	if !ok {
+		return nil, fmt.Errorf("invalid configuration type")
+	}
+
+	return searchCfg, nil
 }
 
-func (w *httpServerWrapper) Reload(ctx context.Context) error {
-    return nil // HTTP server doesn't support reload
+// createMockSearchEngine creates a mock search engine for testing
+func createMockSearchEngine(logger *zap.Logger, metrics *metrics.Collector) (*search.Engine, error) {
+	// For now, return a mock engine
+	// In a real implementation, this would create the actual search engine
+	return &search.Engine{}, nil
 }
 
-func (w *httpServerWrapper) HealthCheck(ctx context.Context) bool {
-    return true // HTTP server health is managed by the search service
+// startServices starts all services
+func startServices(ctx context.Context, searchService service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
+	// Start search service
+	if err := searchService.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start search service: %w", err)
+	}
+
+	// Start HTTP server
+	if err := httpServer.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start HTTP server: %w", err)
+	}
+
+	// Start gRPC server
+	if err := grpcServer.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start gRPC server: %w", err)
+	}
+
+	return nil
 }
 
-func (w *httpServerWrapper) GetStatus(ctx context.Context) map[string]interface{} {
-    return map[string]interface{}{
-        "type": "http_server",
-    }
-}
+// stopServices stops all services
+func stopServices(ctx context.Context, searchService service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
+	var firstErr error
 
-func (w *httpServerWrapper) GetConfig() interface{} {
-    return nil // HTTP server doesn't have a config
-}
+	// Stop gRPC server
+	if err := grpcServer.Stop(ctx); err != nil {
+		firstErr = err
+	}
 
-func (w *httpServerWrapper) UpdateConfig(config interface{}) error {
-    return nil // HTTP server doesn't support config updates
-}
+	// Stop HTTP server
+	if err := httpServer.Stop(ctx); err != nil {
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
 
-func (w *httpServerWrapper) GetMetrics() map[string]interface{} {
-    return nil // HTTP server metrics are collected by the metrics collector
-}
+	// Stop search service
+	if err := searchService.Stop(ctx); err != nil {
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
 
-type grpcServerWrapper struct {
-    server *server.GRPCServer
-}
-
-func (w *grpcServerWrapper) Start(ctx context.Context) error {
-    return w.server.Start(ctx)
-}
-
-func (w *grpcServerWrapper) Stop(ctx context.Context) error {
-    return w.server.Stop(ctx)
-}
-
-func (w *grpcServerWrapper) Reload(ctx context.Context) error {
-    return nil // gRPC server doesn't support reload
-}
-
-func (w *grpcServerWrapper) HealthCheck(ctx context.Context) bool {
-    return true // gRPC server health is managed by the search service
-}
-
-func (w *grpcServerWrapper) GetStatus(ctx context.Context) map[string]interface{} {
-    return w.server.GetServiceInfo()
-}
-
-func (w *grpcServerWrapper) GetConfig() interface{} {
-    return nil // gRPC server doesn't have a config
-}
-
-func (w *grpcServerWrapper) UpdateConfig(config interface{}) error {
-    return nil // gRPC server doesn't support config updates
-}
-
-func (w *grpcServerWrapper) GetMetrics() map[string]interface{} {
-    return nil // gRPC server metrics are collected by the metrics collector
+	return firstErr
 }

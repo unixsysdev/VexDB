@@ -329,7 +329,6 @@ func (h *SearchHandler) handleMultiClusterSearch(w http.ResponseWriter, r *http.
 
 // handleGetVector handles get vector requests
 func (h *SearchHandler) handleGetVector(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	queryID := generateQueryID()
 	vars := mux.Vars(r)
 	vectorID := vars["id"]
@@ -346,7 +345,6 @@ func (h *SearchHandler) handleGetVector(w http.ResponseWriter, r *http.Request) 
 
 // handleDeleteVector handles delete vector requests
 func (h *SearchHandler) handleDeleteVector(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	queryID := generateQueryID()
 	vars := mux.Vars(r)
 	vectorID := vars["id"]
@@ -363,7 +361,6 @@ func (h *SearchHandler) handleDeleteVector(w http.ResponseWriter, r *http.Reques
 
 // handleListClusters handles list clusters requests
 func (h *SearchHandler) handleListClusters(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	queryID := generateQueryID()
 
 	// For now, return not implemented
@@ -372,7 +369,6 @@ func (h *SearchHandler) handleListClusters(w http.ResponseWriter, r *http.Reques
 
 // handleGetCluster handles get cluster requests
 func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	queryID := generateQueryID()
 	vars := mux.Vars(r)
 	clusterID := vars["id"]
@@ -383,7 +379,6 @@ func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request)
 
 // handleClusterSearch handles cluster-specific search requests
 func (h *SearchHandler) handleClusterSearch(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	queryID := generateQueryID()
 	vars := mux.Vars(r)
 	clusterID := vars["id"]
@@ -403,7 +398,11 @@ func (h *SearchHandler) handleHealthCheck(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response := h.formatter.FormatHealthResponse(health.Healthy, health.Status, health.Details)
+	response := h.formatter.FormatHealthResponse(health.Status == "healthy", health.Status, map[string]interface{}{
+		"message": health.Message,
+		"details": health.Details,
+		"timestamp": health.Timestamp,
+	})
 	h.sendJSONResponse(w, http.StatusOK, response)
 }
 
@@ -418,7 +417,12 @@ func (h *SearchHandler) handleDetailedHealthCheck(w http.ResponseWriter, r *http
 		return
 	}
 
-	response := h.formatter.FormatHealthResponse(health.Healthy, health.Status, health.Details)
+	response := h.formatter.FormatHealthResponse(health.Status == "healthy", health.Status, map[string]interface{}{
+		"message": health.Message,
+		"details": health.Details,
+		"timestamp": health.Timestamp,
+		"checks": health.Checks,
+	})
 	h.sendJSONResponse(w, http.StatusOK, response)
 }
 

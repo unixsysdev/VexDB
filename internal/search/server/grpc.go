@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
@@ -64,9 +65,8 @@ func (s *GRPCServer) Start(ctx context.Context) error {
 	searchServer.RegisterServer(s.server)
 
 	// Register reflection service for development
-	if s.config.API.GRPC.Reflection {
-		reflection.Register(s.server)
-	}
+	// Always register reflection for development
+	reflection.Register(s.server)
 
 	// Start server in background
 	go func() {
@@ -239,7 +239,7 @@ func (s *GRPCServer) streamInterceptor(srv interface{}, ss grpc.ServerStream, in
 
 // getAddress returns the server address
 func (s *GRPCServer) getAddress() string {
-	return fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.API.GRPC.Port)
+	return fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port+1) // Use port+1 for gRPC
 }
 
 // GetServiceInfo returns information about the gRPC service

@@ -22,7 +22,60 @@ var (
 	ErrIndexCreationFailed    = errors.New("index creation failed")
 	ErrIndexUpdateFailed      = errors.New("index update failed")
 	ErrIndexQueryFailed       = errors.New("index query failed")
+	ErrInvalidSearchQuery     = errors.New("invalid search query")
 )
+
+// DistanceMetric represents a distance metric
+type DistanceMetric string
+
+const (
+	DistanceEuclidean  DistanceMetric = "euclidean"
+	DistanceCosine     DistanceMetric = "cosine"
+	DistanceManhattan  DistanceMetric = "manhattan"
+	DistanceDotProduct DistanceMetric = "dotproduct"
+	DistanceHamming    DistanceMetric = "hamming"
+	DistanceJaccard    DistanceMetric = "jaccard"
+)
+
+// SearchResult represents a single search result
+type SearchResult struct {
+	Vector   *types.Vector `json:"vector"`
+	Distance float32       `json:"distance"`
+	Score    float32       `json:"score"`
+	Rank     int           `json:"rank"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// SearchQuery represents a search query
+type SearchQuery struct {
+	QueryVector    *types.Vector          `json:"query_vector"`
+	DistanceMetric DistanceMetric         `json:"distance_metric"`
+	Limit          int                    `json:"limit"`
+	Threshold      float32                `json:"threshold"`
+	MetadataFilter map[string]interface{} `json:"metadata_filter,omitempty"`
+	IncludeVector  bool                   `json:"include_vector"`
+}
+
+// Validate validates the search query
+func (q *SearchQuery) Validate() error {
+	if q.QueryVector == nil {
+		return ErrInvalidVector
+	}
+
+	if err := q.QueryVector.Validate(); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidVector, err)
+	}
+
+	if q.Limit < 0 {
+		return errors.New("limit must be non-negative")
+	}
+
+	if q.Threshold < 0 {
+		return errors.New("threshold must be non-negative")
+	}
+
+	return nil
+}
 
 // IndexType represents the type of search index
 type IndexType string
@@ -725,6 +778,42 @@ func (e *SearchEngine) GetIndexTypeInfo(indexType IndexType) map[string]interfac
 		info["build_time"] = "Fast"
 		info["implemented"] = true
 		
-	case IndexTypeIVF:
-		info["name"] = "IVF (Inverted File Index)"
-		info["description"]
+    case IndexTypeIVF:
+        info["name"] = "IVF (Inverted File Index)"
+        info["description"] = "Coarse quantization with inverted lists"
+        info["best_for"] = "Large datasets, approximate search"
+        info["performance"] = "Fast, sublinear"
+        info["memory_usage"] = "Medium"
+        info["build_time"] = "Moderate"
+        info["implemented"] = false
+    case IndexTypeHNSW:
+        info["name"] = "HNSW"
+        info["description"] = "Hierarchical Navigable Small World graphs"
+        info["best_for"] = "High recall approximate search"
+        info["performance"] = "Very fast queries"
+        info["memory_usage"] = "High"
+        info["build_time"] = "Slow"
+        info["implemented"] = false
+    case IndexTypePQ:
+        info["name"] = "PQ (Product Quantization)"
+        info["description"] = "Compressed vector representations"
+        info["best_for"] = "Memory-constrained approximate search"
+        info["performance"] = "Fast"
+        info["memory_usage"] = "Low"
+        info["build_time"] = "Moderate"
+        info["implemented"] = false
+    case IndexTypeLSH:
+        info["name"] = "LSH (Locality-Sensitive Hashing)"
+        info["description"] = "Hashing-based approximate search"
+        info["best_for"] = "Binary/cosine metrics"
+        info["performance"] = "Fast"
+        info["memory_usage"] = "Medium"
+        info["build_time"] = "Fast"
+        info["implemented"] = false
+    default:
+        info["name"] = "Unknown"
+        info["description"] = "Unknown index type"
+        info["implemented"] = false
+    }
+    return info
+}

@@ -1,11 +1,12 @@
 package search
 
 import (
-	"errors"
-	"fmt"
-	"sort"
-	"sync"
-	"time"
+    "errors"
+    "fmt"
+    "math"
+    "sort"
+    "sync"
+    "time"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -230,9 +231,9 @@ func (m *ResultMerger) Merge(resultSets [][]*SearchResult) ([]*SearchResult, err
 	duration := time.Since(start)
 	
 	// Update metrics
-	m.metrics.MergeOperations.Inc("merge", "merge_results")
-	m.metrics.MergeLatency.Observe(duration.Seconds())
-	metrics.ResultsMerged.Add("merge", "results_merged", int64(len(allResults)))
+    m.metrics.MergeOperations.Inc("merge", "merge_results")
+    m.metrics.MergeLatency.Observe(duration.Seconds())
+    m.metrics.ResultsMerged.Add("merge", "results_merged", int64(len(allResults)))
 	
 	return allResults, nil
 }
@@ -699,5 +700,4 @@ func (m *ResultMerger) Validate() error {
 	return nil
 }
 
-// math is used for normalization
-import "math"
+// math imported above for normalization
