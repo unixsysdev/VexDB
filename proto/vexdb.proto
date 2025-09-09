@@ -1,0 +1,254 @@
+syntax = "proto3";
+
+package vexdb;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/vexdb/vexdb/proto";
+
+// Vector represents a vector with metadata
+message Vector {
+  string id = 1;
+  repeated float data = 2;
+  map<string, string> metadata = 3;
+  uint32 cluster_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// VectorBatch represents a batch of vectors
+message VectorBatch {
+  repeated Vector vectors = 1;
+}
+
+// InsertRequest represents a request to insert vectors
+message InsertRequest {
+  oneof request {
+    Vector vector = 1;
+    VectorBatch batch = 2;
+  }
+}
+
+// InsertResponse represents the response to an insert request
+message InsertResponse {
+  bool success = 1;
+  string message = 2;
+  repeated string vector_ids = 3;
+  map<string, string> metadata = 4;
+}
+
+// SearchRequest represents a similarity search request
+message SearchRequest {
+  Vector query_vector = 1;
+  int32 k = 2; // number of results to return
+  repeated string cluster_ids = 3; // optional: specific clusters to search
+  map<string, string> metadata_filter = 4; // optional: metadata filters
+  bool include_metadata = 5;
+  float distance_threshold = 6; // optional: maximum distance threshold
+}
+
+// SearchResult represents a single search result
+message SearchResult {
+  Vector vector = 1;
+  float distance = 2;
+  float score = 3;
+  string cluster_id = 4;
+  string node_id = 5;
+}
+
+// SearchResponse represents the response to a search request
+message SearchResponse {
+  bool success = 1;
+  string message = 2;
+  repeated SearchResult results = 3;
+  int64 total_results = 4;
+  map<string, string> metadata = 5;
+}
+
+// DeleteRequest represents a request to delete vectors
+message DeleteRequest {
+  repeated string vector_ids = 1;
+  map<string, string> metadata_filter = 2; // optional: delete by metadata
+}
+
+// DeleteResponse represents the response to a delete request
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+  int64 deleted_count = 3;
+  map<string, string> metadata = 4;
+}
+
+// ClusterInfo represents information about a cluster
+message ClusterInfo {
+  string id = 1;
+  repeated string node_ids = 2;
+  uint64 vector_count = 3;
+  uint64 size_bytes = 4;
+  map<string, string> metadata = 5;
+}
+
+// NodeInfo represents information about a node
+message NodeInfo {
+  string id = 1;
+  string address = 2;
+  int32 port = 3;
+  bool is_primary = 4;
+  string status = 5;
+  uint64 vector_count = 6;
+  uint64 memory_usage = 7;
+  uint64 disk_usage = 8;
+  map<string, string> metadata = 9;
+}
+
+// ClusterStatus represents the status of the cluster
+message ClusterStatus {
+  repeated ClusterInfo clusters = 1;
+  repeated NodeInfo nodes = 2;
+  uint32 total_clusters = 3;
+  uint32 replication_factor = 4;
+  map<string, string> metadata = 5;
+}
+
+// HealthCheckRequest represents a health check request
+message HealthCheckRequest {
+  bool detailed = 1;
+}
+
+// HealthCheckResponse represents the response to a health check
+message HealthCheckResponse {
+  bool healthy = 1;
+  string status = 2;
+  string message = 3;
+  map<string, string> details = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// MetricsRequest represents a metrics request
+message MetricsRequest {
+  string metric_type = 1; // "system", "cluster", "vectors", "performance"
+  string cluster_id = 2; // optional: specific cluster
+  string node_id = 3; // optional: specific node
+}
+
+// MetricsResponse represents the response to a metrics request
+message MetricsResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, double> metrics = 3;
+  map<string, string> metadata = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// ConfigUpdateRequest represents a configuration update request
+message ConfigUpdateRequest {
+  map<string, string> config_updates = 1;
+  bool restart_required = 2;
+}
+
+// ConfigUpdateResponse represents the response to a configuration update
+message ConfigUpdateResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> applied_updates = 3;
+  map<string, string> failed_updates = 4;
+}
+
+// StorageService provides storage operations
+service StorageService {
+  // Insert operations
+  rpc InsertVector(InsertRequest) returns (InsertResponse);
+  rpc InsertVectorStream(stream InsertRequest) returns (stream InsertResponse);
+  
+  // Search operations
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc SearchStream(stream SearchRequest) returns (stream SearchResponse);
+  
+  // Delete operations
+  rpc DeleteVectors(DeleteRequest) returns (DeleteResponse);
+  rpc DeleteVectorsStream(stream DeleteRequest) returns (stream DeleteResponse);
+  
+  // Cluster management
+  rpc GetClusterInfo(ClusterInfo) returns (ClusterInfo);
+  rpc GetClusterStatus(google.protobuf.Empty) returns (ClusterStatus);
+  
+  // Health and metrics
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  
+  // Configuration
+  rpc UpdateConfig(ConfigUpdateRequest) returns (ConfigUpdateResponse);
+  rpc GetConfig(google.protobuf.Empty) returns (ConfigUpdateResponse);
+}
+
+// InsertService provides vector insertion operations
+service InsertService {
+  // Insert operations
+  rpc InsertVector(InsertRequest) returns (InsertResponse);
+  rpc InsertVectorStream(stream InsertRequest) returns (stream InsertResponse);
+  
+  // Batch operations
+  rpc InsertBatch(VectorBatch) returns (InsertResponse);
+  rpc InsertBatchStream(stream VectorBatch) returns (stream InsertResponse);
+  
+  // Routing and cluster management
+  rpc GetClusterForVector(Vector) returns (ClusterInfo);
+  rpc GetClusterStatus(google.protobuf.Empty) returns (ClusterStatus);
+  
+  // Health and metrics
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  
+  // Configuration
+  rpc UpdateConfig(ConfigUpdateRequest) returns (ConfigUpdateResponse);
+  rpc GetConfig(google.protobuf.Empty) returns (ConfigUpdateResponse);
+}
+
+// SearchService provides search operations
+service SearchService {
+  // Search operations
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc SearchStream(stream SearchRequest) returns (stream SearchResponse);
+  
+  // Multi-cluster search
+  rpc MultiClusterSearch(SearchRequest) returns (SearchResponse);
+  rpc MultiClusterSearchStream(stream SearchRequest) returns (stream SearchResponse);
+  
+  // Cluster management
+  rpc GetClusterInfo(ClusterInfo) returns (ClusterInfo);
+  rpc GetClusterStatus(google.protobuf.Empty) returns (ClusterStatus);
+  
+  // Health and metrics
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  
+  // Configuration
+  rpc UpdateConfig(ConfigUpdateRequest) returns (ConfigUpdateResponse);
+  rpc GetConfig(google.protobuf.Empty) returns (ConfigUpdateResponse);
+}
+
+// AdminService provides administrative operations
+service AdminService {
+  // Cluster management
+  rpc AddNode(NodeInfo) returns (NodeInfo);
+  rpc RemoveNode(NodeInfo) returns (google.protobuf.Empty);
+  rpc UpdateNode(NodeInfo) returns (NodeInfo);
+  
+  // Cluster operations
+  rpc CreateCluster(ClusterInfo) returns (ClusterInfo);
+  rpc DeleteCluster(ClusterInfo) returns (google.protobuf.Empty);
+  rpc UpdateCluster(ClusterInfo) returns (ClusterInfo);
+  
+  // System operations
+  rpc BackupSystem(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc RestoreSystem(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc CompactStorage(google.protobuf.Empty) returns (google.protobuf.Empty);
+  
+  // Health and metrics
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  
+  // Configuration
+  rpc UpdateConfig(ConfigUpdateRequest) returns (ConfigUpdateResponse);
+  rpc GetConfig(google.protobuf.Empty) returns (ConfigUpdateResponse);
+}

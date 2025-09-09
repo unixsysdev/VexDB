@@ -1,0 +1,89 @@
+Business Source License 1.0
+License Grant
+Subject to the limitations and conditions below, you are granted a non-exclusive, worldwide, royalty-free license to use, copy, modify, and distribute VEXDB software.
+Usage Limitations
+You may use VEXDB under this license provided your use qualifies under the free usage criteria below:
+Development & Small Scale Use (Always Free)
+
+Development environments (testing, staging, CI/CD) - unlimited
+Non-commercial use (research, education, personal projects) - unlimited
+Production deployments where ALL of the following apply:
+
+Fewer than 3 nodes in a cluster AND
+Less than 100 GB of vector data stored AND
+Fewer than 1,000 queries per second average load AND
+Annual company revenue under $1 million USD
+
+
+Commercial License Required
+You must obtain a commercial license if any of the following apply:
+
+3 or more nodes in production clusters
+100 GB or more of vector data stored
+1,000+ queries per second average load
+Annual company revenue of $1 million USD or more
+Any managed service offerings or commercial redistribution
+
+Prohibited Uses Without Commercial License
+
+Managed service offerings (offering VEXDB as a service to third parties)
+Consulting services where VEXDB is the primary deliverable
+Embedding in commercial products sold to customers
+Production use exceeding the thresholds above
+
+Commercial License Required
+If your use exceeds the limitations above, you must obtain a commercial license from [Company Name]. Commercial licensing includes:
+
+Enterprise Support with SLA guarantees
+Advanced features (multi-region replication, enterprise security)
+Liability protection and warranties
+Unlimited scale with no usage restrictions
+
+Additional Terms
+Attribution
+You must retain all copyright notices and license text in any distribution.
+No Warranty
+This software is provided "as is" without warranties of any kind.
+Conversion to Open Source
+Four (4) years after each version's release date, that version automatically becomes available under Apache License 2.0.
+Enforcement
+
+First violation: 30-day cure period after written notice
+Good faith compliance is expected for borderline cases
+Annual self-certification required for production deployments
+
+Revenue Optimization Strategy
+Pricing Tiers (Estimated)
+
+Starter: $500/month (up to x nodes, xTB data)
+Professional: $x,000/month (up to xx nodes, xxTB data)
+Enterprise: Custom pricing (unlimited scale + support)
+
+Value-Based Pricing Triggers
+
+Query volume: $0.10 per 1M queries above base tier
+Storage: $50/TB/month above base tier
+Nodes: $100/node/month above base tier
+Premium features: Multi-region (+50%), enterprise security (+30%)
+
+Enterprise Feature Gates
+Features requiring commercial license:
+
+Cross-region replication
+Advanced RBAC and audit logging
+Priority support and SLA guarantees
+Custom integrations and professional services
+Advanced analytics and monitoring dashboards
+
+Competitive Protections
+Cloud Provider Restrictions
+Major cloud providers (AWS, Google, Azure, Alibaba) cannot offer VEXDB as a managed service without explicit partnership agreement.
+Modification Rights
+You may modify the software, but modified versions:
+
+Must retain this license and attribution
+Cannot circumvent usage limitations
+Commercial use of modifications requires commercial license
+
+Fork Protection
+Forks must maintain license compatibility and cannot be used to avoid commercial licensing requirements.
