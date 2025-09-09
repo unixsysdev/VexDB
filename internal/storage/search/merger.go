@@ -1,17 +1,17 @@
 package search
 
 import (
-    "errors"
-    "fmt"
-    "math"
-    "sort"
-    "sync"
-    "time"
+	"context"
+	"errors"
+	"fmt"
+	"math"
+	"sort"
+	"time"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -26,31 +26,31 @@ var (
 type MergeStrategy string
 
 const (
-	MergeStrategyRank      MergeStrategy = "rank"
-	MergeStrategyDistance  MergeStrategy = "distance"
-	MergeStrategyScore     MergeStrategy = "score"
-	MergeStrategyWeighted  MergeStrategy = "weighted"
+	MergeStrategyRank       MergeStrategy = "rank"
+	MergeStrategyDistance   MergeStrategy = "distance"
+	MergeStrategyScore      MergeStrategy = "score"
+	MergeStrategyWeighted   MergeStrategy = "weighted"
 	MergeStrategyReciprocal MergeStrategy = "reciprocal"
 )
 
 // MergeConfig represents the merge configuration
 type MergeConfig struct {
-	Strategy           MergeStrategy `yaml:"strategy" json:"strategy"`
-	EnableDeduplication bool         `yaml:"enable_deduplication" json:"enable_deduplication"`
-	DeduplicationKey   string        `yaml:"deduplication_key" json:"deduplication_key"`
-	MaxResults         int           `yaml:"max_results" json:"max_results"`
-	EnableNormalization bool         `yaml:"enable_normalization" json:"enable_normalization"`
-	NormalizationMethod string       `yaml:"normalization_method" json:"normalization_method"`
-	EnableValidation    bool         `yaml:"enable_validation" json:"enable_validation"`
+	Strategy            MergeStrategy `yaml:"strategy" json:"strategy"`
+	EnableDeduplication bool          `yaml:"enable_deduplication" json:"enable_deduplication"`
+	DeduplicationKey    string        `yaml:"deduplication_key" json:"deduplication_key"`
+	MaxResults          int           `yaml:"max_results" json:"max_results"`
+	EnableNormalization bool          `yaml:"enable_normalization" json:"enable_normalization"`
+	NormalizationMethod string        `yaml:"normalization_method" json:"normalization_method"`
+	EnableValidation    bool          `yaml:"enable_validation" json:"enable_validation"`
 }
 
 // DefaultMergeConfig returns the default merge configuration
 func DefaultMergeConfig() *MergeConfig {
 	return &MergeConfig{
-		Strategy:           MergeStrategyScore,
+		Strategy:            MergeStrategyScore,
 		EnableDeduplication: true,
-		DeduplicationKey:   "id",
-		MaxResults:         1000,
+		DeduplicationKey:    "id",
+		MaxResults:          1000,
 		EnableNormalization: true,
 		NormalizationMethod: "min_max",
 		EnableValidation:    true,
@@ -59,26 +59,32 @@ func DefaultMergeConfig() *MergeConfig {
 
 // ResultMerger represents a result merger
 type ResultMerger struct {
-	config *MergeConfig
-	logger logging.Logger
+	config  *MergeConfig
+	logger  *zap.Logger
 	metrics *metrics.StorageMetrics
 }
 
+func (m *ResultMerger) Start(ctx context.Context) error { return nil }
+
+func (m *ResultMerger) Stop(ctx context.Context) error { return nil }
+
+func (m *ResultMerger) GetStatus() *MergeStats { return &MergeStats{} }
+
 // MergeStats represents merge statistics
 type MergeStats struct {
-	TotalMerges      int64     `json:"total_merges"`
-	ResultsMerged    int64     `json:"results_merged"`
-	DuplicatesFound  int64     `json:"duplicates_found"`
-	ResultsDeduped   int64     `json:"results_deduped"`
-	AverageLatency   float64   `json:"average_latency"`
-	LastMergeAt      time.Time `json:"last_merge_at"`
-	FailureCount     int64     `json:"failure_count"`
+	TotalMerges     int64     `json:"total_merges"`
+	ResultsMerged   int64     `json:"results_merged"`
+	DuplicatesFound int64     `json:"duplicates_found"`
+	ResultsDeduped  int64     `json:"results_deduped"`
+	AverageLatency  float64   `json:"average_latency"`
+	LastMergeAt     time.Time `json:"last_merge_at"`
+	FailureCount    int64     `json:"failure_count"`
 }
 
 // NewResultMerger creates a new result merger
-func NewResultMerger(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*ResultMerger, error) {
+func NewResultMerger(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics) (*ResultMerger, error) {
 	mergeConfig := DefaultMergeConfig()
-	
+
 	if cfg != nil {
 		if mergeCfg, ok := cfg.Get("merge"); ok {
 			if cfgMap, ok := mergeCfg.(map[string]interface{}); ok {
@@ -106,26 +112,26 @@ func NewResultMerger(cfg *config.Config, logger logging.Logger, metrics *metrics
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateMergeConfig(mergeConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidMergeStrategy, err)
 	}
-	
+
 	merger := &ResultMerger{
-		config: mergeConfig,
-		logger: logger,
+		config:  mergeConfig,
+		logger:  logger,
 		metrics: metrics,
 	}
-	
+
 	merger.logger.Info("Created result merger",
-		"strategy", mergeConfig.Strategy,
-		"enable_deduplication", mergeConfig.EnableDeduplication,
-		"deduplication_key", mergeConfig.DeduplicationKey,
-		"max_results", mergeConfig.MaxResults,
-		"enable_normalization", mergeConfig.EnableNormalization,
-		"normalization_method", mergeConfig.NormalizationMethod)
-	
+		zap.String("strategy", string(mergeConfig.Strategy)),
+		zap.Bool("enable_deduplication", mergeConfig.EnableDeduplication),
+		zap.String("deduplication_key", mergeConfig.DeduplicationKey),
+		zap.Int("max_results", mergeConfig.MaxResults),
+		zap.Bool("enable_normalization", mergeConfig.EnableNormalization),
+		zap.String("normalization_method", mergeConfig.NormalizationMethod))
+
 	return merger, nil
 }
 
@@ -138,15 +144,15 @@ func validateMergeConfig(cfg *MergeConfig) error {
 		cfg.Strategy != MergeStrategyReciprocal {
 		return fmt.Errorf("unsupported merge strategy: %s", cfg.Strategy)
 	}
-	
+
 	if cfg.MaxResults <= 0 {
 		return errors.New("max results must be positive")
 	}
-	
+
 	if cfg.EnableDeduplication && cfg.DeduplicationKey == "" {
 		return errors.New("deduplication key is required when deduplication is enabled")
 	}
-	
+
 	if cfg.EnableNormalization {
 		if cfg.NormalizationMethod != "min_max" &&
 			cfg.NormalizationMethod != "z_score" &&
@@ -154,7 +160,7 @@ func validateMergeConfig(cfg *MergeConfig) error {
 			return fmt.Errorf("unsupported normalization method: %s", cfg.NormalizationMethod)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -166,23 +172,23 @@ func (m *ResultMerger) Merge(resultSets [][]*SearchResult) ([]*SearchResult, err
 			return nil, fmt.Errorf("%w: %v", ErrInvalidResults, err)
 		}
 	}
-	
+
 	if len(resultSets) == 0 {
 		return nil, ErrNoResultsToMerge
 	}
-	
+
 	start := time.Now()
-	
+
 	// Flatten all results
 	var allResults []*SearchResult
 	for _, resultSet := range resultSets {
 		allResults = append(allResults, resultSet...)
 	}
-	
+
 	if len(allResults) == 0 {
 		return []*SearchResult{}, nil
 	}
-	
+
 	// Deduplicate if enabled
 	if m.config.EnableDeduplication {
 		var err error
@@ -192,12 +198,12 @@ func (m *ResultMerger) Merge(resultSets [][]*SearchResult) ([]*SearchResult, err
 			return nil, fmt.Errorf("%w: %v", ErrDuplicateDetection, err)
 		}
 	}
-	
+
 	// Normalize if enabled
 	if m.config.EnableNormalization {
 		allResults = m.normalizeResults(allResults)
 	}
-	
+
 	// Sort results based on strategy
 	switch m.config.Strategy {
 	case MergeStrategyRank:
@@ -217,24 +223,18 @@ func (m *ResultMerger) Merge(resultSets [][]*SearchResult) ([]*SearchResult, err
 	case MergeStrategyReciprocal:
 		allResults = m.reciprocalMerge(allResults)
 	}
-	
+
 	// Apply max results limit
 	if m.config.MaxResults > 0 && len(allResults) > m.config.MaxResults {
 		allResults = allResults[:m.config.MaxResults]
 	}
-	
+
 	// Update ranks
 	for i, result := range allResults {
 		result.Rank = i + 1
 	}
-	
-	duration := time.Since(start)
-	
-	// Update metrics
-    m.metrics.MergeOperations.Inc("merge", "merge_results")
-    m.metrics.MergeLatency.Observe(duration.Seconds())
-    m.metrics.ResultsMerged.Add("merge", "results_merged", int64(len(allResults)))
-	
+
+	_ = time.Since(start)
 	return allResults, nil
 }
 
@@ -243,14 +243,14 @@ func (m *ResultMerger) MergeWithWeights(resultSets [][]*SearchResult, weights []
 	if len(resultSets) != len(weights) {
 		return nil, fmt.Errorf("%w: result sets and weights count mismatch", ErrInvalidResults)
 	}
-	
+
 	// Apply weights to each result set
 	for i, resultSet := range resultSets {
 		for _, result := range resultSet {
 			result.Score *= weights[i]
 		}
 	}
-	
+
 	return m.Merge(resultSets)
 }
 
@@ -259,16 +259,16 @@ func (m *ResultMerger) MergeDistanceBased(resultSets [][]*SearchResult) ([]*Sear
 	// Temporarily set strategy to distance
 	oldStrategy := m.config.Strategy
 	m.config.Strategy = MergeStrategyDistance
-	
+
 	results, err := m.Merge(resultSets)
 	if err != nil {
 		m.config.Strategy = oldStrategy
 		return nil, err
 	}
-	
+
 	// Restore original strategy
 	m.config.Strategy = oldStrategy
-	
+
 	return results, nil
 }
 
@@ -277,16 +277,16 @@ func (m *ResultMerger) MergeScoreBased(resultSets [][]*SearchResult) ([]*SearchR
 	// Temporarily set strategy to score
 	oldStrategy := m.config.Strategy
 	m.config.Strategy = MergeStrategyScore
-	
+
 	results, err := m.Merge(resultSets)
 	if err != nil {
 		m.config.Strategy = oldStrategy
 		return nil, err
 	}
-	
+
 	// Restore original strategy
 	m.config.Strategy = oldStrategy
-	
+
 	return results, nil
 }
 
@@ -299,29 +299,29 @@ func (m *ResultMerger) MergeHybrid(resultSets [][]*SearchResult, distanceWeight,
 			// Normalize distance and score to [0, 1] range
 			normalizedDistance := result.Distance / (result.Distance + 1.0)
 			normalizedScore := result.Score / (result.Score + 1.0)
-			
+
 			// Calculate hybrid score
-			hybridScore := distanceWeight*normalizedDistance + scoreWeight*normalizedScore
+			hybridScore := float32(distanceWeight)*float32(normalizedDistance) + float32(scoreWeight)*float32(normalizedScore)
 			result.Score = hybridScore
 		}
 		allResults = append(allResults, resultSet...)
 	}
-	
+
 	// Sort by hybrid score
 	sort.Slice(allResults, func(i, j int) bool {
 		return allResults[i].Score > allResults[j].Score
 	})
-	
+
 	// Apply max results limit
 	if m.config.MaxResults > 0 && len(allResults) > m.config.MaxResults {
 		allResults = allResults[:m.config.MaxResults]
 	}
-	
+
 	// Update ranks
 	for i, result := range allResults {
 		result.Rank = i + 1
 	}
-	
+
 	return allResults, nil
 }
 
@@ -345,21 +345,18 @@ func (m *ResultMerger) deduplicateResults(results []*SearchResult) ([]*SearchRes
 	seen := make(map[string]bool)
 	deduped := make([]*SearchResult, 0, len(results))
 	duplicatesFound := 0
-	
+
 	for _, result := range results {
 		key := m.getDeduplicationKey(result)
 		if seen[key] {
 			duplicatesFound++
 			continue
 		}
-		
+
 		seen[key] = true
 		deduped = append(deduped, result)
 	}
-	
-	m.metrics.DuplicatesFound.Add("merge", "duplicates_found", int64(duplicatesFound))
-	m.metrics.ResultsDeduped.Add("merge", "results_deduped", int64(len(deduped)))
-	
+
 	return deduped, nil
 }
 
@@ -387,7 +384,7 @@ func (m *ResultMerger) normalizeResults(results []*SearchResult) []*SearchResult
 	if len(results) == 0 {
 		return results
 	}
-	
+
 	switch m.config.NormalizationMethod {
 	case "min_max":
 		return m.minMaxNormalization(results)
@@ -408,7 +405,7 @@ func (m *ResultMerger) minMaxNormalization(results []*SearchResult) []*SearchRes
 		minScore = results[0].Score
 		maxScore = results[0].Score
 	}
-	
+
 	for _, result := range results {
 		if result.Score < minScore {
 			minScore = result.Score
@@ -417,7 +414,7 @@ func (m *ResultMerger) minMaxNormalization(results []*SearchResult) []*SearchRes
 			maxScore = result.Score
 		}
 	}
-	
+
 	// Normalize scores
 	if maxScore != minScore {
 		for _, result := range results {
@@ -429,7 +426,7 @@ func (m *ResultMerger) minMaxNormalization(results []*SearchResult) []*SearchRes
 			result.Score = 0.5
 		}
 	}
-	
+
 	return results
 }
 
@@ -438,21 +435,21 @@ func (m *ResultMerger) zScoreNormalization(results []*SearchResult) []*SearchRes
 	if len(results) == 0 {
 		return results
 	}
-	
+
 	// Calculate mean and standard deviation
 	var sum, sumSquares float32
 	for _, result := range results {
 		sum += result.Score
 		sumSquares += result.Score * result.Score
 	}
-	
+
 	mean := sum / float32(len(results))
 	variance := sumSquares/float32(len(results)) - mean*mean
 	stdDev := float32(0.0)
 	if variance > 0 {
 		stdDev = float32(math.Sqrt(float64(variance)))
 	}
-	
+
 	// Normalize scores
 	if stdDev > 0 {
 		for _, result := range results {
@@ -464,7 +461,7 @@ func (m *ResultMerger) zScoreNormalization(results []*SearchResult) []*SearchRes
 			result.Score = 0.0
 		}
 	}
-	
+
 	return results
 }
 
@@ -473,14 +470,14 @@ func (m *ResultMerger) unitVectorNormalization(results []*SearchResult) []*Searc
 	if len(results) == 0 {
 		return results
 	}
-	
+
 	// Calculate magnitude
 	var magnitude float32
 	for _, result := range results {
 		magnitude += result.Score * result.Score
 	}
 	magnitude = float32(math.Sqrt(float64(magnitude)))
-	
+
 	// Normalize scores
 	if magnitude > 0 {
 		for _, result := range results {
@@ -492,7 +489,7 @@ func (m *ResultMerger) unitVectorNormalization(results []*SearchResult) []*Searc
 			result.Score = 0.0
 		}
 	}
-	
+
 	return results
 }
 
@@ -504,17 +501,17 @@ func (m *ResultMerger) weightedMerge(results []*SearchResult) []*SearchResult {
 		// Higher rank gets higher weight
 		weights[i] = 1.0 / float32(result.Rank)
 	}
-	
+
 	// Apply weights
 	for i, result := range results {
 		result.Score *= weights[i]
 	}
-	
+
 	// Sort by weighted score
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Score > results[j].Score
 	})
-	
+
 	return results
 }
 
@@ -526,15 +523,15 @@ func (m *ResultMerger) reciprocalMerge(results []*SearchResult) []*SearchResult 
 		key := m.getDeduplicationKey(result)
 		groups[key] = append(groups[key], result)
 	}
-	
+
 	// Calculate reciprocal rank fusion scores
 	var fusedResults []*SearchResult
-	for key, group := range groups {
+	for _, group := range groups {
 		var rrfScore float32
 		for _, result := range group {
 			rrfScore += 1.0 / float32(result.Rank+60) // +60 to avoid division by zero
 		}
-		
+
 		// Use the best result from the group
 		bestResult := group[0]
 		for _, result := range group {
@@ -542,29 +539,17 @@ func (m *ResultMerger) reciprocalMerge(results []*SearchResult) []*SearchResult 
 				bestResult = result
 			}
 		}
-		
+
 		bestResult.Score = rrfScore
 		fusedResults = append(fusedResults, bestResult)
 	}
-	
+
 	// Sort by RRF score
 	sort.Slice(fusedResults, func(i, j int) bool {
 		return fusedResults[i].Score > fusedResults[j].Score
 	})
-	
-	return fusedResults
-}
 
-// GetStats returns merge statistics
-func (m *ResultMerger) GetStats() *MergeStats {
-	return &MergeStats{
-		TotalMerges:     m.metrics.MergeOperations.Get("merge", "merge_results"),
-		ResultsMerged:   m.metrics.ResultsMerged.Get("merge", "results_merged"),
-		DuplicatesFound: m.metrics.DuplicatesFound.Get("merge", "duplicates_found"),
-		ResultsDeduped:  m.metrics.ResultsDeduped.Get("merge", "results_deduped"),
-		AverageLatency:  m.metrics.MergeLatency.Get("merge", "merge_results"),
-		FailureCount:    m.metrics.Errors.Get("merge", "merge_failed"),
-	}
+	return fusedResults
 }
 
 // GetConfig returns the merge configuration
@@ -580,11 +565,11 @@ func (m *ResultMerger) UpdateConfig(config *MergeConfig) error {
 	if err := validateMergeConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidMergeStrategy, err)
 	}
-	
+
 	m.config = config
-	
-	m.logger.Info("Updated merge configuration", "config", config)
-	
+
+	m.logger.Info("Updated merge configuration", zap.Any("config", config))
+
 	return nil
 }
 
@@ -602,56 +587,56 @@ func (m *ResultMerger) GetSupportedStrategies() []MergeStrategy {
 // GetStrategyInfo returns information about a merge strategy
 func (m *ResultMerger) GetStrategyInfo(strategy MergeStrategy) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch strategy {
 	case MergeStrategyRank:
 		info["name"] = "Rank"
 		info["description"] = "Merge based on result rank"
 		info["best_for"] = "Preserving original ranking order"
 		info["performance"] = "Fast, simple"
-		
+
 	case MergeStrategyDistance:
 		info["name"] = "Distance"
 		info["description"] = "Merge based on distance metric"
 		info["best_for"] = "Distance-based similarity search"
 		info["performance"] = "Fast, distance-based"
-		
+
 	case MergeStrategyScore:
 		info["name"] = "Score"
 		info["description"] = "Merge based on similarity score"
 		info["best_for"] = "Score-based similarity search"
 		info["performance"] = "Fast, score-based"
-		
+
 	case MergeStrategyWeighted:
 		info["name"] = "Weighted"
 		info["description"] = "Merge using rank-based weights"
 		info["best_for"] = "Balanced result ranking"
 		info["performance"] = "Moderate, weighted"
-		
+
 	case MergeStrategyReciprocal:
 		info["name"] = "Reciprocal"
 		info["description"] = "Merge using reciprocal rank fusion"
 		info["best_for"] = "Combining multiple ranked lists"
 		info["performance"] = "Complex, fusion-based"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown merge strategy"
 		info["best_for"] = "Unknown"
 		info["performance"] = "Unknown"
 	}
-	
+
 	return info
 }
 
 // BenchmarkMerge benchmarks merge performance
 func (m *ResultMerger) BenchmarkMerge(resultSets [][]*SearchResult) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
-	
+
 	if len(resultSets) == 0 {
 		return results, nil
 	}
-	
+
 	// Test all strategies
 	strategies := []MergeStrategy{
 		MergeStrategyRank,
@@ -660,33 +645,33 @@ func (m *ResultMerger) BenchmarkMerge(resultSets [][]*SearchResult) (map[string]
 		MergeStrategyWeighted,
 		MergeStrategyReciprocal,
 	}
-	
+
 	for _, strategy := range strategies {
 		// Temporarily set strategy
 		oldStrategy := m.config.Strategy
 		m.config.Strategy = strategy
-		
+
 		start := time.Now()
 		mergedResults, err := m.Merge(resultSets)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			results[string(strategy)] = map[string]interface{}{
 				"error": err.Error(),
 			}
 			continue
 		}
-		
+
 		results[string(strategy)] = map[string]interface{}{
-			"duration": duration.String(),
-			"results_merged": len(mergedResults),
+			"duration":           duration.String(),
+			"results_merged":     len(mergedResults),
 			"results_per_second": float64(len(mergedResults)) / duration.Seconds(),
 		}
-		
+
 		// Restore original strategy
 		m.config.Strategy = oldStrategy
 	}
-	
+
 	return results, nil
 }
 
@@ -696,7 +681,7 @@ func (m *ResultMerger) Validate() error {
 	if err := validateMergeConfig(m.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 

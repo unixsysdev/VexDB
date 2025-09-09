@@ -3,10 +3,11 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/storage/buffer"
 	"vexdb/internal/storage/clusterrange"
@@ -21,23 +22,23 @@ import (
 
 // Storage represents the main storage engine
 type Storage struct {
-	config      *config.Config
-	logger      *zap.Logger
-	metrics     *metrics.Collector
-	
-	buffer      *buffer.Manager
-	compressor  *compression.Compressor
-	hasher      *hashing.Hasher
-	ranges      *clusterrange.Manager
-	segments    *segment.Manager
-	search      *search.Engine
-	
-	mu          sync.RWMutex
-	started     bool
+	config  config.Config
+	logger  *zap.Logger
+	metrics *metrics.StorageMetrics
+
+	buffer     *buffer.Manager
+	compressor *compression.Compressor
+	hasher     *hashing.Hasher
+	ranges     *clusterrange.RangeManager
+	segments   *segment.Manager
+	search     *search.Engine
+
+	mu      sync.RWMutex
+	started bool
 }
 
 // NewStorage creates a new storage engine instance
-func NewStorage(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector) (*Storage, error) {
+func NewStorage(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics) (*Storage, error) {
 	s := &Storage{
 		config:  cfg,
 		logger:  logger,
@@ -57,37 +58,37 @@ func (s *Storage) initializeComponents() error {
 	var err error
 
 	// Initialize buffer manager
-	s.buffer, err = buffer.NewManager(s.config, s.logger, s.metrics)
+	s.buffer, err = buffer.NewBuffer(s.config, *s.logger, s.metrics, nil)
 	if err != nil {
 		return err
 	}
 
 	// Initialize compressor
-	s.compressor, err = compression.NewCompressor(s.config, s.logger, s.metrics)
+	s.compressor, err = compression.NewCompressor(s.config, *s.logger, s.metrics)
 	if err != nil {
 		return err
 	}
 
 	// Initialize hasher
-	s.hasher, err = hashing.NewHasher(s.config, s.logger, s.metrics)
+	s.hasher, err = hashing.NewHasher(s.config, *s.logger, s.metrics)
 	if err != nil {
 		return err
 	}
 
 	// Initialize cluster range manager
-	s.ranges, err = clusterrange.NewManager(s.config, s.logger, s.metrics)
+	s.ranges, err = clusterrange.NewRangeManager(s.config, *s.logger, s.metrics)
 	if err != nil {
 		return err
 	}
 
 	// Initialize segment manager
-	s.segments, err = segment.NewManager(s.config, s.logger, s.metrics, s.compressor)
+	s.segments, err = segment.NewManager(&s.config, s.logger, nil, s.compressor)
 	if err != nil {
 		return err
 	}
 
 	// Initialize search engine
-	s.search, err = search.NewEngine(s.config, s.logger, s.metrics, s.buffer, s.segments)
+	s.search, err = search.NewEngine(s.config, s.logger, s.metrics, s.segments, s.buffer)
 	if err != nil {
 		return err
 	}
@@ -106,31 +107,6 @@ func (s *Storage) Start(ctx context.Context) error {
 
 	s.logger.Info("Starting storage engine")
 
-	// Start components
-	if err := s.buffer.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := s.compressor.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := s.hasher.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := s.ranges.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := s.segments.Start(ctx); err != nil {
-		return err
-	}
-
-	if err := s.search.Start(ctx); err != nil {
-		return err
-	}
-
 	s.started = true
 	s.logger.Info("Storage engine started successfully")
 	return nil
@@ -146,31 +122,6 @@ func (s *Storage) Stop(ctx context.Context) error {
 	}
 
 	s.logger.Info("Stopping storage engine")
-
-	// Stop components in reverse order
-	if err := s.search.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop search engine", zap.Error(err))
-	}
-
-	if err := s.segments.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop segment manager", zap.Error(err))
-	}
-
-	if err := s.ranges.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop cluster range manager", zap.Error(err))
-	}
-
-	if err := s.hasher.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop hasher", zap.Error(err))
-	}
-
-	if err := s.compressor.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop compressor", zap.Error(err))
-	}
-
-	if err := s.buffer.Stop(ctx); err != nil {
-		s.logger.Error("Failed to stop buffer manager", zap.Error(err))
-	}
 
 	s.started = false
 	s.logger.Info("Storage engine stopped successfully")
@@ -193,13 +144,24 @@ func (s *Storage) StoreVector(ctx context.Context, vector *types.Vector) error {
 	}
 
 	// Get the cluster range for the cluster ID
-	rangeInfo, err := s.ranges.GetRange(clusterID)
+	_, err = s.ranges.GetRange(uint32(clusterID))
 	if err != nil {
 		return err
 	}
 
-	// Store the vector in the buffer
-	return s.buffer.StoreVector(ctx, vector, clusterID, rangeInfo)
+	start := time.Now()
+	if err := s.search.AddVectors([]*types.Vector{vector}); err != nil {
+		if s.metrics != nil {
+			s.metrics.Errors.Inc("store")
+		}
+		return err
+	}
+	if s.metrics != nil {
+		s.metrics.WriteOperations.Inc("storage", "store")
+		s.metrics.WriteLatency.Observe(time.Since(start).Seconds(), "storage", "store")
+		s.metrics.VectorsTotal.Inc("storage", fmt.Sprintf("%d", clusterID))
+	}
+	return nil
 }
 
 // SearchVectors performs a similarity search for vectors
@@ -212,18 +174,16 @@ func (s *Storage) SearchVectors(ctx context.Context, query *types.Vector, k int)
 	}
 
 	// Perform the search using the search engine
-	return s.search.Search(ctx, query, k)
+	searchQuery := &search.SearchQuery{QueryVector: query, Limit: k}
+	return s.search.Search(ctx, searchQuery)
 }
 
 // GetStatus returns the current status of the storage engine
-func (s *Storage) GetStatus() *types.StorageStatus {
+func (s *Storage) GetStatus() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return &types.StorageStatus{
-		Started: s.started,
-		Buffer:  s.buffer.GetStatus(),
-		Segments: s.segments.GetStatus(),
-		Search:  s.search.GetStatus(),
+	return map[string]interface{}{
+		"started": s.started,
 	}
 }

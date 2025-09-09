@@ -3,11 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	searchconfig "vexdb/internal/search/config"
 	"vexdb/internal/service"
@@ -19,17 +17,17 @@ import (
 
 // SearchService implements the search service interface
 type SearchService struct {
-	config        *searchconfig.SearchServiceConfig
-	logger        *zap.Logger
-	metrics       *metrics.Collector
-	searchEngine  *search.Engine
+	config         *searchconfig.SearchServiceConfig
+	logger         *zap.Logger
+	metrics        *metrics.Collector
+	searchEngine   *search.Engine
 	clusterManager service.ClusterManager
 	queryPlanner   service.QueryPlanner
 	resultMerger   service.ResultMerger
 
-	mu        sync.RWMutex
-	started   bool
-	stats     *SearchStats
+	mu      sync.RWMutex
+	started bool
+	stats   *SearchStats
 }
 
 // SearchStats represents search service statistics
@@ -68,7 +66,7 @@ func (s *SearchService) Start(ctx context.Context) error {
 	s.logger.Info("Starting search service")
 
 	// Start the search engine
-	if err := s.searchEngine.Start(ctx); err != nil {
+	if err := s.searchEngine.Start(); err != nil {
 		return fmt.Errorf("failed to start search engine: %w", err)
 	}
 
@@ -95,7 +93,7 @@ func (s *SearchService) Stop(ctx context.Context) error {
 	s.logger.Info("Stopping search service")
 
 	// Stop the search engine
-	if err := s.searchEngine.Stop(ctx); err != nil {
+	if err := s.searchEngine.Stop(); err != nil {
 		s.logger.Error("Failed to stop search engine", zap.Error(err))
 	}
 
@@ -174,11 +172,11 @@ func (s *SearchService) GetStatus(ctx context.Context) map[string]interface{} {
 	defer s.mu.RUnlock()
 
 	status := map[string]interface{}{
-		"started":        s.started,
-		"total_searches": s.stats.TotalSearches,
+		"started":         s.started,
+		"total_searches":  s.stats.TotalSearches,
 		"failed_searches": s.stats.FailedSearches,
-		"avg_latency_ms": s.stats.AvgLatency,
-		"last_search":    s.stats.LastSearch,
+		"avg_latency_ms":  s.stats.AvgLatency,
+		"last_search":     s.stats.LastSearch,
 	}
 
 	if s.started {
@@ -193,19 +191,19 @@ func (s *SearchService) GetStatus(ctx context.Context) map[string]interface{} {
 func (s *SearchService) GetConfig(ctx context.Context) (map[string]string, error) {
 	// Convert configuration to string map
 	config := map[string]string{
-		"server.host":              s.config.Server.Host,
-		"server.port":              fmt.Sprintf("%d", s.config.Server.Port),
-		"engine.max_results":       fmt.Sprintf("%d", s.config.Engine.MaxResults),
-		"engine.default_k":         fmt.Sprintf("%d", s.config.Engine.DefaultK),
-		"engine.distance_type":     s.config.Engine.DistanceType,
-		"engine.enable_cache":      fmt.Sprintf("%t", s.config.Engine.EnableCache),
-		"api.http.enabled":         fmt.Sprintf("%t", s.config.API.HTTP.Enabled),
-		"api.grpc.enabled":         fmt.Sprintf("%t", s.config.API.GRPC.Enabled),
-		"auth.enabled":             fmt.Sprintf("%t", s.config.Auth.Enabled),
-		"auth.type":                s.config.Auth.Type,
-		"rate_limit.enabled":       fmt.Sprintf("%t", s.config.RateLimit.Enabled),
-		"metrics.enabled":          fmt.Sprintf("%t", s.config.Metrics.Enabled),
-		"health.enabled":           fmt.Sprintf("%t", s.config.Health.Enabled),
+		"server.host":          s.config.Server.Host,
+		"server.port":          fmt.Sprintf("%d", s.config.Server.Port),
+		"engine.max_results":   fmt.Sprintf("%d", s.config.Engine.MaxResults),
+		"engine.default_k":     fmt.Sprintf("%d", s.config.Engine.DefaultK),
+		"engine.distance_type": s.config.Engine.DistanceType,
+		"engine.enable_cache":  fmt.Sprintf("%t", s.config.Engine.EnableCache),
+		"api.http.enabled":     fmt.Sprintf("%t", s.config.API.HTTP.Enabled),
+		"api.grpc.enabled":     fmt.Sprintf("%t", s.config.API.GRPC.Enabled),
+		"auth.enabled":         fmt.Sprintf("%t", s.config.Auth.Enabled),
+		"auth.type":            s.config.Auth.Type,
+		"rate_limit.enabled":   fmt.Sprintf("%t", s.config.RateLimit.Enabled),
+		"metrics.enabled":      fmt.Sprintf("%t", s.config.Metrics.Enabled),
+		"health.enabled":       fmt.Sprintf("%t", s.config.Health.Enabled),
 	}
 
 	return config, nil
@@ -239,24 +237,11 @@ func (s *SearchService) GetMetrics(ctx context.Context, metricType, clusterID, n
 		metrics["active_connections"] = float64(s.stats.ActiveConnections)
 
 	case "performance":
-		if s.started {
-			engineStatus := s.searchEngine.GetStatus()
-			if engineStatus.Linear != nil {
-				metrics["linear_searches"] = float64(engineStatus.Linear.Searches)
-				metrics["linear_avg_latency_ms"] = engineStatus.Linear.AvgLatency
-			}
-			if engineStatus.Dual != nil && engineStatus.Dual.Linear != nil {
-				metrics["dual_linear_searches"] = float64(engineStatus.Dual.Linear.Searches)
-				metrics["dual_linear_avg_latency_ms"] = engineStatus.Dual.Linear.AvgLatency
-			}
-		}
+		metrics["total_searches"] = float64(s.stats.TotalSearches)
+		metrics["avg_latency_ms"] = s.stats.AvgLatency
 
 	case "vectors":
-		if s.started {
-			engineStatus := s.searchEngine.GetStatus()
-			metrics["total_vectors"] = float64(engineStatus.TotalVectors)
-			metrics["total_segments"] = float64(engineStatus.TotalSegments)
-		}
+		metrics["total_vectors"] = float64(s.stats.TotalVectors)
 
 	default:
 		return nil, fmt.Errorf("unknown metric type: %s", metricType)
@@ -291,8 +276,12 @@ func (s *SearchService) Search(ctx context.Context, query *types.Vector, k int, 
 		zap.Int("vector_dim", len(query.Data)),
 	)
 
-	// Perform the search
-	results, err := s.searchEngine.Search(ctx, query, k)
+	// Build and perform the search query
+	searchQuery := &search.SearchQuery{
+		QueryVector: query,
+		Limit:       k,
+	}
+	results, err := s.searchEngine.Search(ctx, searchQuery)
 	if err != nil {
 		s.logger.Error("Search failed", zap.String("query_id", queryID), zap.Error(err))
 		s.recordSearchError(queryID, err)
@@ -337,7 +326,11 @@ func (s *SearchService) MultiClusterSearch(ctx context.Context, query *types.Vec
 
 	// For now, perform a regular search
 	// In a real implementation, this would coordinate searches across multiple clusters
-	results, err := s.searchEngine.Search(ctx, query, k)
+	searchQuery := &search.SearchQuery{
+		QueryVector: query,
+		Limit:       k,
+	}
+	results, err := s.searchEngine.Search(ctx, searchQuery)
 	if err != nil {
 		s.logger.Error("Multi-cluster search failed", zap.String("query_id", queryID), zap.Error(err))
 		s.recordSearchError(queryID, err)
@@ -365,14 +358,17 @@ func (s *SearchService) GetClusterInfo(ctx context.Context, clusterID string) (*
 	// For now, return a mock cluster info
 	// In a real implementation, this would get cluster info from the cluster manager
 	clusterInfo := &types.ClusterInfo{
-		ID:        clusterID,
-		NodeIDs:   []string{"node1", "node2"},
-		VectorCount: 1000,
-		SizeBytes:   1024 * 1024, // 1MB
+		ID:          clusterID,
+		Name:        fmt.Sprintf("cluster-%s", clusterID),
+		Description: "mock cluster",
 		Metadata: map[string]string{
-			"status": "active",
-			"region": "us-east-1",
+			"status":       "active",
+			"region":       "us-east-1",
+			"nodes":        "node1,node2",
+			"vector_count": "1000",
 		},
+		CreatedAt: time.Now().Unix(),
+		UpdatedAt: time.Now().Unix(),
 	}
 
 	return clusterInfo, nil
@@ -390,53 +386,11 @@ func (s *SearchService) GetClusterStatus(ctx context.Context) (*types.ClusterSta
 	// For now, return a mock cluster status
 	// In a real implementation, this would get cluster status from the cluster manager
 	clusterStatus := &types.ClusterStatus{
-		TotalClusters:    3,
-		ReplicationFactor: 2,
-		Clusters: []*types.ClusterInfo{
-			{
-				ID:        "cluster1",
-				NodeIDs:   []string{"node1", "node2"},
-				VectorCount: 1000,
-				SizeBytes:   1024 * 1024,
-				Metadata:    map[string]string{"status": "active"},
-			},
-			{
-				ID:        "cluster2",
-				NodeIDs:   []string{"node3", "node4"},
-				VectorCount: 1500,
-				SizeBytes:   2 * 1024 * 1024,
-				Metadata:    map[string]string{"status": "active"},
-			},
-			{
-				ID:        "cluster3",
-				NodeIDs:   []string{"node5", "node6"},
-				VectorCount: 800,
-				SizeBytes:   512 * 1024,
-				Metadata:    map[string]string{"status": "active"},
-			},
-		},
-		Nodes: []*types.NodeInfo{
-			{
-				ID:        "node1",
-				Address:   "127.0.0.1",
-				Port:      8081,
-				IsPrimary: true,
-				Status:    "healthy",
-				VectorCount: 500,
-				MemoryUsage: 1024 * 1024,
-				DiskUsage:   2 * 1024 * 1024,
-			},
-			{
-				ID:        "node2",
-				Address:   "127.0.0.1",
-				Port:      8082,
-				IsPrimary: false,
-				Status:    "healthy",
-				VectorCount: 500,
-				MemoryUsage: 1024 * 1024,
-				DiskUsage:   2 * 1024 * 1024,
-			},
-		},
+		ID:        "cluster1",
+		Status:    "active",
+		Health:    "healthy",
+		Timestamp: time.Now().Unix(),
+		Nodes:     []string{"node1", "node2"},
 	}
 
 	return clusterStatus, nil

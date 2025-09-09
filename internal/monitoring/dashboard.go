@@ -1,15 +1,14 @@
 package monitoring
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
-	"strconv"
+	"runtime"
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
@@ -26,45 +25,45 @@ type Dashboard struct {
 
 // DashboardConfig represents dashboard configuration
 type DashboardConfig struct {
-	Enabled        bool          `yaml:"enabled" json:"enabled"`
-	Host           string        `yaml:"host" json:"host"`
-	Port           int           `yaml:"port" json:"port"`
-	BasePath       string        `yaml:"base_path" json:"base_path"`
-	ReadTimeout    time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout   time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout    time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	EnableProfiling bool         `yaml:"enable_profiling" json:"enable_profiling"`
-	ProfilingPath  string        `yaml:"profiling_path" json:"profiling_path"`
-	EnablePprof    bool          `yaml:"enable_pprof" json:"enable_pprof"`
-	PprofPath      string        `yaml:"pprof_path" json:"pprof_path"`
-	EnableMetrics  bool          `yaml:"enable_metrics" json:"enable_metrics"`
-	MetricsPath    string        `yaml:"metrics_path" json:"metrics_path"`
-	EnableHealth   bool          `yaml:"enable_health" json:"enable_health"`
-	HealthPath     string        `yaml:"health_path" json:"health_path"`
-	EnableDebug    bool          `yaml:"enable_debug" json:"enable_debug"`
-	DebugPath      string        `yaml:"debug_path" json:"debug_path"`
+	Enabled         bool          `yaml:"enabled" json:"enabled"`
+	Host            string        `yaml:"host" json:"host"`
+	Port            int           `yaml:"port" json:"port"`
+	BasePath        string        `yaml:"base_path" json:"base_path"`
+	ReadTimeout     time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout    time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	IdleTimeout     time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	EnableProfiling bool          `yaml:"enable_profiling" json:"enable_profiling"`
+	ProfilingPath   string        `yaml:"profiling_path" json:"profiling_path"`
+	EnablePprof     bool          `yaml:"enable_pprof" json:"enable_pprof"`
+	PprofPath       string        `yaml:"pprof_path" json:"pprof_path"`
+	EnableMetrics   bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	MetricsPath     string        `yaml:"metrics_path" json:"metrics_path"`
+	EnableHealth    bool          `yaml:"enable_health" json:"enable_health"`
+	HealthPath      string        `yaml:"health_path" json:"health_path"`
+	EnableDebug     bool          `yaml:"enable_debug" json:"enable_debug"`
+	DebugPath       string        `yaml:"debug_path" json:"debug_path"`
 }
 
 // DefaultDashboardConfig returns default dashboard configuration
 func DefaultDashboardConfig() *DashboardConfig {
 	return &DashboardConfig{
-		Enabled:        true,
-		Host:           "0.0.0.0",
-		Port:           9090,
-		BasePath:       "/",
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		IdleTimeout:    60 * time.Second,
+		Enabled:         true,
+		Host:            "0.0.0.0",
+		Port:            9090,
+		BasePath:        "/",
+		ReadTimeout:     30 * time.Second,
+		WriteTimeout:    30 * time.Second,
+		IdleTimeout:     60 * time.Second,
 		EnableProfiling: false,
-		ProfilingPath:  "/debug/pprof",
-		EnablePprof:    false,
-		PprofPath:      "/debug/pprof",
-		EnableMetrics:  true,
-		MetricsPath:    "/metrics",
-		EnableHealth:   true,
-		HealthPath:     "/health",
-		EnableDebug:    false,
-		DebugPath:      "/debug",
+		ProfilingPath:   "/debug/pprof",
+		EnablePprof:     false,
+		PprofPath:       "/debug/pprof",
+		EnableMetrics:   true,
+		MetricsPath:     "/metrics",
+		EnableHealth:    true,
+		HealthPath:      "/health",
+		EnableDebug:     false,
+		DebugPath:       "/debug",
 	}
 }
 
@@ -399,23 +398,22 @@ func (d *Dashboard) handleStorageDashboard(w http.ResponseWriter, r *http.Reques
             .then(response => response.json())
             .then(data => {
                 const metricsDiv = document.getElementById('storage-metrics');
-                metricsDiv.innerHTML = \`
-                    <div class="metric">
-                        <h3>Vectors</h3>
-                        <p>Total: ${data.storage_vectors_total || '0'}</p>
-                        <p>Segments: ${data.storage_segments_total || '0'}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Storage Size</h3>
-                        <p>Total: ${formatBytes(data.storage_size_bytes || 0)}</p>
-                        <p>Avg per Vector: ${formatBytes((data.storage_size_bytes || 0) / (data.storage_vectors_total || 1))}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Operations</h3>
-                        <p>Total: ${data.storage_operations_total || '0'}</p>
-                        <p>Avg Duration: ${data.storage_operation_duration_seconds_avg ? data.storage_operation_duration_seconds_avg.toFixed(6) + 's' : 'N/A'}</p>
-                    </div>
-                \`;
+                metricsDiv.innerHTML =
+                    '<div class="metric">' +
+                        '<h3>Vectors</h3>' +
+                        '<p>Total: ' + (data.storage_vectors_total || '0') + '</p>' +
+                        '<p>Segments: ' + (data.storage_segments_total || '0') + '</p>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<h3>Storage Size</h3>' +
+                        '<p>Total: ' + formatBytes(data.storage_size_bytes || 0) + '</p>' +
+                        '<p>Avg per Vector: ' + formatBytes((data.storage_size_bytes || 0) / (data.storage_vectors_total || 1)) + '</p>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<h3>Operations</h3>' +
+                        '<p>Total: ' + (data.storage_operations_total || '0') + '</p>' +
+                        '<p>Avg Duration: ' + (data.storage_operation_duration_seconds_avg ? data.storage_operation_duration_seconds_avg.toFixed(6) + 's' : 'N/A') + '</p>' +
+                    '</div>';
             })
             .catch(error => {
                 document.getElementById('storage-metrics').innerHTML = '<div class="metric">Error loading storage metrics</div>';
@@ -474,20 +472,19 @@ func (d *Dashboard) handleClusterDashboard(w http.ResponseWriter, r *http.Reques
                     data.cluster_health_score ? (data.cluster_health_score * 100).toFixed(1) + '%' : 'N/A';
                 
                 // This would be populated with actual node data from the API
-                document.getElementById('cluster-nodes-list').innerHTML = \`
-                    <div class="node">
-                        <h4>Node 1</h4>
-                        <p>Status: Healthy</p>
-                        <p>Role: Primary</p>
-                        <p>Replication Lag: 0ms</p>
-                    </div>
-                    <div class="node">
-                        <h4>Node 2</h4>
-                        <p>Status: Healthy</p>
-                        <p>Role: Replica</p>
-                        <p>Replication Lag: 12ms</p>
-                    </div>
-                \`;
+                document.getElementById('cluster-nodes-list').innerHTML =
+                    '<div class="node">' +
+                        '<h4>Node 1</h4>' +
+                        '<p>Status: Healthy</p>' +
+                        '<p>Role: Primary</p>' +
+                        '<p>Replication Lag: 0ms</p>' +
+                    '</div>' +
+                    '<div class="node">' +
+                        '<h4>Node 2</h4>' +
+                        '<p>Status: Healthy</p>' +
+                        '<p>Role: Replica</p>' +
+                        '<p>Replication Lag: 12ms</p>' +
+                    '</div>';
             })
             .catch(error => {
                 document.getElementById('cluster-nodes').textContent = 'Error';
@@ -529,26 +526,25 @@ func (d *Dashboard) handleSystemDashboard(w http.ResponseWriter, r *http.Request
             .then(response => response.json())
             .then(data => {
                 const metricsDiv = document.getElementById('system-metrics');
-                metricsDiv.innerHTML = \`
-                    <div class="metric">
-                        <h3>Memory</h3>
-                        <p>Allocated: ${formatBytes(data.system_memory_allocated || 0)}</p>
-                        <p>Total: ${formatBytes(data.system_memory_total || 0)}</p>
-                        <p>Heap: ${formatBytes(data.system_memory_heap || 0)}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Runtime</h3>
-                        <p>Goroutines: ${data.system_goroutines || '0'}</p>
-                        <p>GC Count: ${data.system_gc_count || '0'}</p>
-                        <p>GC Pause Total: ${formatDuration(data.system_gc_pause_total_ns || 0)}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Connections</h3>
-                        <p>HTTP: ${data.protocol_connections_http || '0'}</p>
-                        <p>gRPC: ${data.protocol_connections_grpc || '0'}</p>
-                        <p>WebSocket: ${data.protocol_connections_websocket || '0'}</p>
-                    </div>
-                \`;
+                metricsDiv.innerHTML =
+                    '<div class="metric">' +
+                        '<h3>Memory</h3>' +
+                        '<p>Allocated: ' + formatBytes(data.system_memory_allocated || 0) + '</p>' +
+                        '<p>Total: ' + formatBytes(data.system_memory_total || 0) + '</p>' +
+                        '<p>Heap: ' + formatBytes(data.system_memory_heap || 0) + '</p>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<h3>Runtime</h3>' +
+                        '<p>Goroutines: ' + (data.system_goroutines || '0') + '</p>' +
+                        '<p>GC Count: ' + (data.system_gc_count || '0') + '</p>' +
+                        '<p>GC Pause Total: ' + formatDuration(data.system_gc_pause_total_ns || 0) + '</p>' +
+                    '</div>' +
+                    '<div class="metric">' +
+                        '<h3>Connections</h3>' +
+                        '<p>HTTP: ' + (data.protocol_connections_http || '0') + '</p>' +
+                        '<p>gRPC: ' + (data.protocol_connections_grpc || '0') + '</p>' +
+                        '<p>WebSocket: ' + (data.protocol_connections_websocket || '0') + '</p>' +
+                    '</div>';
             })
             .catch(error => {
                 document.getElementById('system-metrics').innerHTML = '<div class="metric">Error loading system metrics</div>';
@@ -568,7 +564,7 @@ func (d *Dashboard) handleSystemDashboard(w http.ResponseWriter, r *http.Request
             if (seconds < 60) return seconds.toFixed(2) + 's';
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
-            return \`\${minutes}m \${remainingSeconds.toFixed(2)}s\`;
+            return minutes + 'm ' + remainingSeconds.toFixed(2) + 's';
         }
     </script>
 </body>
@@ -617,20 +613,19 @@ func (d *Dashboard) handleReplicationDashboard(w http.ResponseWriter, r *http.Re
                     data.replication_error_rate ? (data.replication_error_rate * 100).toFixed(2) + '%' : '0%';
                 
                 // This would be populated with actual replication stream data
-                document.getElementById('replication-streams').innerHTML = \`
-                    <div class="replication-stream">
-                        <h4>Stream: node1 → node2</h4>
-                        <p>Status: Active</p>
-                        <p>Lag: 12ms</p>
-                        <p>Throughput: 1.2MB/s</p>
-                    </div>
-                    <div class="replication-stream">
-                        <h4>Stream: node1 → node3</h4>
-                        <p>Status: Active</p>
-                        <p>Lag: 24ms</p>
-                        <p>Throughput: 1.1MB/s</p>
-                    </div>
-                \`;
+                document.getElementById('replication-streams').innerHTML =
+                    '<div class="replication-stream">' +
+                        '<h4>Stream: node1 -> node2</h4>' +
+                        '<p>Status: Active</p>' +
+                        '<p>Lag: 12ms</p>' +
+                        '<p>Throughput: 1.2MB/s</p>' +
+                    '</div>' +
+                    '<div class="replication-stream">' +
+                        '<h4>Stream: node1 -> node3</h4>' +
+                        '<p>Status: Active</p>' +
+                        '<p>Lag: 24ms</p>' +
+                        '<p>Throughput: 1.1MB/s</p>' +
+                    '</div>';
             })
             .catch(error => {
                 document.getElementById('replication-throughput').textContent = 'Error';
@@ -695,20 +690,19 @@ func (d *Dashboard) handleCacheDashboard(w http.ResponseWriter, r *http.Request)
                 document.getElementById('cache-evictions').textContent = data.cache_evictions_total || '0';
                 
                 // This would be populated with actual cache data
-                document.getElementById('cache-list').innerHTML = \`
-                    <div class="cache">
-                        <h4>Vector Cache</h4>
-                        <p>Size: ${formatBytes(data.cache_size_vector_cache || 0)}</p>
-                        <p>Hit Rate: ${calculateHitRate(data.cache_hits_vector_cache || 0, data.cache_misses_vector_cache || 0)}%</p>
-                        <p>Evictions: ${data.cache_evictions_vector_cache || 0}</p>
-                    </div>
-                    <div class="cache">
-                        <h4>Segment Cache</h4>
-                        <p>Size: ${formatBytes(data.cache_size_segment_cache || 0)}</p>
-                        <p>Hit Rate: ${calculateHitRate(data.cache_hits_segment_cache || 0, data.cache_misses_segment_cache || 0)}%</p>
-                        <p>Evictions: ${data.cache_evictions_segment_cache || 0}</p>
-                    </div>
-                \`;
+                document.getElementById('cache-list').innerHTML =
+                    '<div class="cache">' +
+                        '<h4>Vector Cache</h4>' +
+                        '<p>Size: ' + formatBytes(data.cache_size_vector_cache || 0) + '</p>' +
+                        '<p>Hit Rate: ' + calculateHitRate(data.cache_hits_vector_cache || 0, data.cache_misses_vector_cache || 0) + '%</p>' +
+                        '<p>Evictions: ' + (data.cache_evictions_vector_cache || 0) + '</p>' +
+                    '</div>' +
+                    '<div class="cache">' +
+                        '<h4>Segment Cache</h4>' +
+                        '<p>Size: ' + formatBytes(data.cache_size_segment_cache || 0) + '</p>' +
+                        '<p>Hit Rate: ' + calculateHitRate(data.cache_hits_segment_cache || 0, data.cache_misses_segment_cache || 0) + '%</p>' +
+                        '<p>Evictions: ' + (data.cache_evictions_segment_cache || 0) + '</p>' +
+                    '</div>';
             })
             .catch(error => {
                 document.getElementById('cache-size').textContent = 'Error';
@@ -753,11 +747,11 @@ func (d *Dashboard) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"status":      "healthy",
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
-		"uptime":      time.Since(startTime).String(),
-		"version":     "1.0.0",
-		"checks":      healthChecks,
+		"status":    "healthy",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"uptime":    time.Since(startTime).String(),
+		"version":   "1.0.0",
+		"checks":    healthChecks,
 	}
 
 	if !allHealthy {
@@ -872,12 +866,12 @@ func (d *Dashboard) handleAPIHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"status":      "healthy",
-		"timestamp":   time.Now().UTC().Format(time.RFC3339),
-		"uptime":      time.Since(startTime).String(),
-		"version":     "1.0.0",
-		"checks":      healthChecks,
-		"healthy":     allHealthy,
+		"status":    "healthy",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"uptime":    time.Since(startTime).String(),
+		"version":   "1.0.0",
+		"checks":    healthChecks,
+		"healthy":   allHealthy,
 	}
 
 	if !allHealthy {
@@ -896,13 +890,13 @@ func (d *Dashboard) handleAPIAlerts(w http.ResponseWriter, r *http.Request) {
 	apiAlerts := make([]map[string]interface{}, 0, len(alerts))
 	for _, alert := range alerts {
 		apiAlerts = append(apiAlerts, map[string]interface{}{
-			"id":          alert.ID,
-			"name":        alert.Name,
-			"description": alert.Description,
-			"severity":    alert.Severity,
+			"id":           alert.ID,
+			"name":         alert.Name,
+			"description":  alert.Description,
+			"severity":     alert.Severity,
 			"last_trigger": alert.LastTrigger.Format(time.RFC3339),
-			"count":       alert.Count,
-			"enabled":     alert.Enabled,
+			"count":        alert.Count,
+			"enabled":      alert.Enabled,
 		})
 	}
 
@@ -954,13 +948,13 @@ func (d *Dashboard) getSystemStatus() map[string]interface{} {
 		"service_version":   d.collector.config.ServiceVersion,
 		"service_instance":  d.collector.config.ServiceInstance,
 		"service_up":        true, // This would be determined by actual service status
-		"uptime":           time.Since(startTime).String(),
-		"timestamp":        time.Now().UTC().Format(time.RFC3339),
-		"total_checks":     len(healthChecks),
-		"healthy_checks":   healthyChecks,
-		"active_alerts":    activeAlerts,
+		"uptime":            time.Since(startTime).String(),
+		"timestamp":         time.Now().UTC().Format(time.RFC3339),
+		"total_checks":      len(healthChecks),
+		"healthy_checks":    healthyChecks,
+		"active_alerts":     activeAlerts,
 		"dashboard_enabled": d.config.Enabled,
-		"tracing_enabled":  d.tracer.config.Enabled,
+		"tracing_enabled":   d.tracer.config.Enabled,
 	}
 }
 
@@ -977,45 +971,45 @@ func (d *Dashboard) getAPIMetrics() map[string]interface{} {
 			"up":       true,
 		},
 		"system": map[string]interface{}{
-			"goroutines":         runtime.NumGoroutine(),
-			"memory_allocated":   getMemoryAlloc(),
-			"memory_total":       getMemoryTotal(),
-			"memory_heap":        getMemoryHeap(),
-			"gc_count":           getGCCount(),
-			"gc_pause_total_ns":  getGCPauseTotal(),
+			"goroutines":        runtime.NumGoroutine(),
+			"memory_allocated":  getMemoryAlloc(),
+			"memory_total":      getMemoryTotal(),
+			"memory_heap":       getMemoryHeap(),
+			"gc_count":          getGCCount(),
+			"gc_pause_total_ns": getGCPauseTotal(),
 		},
 		"storage": map[string]interface{}{
-			"vectors_total":      getStorageVectors(),
-			"segments_total":     getStorageSegments(),
-			"size_bytes":         getStorageSize(),
-			"operations_total":   getStorageOperations(),
+			"vectors_total":                  getStorageVectors(),
+			"segments_total":                 getStorageSegments(),
+			"size_bytes":                     getStorageSize(),
+			"operations_total":               getStorageOperations(),
 			"operation_duration_seconds_avg": getStorageOperationDuration(),
 		},
 		"cluster": map[string]interface{}{
-			"nodes_total":        getClusterNodes(),
-			"replicas_total":     getClusterReplicas(),
-			"health_score":       getClusterHealthScore(),
+			"nodes_total":    getClusterNodes(),
+			"replicas_total": getClusterReplicas(),
+			"health_score":   getClusterHealthScore(),
 		},
 		"search": map[string]interface{}{
-			"count_total":        getSearchCount(),
+			"count_total":          getSearchCount(),
 			"duration_seconds_avg": getSearchDuration(),
-			"results_count_avg":  getSearchResults(),
-			"error_rate":         getSearchErrorRate(),
+			"results_count_avg":    getSearchResults(),
+			"error_rate":           getSearchErrorRate(),
 		},
 		"replication": map[string]interface{}{
 			"throughput_bytes_total": getReplicationThroughput(),
-			"lag_seconds_avg":       getReplicationLag(),
-			"error_rate":            getReplicationErrorRate(),
+			"lag_seconds_avg":        getReplicationLag(),
+			"error_rate":             getReplicationErrorRate(),
 		},
 		"cache": map[string]interface{}{
-			"size_bytes":         getCacheSize(),
-			"hits_total":        getCacheHits(),
-			"misses_total":      getCacheMisses(),
-			"evictions_total":   getCacheEvictions(),
+			"size_bytes":      getCacheSize(),
+			"hits_total":      getCacheHits(),
+			"misses_total":    getCacheMisses(),
+			"evictions_total": getCacheEvictions(),
 		},
 		"protocol": map[string]interface{}{
-			"connections_http":     getProtocolConnections("http"),
-			"connections_grpc":     getProtocolConnections("grpc"),
+			"connections_http":      getProtocolConnections("http"),
+			"connections_grpc":      getProtocolConnections("grpc"),
 			"connections_websocket": getProtocolConnections("websocket"),
 		},
 	}
@@ -1162,10 +1156,3 @@ func getProtocolConnections(protocol string) int64 {
 	// Placeholder - would gather from actual metrics
 	return 0
 }
-
-// Import required packages
-import (
-	"context"
-	"net/http"
-	"runtime"
-)

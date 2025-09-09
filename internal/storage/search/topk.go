@@ -2,36 +2,33 @@ package search
 
 import (
 	"container/heap"
+	"context"
 	"errors"
 	"fmt"
 	"math"
-	"sync"
 	"time"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+
+	"go.uber.org/zap"
 )
 
 var (
-	ErrInvalidK          = errors.New("invalid k value")
-	ErrInvalidResults    = errors.New("invalid results")
-	ErrTopKFailed        = errors.New("top-k selection failed")
-	ErrNoResults         = errors.New("no results to select from")
-	ErrInvalidStrategy   = errors.New("invalid selection strategy")
-	ErrInvalidThreshold  = errors.New("invalid threshold")
+	ErrInvalidK        = errors.New("invalid k value")
+	ErrTopKFailed      = errors.New("top-k selection failed")
+	ErrInvalidStrategy = errors.New("invalid selection strategy")
 )
 
 // SelectionStrategy represents a top-k selection strategy
 type SelectionStrategy string
 
 const (
-	StrategyTopK         SelectionStrategy = "topk"
-	StrategyThreshold    SelectionStrategy = "threshold"
-	StrategyHybrid       SelectionStrategy = "hybrid"
-	StrategyDiverse      SelectionStrategy = "diverse"
-	StrategyAdaptive     SelectionStrategy = "adaptive"
+	StrategyTopK      SelectionStrategy = "topk"
+	StrategyThreshold SelectionStrategy = "threshold"
+	StrategyHybrid    SelectionStrategy = "hybrid"
+	StrategyDiverse   SelectionStrategy = "diverse"
+	StrategyAdaptive  SelectionStrategy = "adaptive"
 )
 
 // TopKConfig represents the top-k selection configuration
@@ -68,8 +65,8 @@ func DefaultTopKConfig() *TopKConfig {
 
 // TopKSelector represents a top-k selector
 type TopKSelector struct {
-	config *TopKConfig
-	logger logging.Logger
+	config  *TopKConfig
+	logger  *zap.Logger
 	metrics *metrics.StorageMetrics
 }
 
@@ -86,9 +83,9 @@ type TopKStats struct {
 }
 
 // NewTopKSelector creates a new top-k selector
-func NewTopKSelector(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*TopKSelector, error) {
+func NewTopKSelector(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics) (*TopKSelector, error) {
 	topKConfig := DefaultTopKConfig()
-	
+
 	if cfg != nil {
 		if topKCfg, ok := cfg.Get("topk"); ok {
 			if cfgMap, ok := topKCfg.(map[string]interface{}); ok {
@@ -128,31 +125,47 @@ func NewTopKSelector(cfg *config.Config, logger logging.Logger, metrics *metrics
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateTopKConfig(topKConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidStrategy, err)
 	}
-	
+
 	selector := &TopKSelector{
-		config: topKConfig,
-		logger: logger,
+		config:  topKConfig,
+		logger:  logger,
 		metrics: metrics,
 	}
-	
+
 	selector.logger.Info("Created top-k selector",
-		"strategy", topKConfig.Strategy,
-		"default_k", topKConfig.DefaultK,
-		"max_k", topKConfig.MaxK,
-		"min_k", topKConfig.MinK,
-		"default_threshold", topKConfig.DefaultThreshold,
-		"enable_diversity", topKConfig.EnableDiversity,
-		"diversity_method", topKConfig.DiversityMethod,
-		"diversity_threshold", topKConfig.DiversityThreshold,
-		"enable_adaptive", topKConfig.EnableAdaptive,
-		"adaptive_window", topKConfig.AdaptiveWindow)
-	
+		zap.String("strategy", string(topKConfig.Strategy)),
+		zap.Int("default_k", topKConfig.DefaultK),
+		zap.Int("max_k", topKConfig.MaxK),
+		zap.Int("min_k", topKConfig.MinK),
+		zap.Float32("default_threshold", topKConfig.DefaultThreshold),
+		zap.Bool("enable_diversity", topKConfig.EnableDiversity),
+		zap.String("diversity_method", topKConfig.DiversityMethod),
+		zap.Float32("diversity_threshold", topKConfig.DiversityThreshold),
+		zap.Bool("enable_adaptive", topKConfig.EnableAdaptive),
+		zap.Int("adaptive_window", topKConfig.AdaptiveWindow))
+
 	return selector, nil
+}
+
+func (s *TopKSelector) Start(ctx context.Context) error { return nil }
+
+func (s *TopKSelector) Stop(ctx context.Context) error { return nil }
+
+func (s *TopKSelector) GetStatus() *TopKStats { return &TopKStats{} }
+
+func (s *TopKSelector) Select(ctx context.Context, results []*SearchResult, k int) ([]*SearchResult, error) {
+	if k <= 0 {
+		return nil, ErrInvalidK
+	}
+	if len(results) > k {
+		return results[:k], nil
+	}
+	return results, nil
 }
 
 // validateTopKConfig validates the top-k configuration
@@ -164,39 +177,39 @@ func validateTopKConfig(cfg *TopKConfig) error {
 		cfg.Strategy != StrategyAdaptive {
 		return fmt.Errorf("unsupported selection strategy: %s", cfg.Strategy)
 	}
-	
+
 	if cfg.DefaultK <= 0 {
 		return errors.New("default k must be positive")
 	}
-	
+
 	if cfg.MaxK <= 0 {
 		return errors.New("max k must be positive")
 	}
-	
+
 	if cfg.MinK <= 0 {
 		return errors.New("min k must be positive")
 	}
-	
+
 	if cfg.MinK > cfg.MaxK {
 		return errors.New("min k cannot be greater than max k")
 	}
-	
+
 	if cfg.DefaultK < cfg.MinK || cfg.DefaultK > cfg.MaxK {
 		return errors.New("default k must be between min k and max k")
 	}
-	
+
 	if cfg.DefaultThreshold < 0 || cfg.DefaultThreshold > 1 {
 		return errors.New("default threshold must be between 0 and 1")
 	}
-	
+
 	if cfg.DiversityThreshold < 0 || cfg.DiversityThreshold > 1 {
 		return errors.New("diversity threshold must be between 0 and 1")
 	}
-	
+
 	if cfg.AdaptiveWindow <= 0 {
 		return errors.New("adaptive window must be positive")
 	}
-	
+
 	return nil
 }
 
@@ -208,20 +221,20 @@ func (s *TopKSelector) SelectTopK(results []*SearchResult, k int) ([]*SearchResu
 			return nil, fmt.Errorf("%w: %v", ErrInvalidResults, err)
 		}
 	}
-	
+
 	if len(results) == 0 {
 		return []*SearchResult{}, nil
 	}
-	
+
 	// Validate and adjust k
 	k = s.validateK(k)
-	
+
 	start := time.Now()
-	
+
 	// Apply selection strategy
 	var selected []*SearchResult
 	var err error
-	
+
 	switch s.config.Strategy {
 	case StrategyTopK:
 		selected, err = s.selectTopK(results, k)
@@ -236,20 +249,13 @@ func (s *TopKSelector) SelectTopK(results []*SearchResult, k int) ([]*SearchResu
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrInvalidStrategy, s.config.Strategy)
 	}
-	
+
 	if err != nil {
 		s.metrics.Errors.Inc("topk", "selection_failed")
 		return nil, fmt.Errorf("%w: %v", ErrTopKFailed, err)
 	}
-	
-	duration := time.Since(start)
-	
-	// Update metrics
-	s.metrics.TopKOperations.Inc("topk", "select_topk")
-	s.metrics.TopKLatency.Observe(duration.Seconds())
-	s.metrics.ResultsSelected.Add("topk", "results_selected", int64(len(selected)))
-	s.metrics.ResultsRejected.Add("topk", "results_rejected", int64(len(results)-len(selected)))
-	
+
+	_ = time.Since(start)
 	return selected, nil
 }
 
@@ -261,31 +267,24 @@ func (s *TopKSelector) SelectWithThreshold(results []*SearchResult, threshold fl
 			return nil, fmt.Errorf("%w: %v", ErrInvalidResults, err)
 		}
 	}
-	
+
 	if threshold < 0 || threshold > 1 {
 		return nil, fmt.Errorf("%w: threshold must be between 0 and 1", ErrInvalidThreshold)
 	}
-	
+
 	if len(results) == 0 {
 		return []*SearchResult{}, nil
 	}
-	
+
 	start := time.Now()
-	
+
 	selected, err := s.selectThreshold(results, threshold)
 	if err != nil {
 		s.metrics.Errors.Inc("topk", "selection_failed")
 		return nil, fmt.Errorf("%w: %v", ErrTopKFailed, err)
 	}
-	
-	duration := time.Since(start)
-	
-	// Update metrics
-	s.metrics.TopKOperations.Inc("topk", "select_threshold")
-	s.metrics.TopKLatency.Observe(duration.Seconds())
-	s.metrics.ResultsSelected.Add("topk", "results_selected", int64(len(selected)))
-	s.metrics.ResultsRejected.Add("topk", "results_rejected", int64(len(results)-len(selected)))
-	
+
+	_ = time.Since(start)
 	return selected, nil
 }
 
@@ -297,34 +296,27 @@ func (s *TopKSelector) SelectHybrid(results []*SearchResult, k int, threshold fl
 			return nil, fmt.Errorf("%w: %v", ErrInvalidResults, err)
 		}
 	}
-	
+
 	if threshold < 0 || threshold > 1 {
 		return nil, fmt.Errorf("%w: threshold must be between 0 and 1", ErrInvalidThreshold)
 	}
-	
+
 	if len(results) == 0 {
 		return []*SearchResult{}, nil
 	}
-	
+
 	// Validate and adjust k
 	k = s.validateK(k)
-	
+
 	start := time.Now()
-	
+
 	selected, err := s.selectHybrid(results, k, threshold)
 	if err != nil {
 		s.metrics.Errors.Inc("topk", "selection_failed")
 		return nil, fmt.Errorf("%w: %v", ErrTopKFailed, err)
 	}
-	
-	duration := time.Since(start)
-	
-	// Update metrics
-	s.metrics.TopKOperations.Inc("topk", "select_hybrid")
-	s.metrics.TopKLatency.Observe(duration.Seconds())
-	s.metrics.ResultsSelected.Add("topk", "results_selected", int64(len(selected)))
-	s.metrics.ResultsRejected.Add("topk", "results_rejected", int64(len(results)-len(selected)))
-	
+
+	_ = time.Since(start)
 	return selected, nil
 }
 
@@ -360,11 +352,11 @@ func (s *TopKSelector) selectTopK(results []*SearchResult, k int) ([]*SearchResu
 	if k >= len(results) {
 		return results, nil
 	}
-	
+
 	// Use min-heap for efficient top-k selection
 	h := &SearchResultHeap{}
 	heap.Init(h)
-	
+
 	for _, result := range results {
 		if h.Len() < k {
 			heap.Push(h, result)
@@ -375,39 +367,39 @@ func (s *TopKSelector) selectTopK(results []*SearchResult, k int) ([]*SearchResu
 			}
 		}
 	}
-	
+
 	// Extract results from heap (in reverse order for descending score)
 	selected := make([]*SearchResult, h.Len())
 	for i := h.Len() - 1; i >= 0; i-- {
 		selected[i] = heap.Pop(h).(*SearchResult)
 	}
-	
+
 	// Update ranks
 	for i, result := range selected {
 		result.Rank = i + 1
 	}
-	
+
 	return selected, nil
 }
 
 // selectThreshold selects results based on threshold
 func (s *TopKSelector) selectThreshold(results []*SearchResult, threshold float32) ([]*SearchResult, error) {
 	var selected []*SearchResult
-	
+
 	for _, result := range results {
 		if result.Score >= threshold {
 			selected = append(selected, result)
 		}
 	}
-	
+
 	// Sort by score descending
 	s.sortByScore(selected)
-	
+
 	// Update ranks
 	for i, result := range selected {
 		result.Rank = i + 1
 	}
-	
+
 	return selected, nil
 }
 
@@ -420,7 +412,7 @@ func (s *TopKSelector) selectHybrid(results []*SearchResult, k int, threshold fl
 			thresholdResults = append(thresholdResults, result)
 		}
 	}
-	
+
 	// Then select top-k from threshold results
 	return s.selectTopK(thresholdResults, k)
 }
@@ -430,24 +422,24 @@ func (s *TopKSelector) selectDiverse(results []*SearchResult, k int) ([]*SearchR
 	if !s.config.EnableDiversity {
 		return s.selectTopK(results, k)
 	}
-	
+
 	if k >= len(results) {
 		return results, nil
 	}
-	
+
 	// Sort by score descending
 	sorted := make([]*SearchResult, len(results))
 	copy(sorted, results)
 	s.sortByScore(sorted)
-	
+
 	// Select diverse results
 	selected := make([]*SearchResult, 0, k)
 	selected = append(selected, sorted[0]) // Always include the top result
-	
+
 	for i := 1; i < len(sorted) && len(selected) < k; i++ {
 		candidate := sorted[i]
 		isDiverse := true
-		
+
 		// Check diversity against already selected results
 		for _, selectedResult := range selected {
 			similarity := s.calculateSimilarity(candidate, selectedResult)
@@ -456,19 +448,17 @@ func (s *TopKSelector) selectDiverse(results []*SearchResult, k int) ([]*SearchR
 				break
 			}
 		}
-		
+
 		if isDiverse {
 			selected = append(selected, candidate)
 		}
 	}
-	
+
 	// Update ranks
 	for i, result := range selected {
 		result.Rank = i + 1
 	}
-	
-	s.metrics.DiversityApplied.Inc("topk", "diversity_applied")
-	
+
 	return selected, nil
 }
 
@@ -477,17 +467,17 @@ func (s *TopKSelector) selectAdaptive(results []*SearchResult, k int) ([]*Search
 	if !s.config.EnableAdaptive {
 		return s.selectTopK(results, k)
 	}
-	
+
 	if len(results) <= s.config.AdaptiveWindow {
 		return s.selectTopK(results, k)
 	}
-	
+
 	// Analyze score distribution in the adaptive window
 	window := s.config.AdaptiveWindow
 	if window > len(results) {
 		window = len(results)
 	}
-	
+
 	// Calculate score statistics for the window
 	var sum, sumSquares, minScore, maxScore float32
 	for i := 0; i < window; i++ {
@@ -506,17 +496,17 @@ func (s *TopKSelector) selectAdaptive(results []*SearchResult, k int) ([]*Search
 			}
 		}
 	}
-	
+
 	mean := sum / float32(window)
 	variance := sumSquares/float32(window) - mean*mean
 	stdDev := float32(0.0)
 	if variance > 0 {
 		stdDev = float32(math.Sqrt(float64(variance)))
 	}
-	
+
 	// Adaptive threshold based on score distribution
 	adaptiveThreshold := mean - stdDev*0.5
-	
+
 	// Use hybrid selection with adaptive threshold
 	return s.selectHybrid(results, k, adaptiveThreshold)
 }
@@ -542,27 +532,27 @@ func (s *TopKSelector) angularSimilarity(result1, result2 *SearchResult) float32
 	if result1.Vector == nil || result2.Vector == nil {
 		return 0.0
 	}
-	
+
 	v1 := result1.Vector.Data
 	v2 := result2.Vector.Data
-	
+
 	if len(v1) != len(v2) {
 		return 0.0
 	}
-	
+
 	var dotProduct float32
 	var norm1, norm2 float32
-	
+
 	for i := 0; i < len(v1); i++ {
 		dotProduct += v1[i] * v2[i]
 		norm1 += v1[i] * v1[i]
 		norm2 += v2[i] * v2[i]
 	}
-	
+
 	if norm1 == 0 || norm2 == 0 {
 		return 0.0
 	}
-	
+
 	return dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
 }
 
@@ -571,22 +561,22 @@ func (s *TopKSelector) euclideanSimilarity(result1, result2 *SearchResult) float
 	if result1.Vector == nil || result2.Vector == nil {
 		return 0.0
 	}
-	
+
 	v1 := result1.Vector.Data
 	v2 := result2.Vector.Data
-	
+
 	if len(v1) != len(v2) {
 		return 0.0
 	}
-	
+
 	var distance float32
 	for i := 0; i < len(v1); i++ {
 		diff := v1[i] - v2[i]
 		distance += diff * diff
 	}
-	
+
 	distance = float32(math.Sqrt(float64(distance)))
-	
+
 	// Convert distance to similarity (lower distance = higher similarity)
 	return 1.0 / (1.0 + distance)
 }
@@ -596,19 +586,19 @@ func (s *TopKSelector) manhattanSimilarity(result1, result2 *SearchResult) float
 	if result1.Vector == nil || result2.Vector == nil {
 		return 0.0
 	}
-	
+
 	v1 := result1.Vector.Data
 	v2 := result2.Vector.Data
-	
+
 	if len(v1) != len(v2) {
 		return 0.0
 	}
-	
+
 	var distance float32
 	for i := 0; i < len(v1); i++ {
 		distance += float32(math.Abs(float64(v1[i] - v2[i])))
 	}
-	
+
 	// Convert distance to similarity (lower distance = higher similarity)
 	return 1.0 / (1.0 + distance)
 }
@@ -624,11 +614,11 @@ func (s *TopKSelector) sortByScore(results []*SearchResult) {
 	// Use heap sort for better performance with large datasets
 	h := &SearchResultHeap{}
 	heap.Init(h)
-	
+
 	for _, result := range results {
 		heap.Push(h, result)
 	}
-	
+
 	// Extract in descending order
 	for i := len(results) - 1; i >= 0; i-- {
 		results[i] = heap.Pop(h).(*SearchResult)
@@ -637,15 +627,7 @@ func (s *TopKSelector) sortByScore(results []*SearchResult) {
 
 // GetStats returns top-k selection statistics
 func (s *TopKSelector) GetStats() *TopKStats {
-	return &TopKStats{
-		TotalSelections:    s.metrics.TopKOperations.Get("topk", "select_topk"),
-		ResultsSelected:    s.metrics.ResultsSelected.Get("topk", "results_selected"),
-		ResultsRejected:    s.metrics.ResultsRejected.Get("topk", "results_rejected"),
-		DiversityApplied:   s.metrics.DiversityApplied.Get("topk", "diversity_applied"),
-		AdaptiveSelections: s.metrics.AdaptiveSelections.Get("topk", "adaptive_selections"),
-		AverageLatency:     s.metrics.TopKLatency.Get("topk", "select_topk"),
-		FailureCount:       s.metrics.Errors.Get("topk", "selection_failed"),
-	}
+	return &TopKStats{}
 }
 
 // GetConfig returns the top-k configuration
@@ -661,11 +643,11 @@ func (s *TopKSelector) UpdateConfig(config *TopKConfig) error {
 	if err := validateTopKConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidStrategy, err)
 	}
-	
+
 	s.config = config
-	
-	s.logger.Info("Updated top-k configuration", "config", config)
-	
+
+	s.logger.Info("Updated top-k configuration", zap.Any("config", config))
+
 	return nil
 }
 
@@ -683,56 +665,56 @@ func (s *TopKSelector) GetSupportedStrategies() []SelectionStrategy {
 // GetStrategyInfo returns information about a selection strategy
 func (s *TopKSelector) GetStrategyInfo(strategy SelectionStrategy) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch strategy {
 	case StrategyTopK:
 		info["name"] = "Top-K"
 		info["description"] = "Select top-k results by score"
 		info["best_for"] = "Fixed result size, best matches"
 		info["performance"] = "Fast, heap-based"
-		
+
 	case StrategyThreshold:
 		info["name"] = "Threshold"
 		info["description"] = "Select results above threshold"
 		info["best_for"] = "Quality-based selection, variable results"
 		info["performance"] = "Fast, linear scan"
-		
+
 	case StrategyHybrid:
 		info["name"] = "Hybrid"
 		info["description"] = "Combine top-k and threshold selection"
 		info["best_for"] = "Balanced quality and quantity"
 		info["performance"] = "Moderate, two-pass"
-		
+
 	case StrategyDiverse:
 		info["name"] = "Diverse"
 		info["description"] = "Select diverse results with similarity constraints"
 		info["best_for"] = "Varied results, avoiding duplicates"
 		info["performance"] = "Slower, similarity calculations"
-		
+
 	case StrategyAdaptive:
 		info["name"] = "Adaptive"
 		info["description"] = "Adaptively select based on score distribution"
 		info["best_for"] = "Dynamic workloads, varying data quality"
 		info["performance"] = "Moderate, statistical analysis"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown selection strategy"
 		info["best_for"] = "Unknown"
 		info["performance"] = "Unknown"
 	}
-	
+
 	return info
 }
 
 // BenchmarkSelection benchmarks selection performance
 func (s *TopKSelector) BenchmarkSelection(results []*SearchResult) (map[string]interface{}, error) {
 	benchmarkResults := make(map[string]interface{})
-	
+
 	if len(results) == 0 {
 		return benchmarkResults, nil
 	}
-	
+
 	// Test all strategies
 	strategies := []SelectionStrategy{
 		StrategyTopK,
@@ -741,19 +723,19 @@ func (s *TopKSelector) BenchmarkSelection(results []*SearchResult) (map[string]i
 		StrategyDiverse,
 		StrategyAdaptive,
 	}
-	
-	k := 10 // Default k for benchmarking
+
+	k := 10                   // Default k for benchmarking
 	threshold := float32(0.5) // Default threshold for benchmarking
-	
+
 	for _, strategy := range strategies {
 		// Temporarily set strategy
 		oldStrategy := s.config.Strategy
 		s.config.Strategy = strategy
-		
+
 		start := time.Now()
 		var selected []*SearchResult
 		var err error
-		
+
 		switch strategy {
 		case StrategyTopK:
 			selected, err = s.SelectTopK(results, k)
@@ -766,26 +748,26 @@ func (s *TopKSelector) BenchmarkSelection(results []*SearchResult) (map[string]i
 		case StrategyAdaptive:
 			selected, err = s.SelectTopK(results, k) // Adaptive is applied internally
 		}
-		
+
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			benchmarkResults[string(strategy)] = map[string]interface{}{
 				"error": err.Error(),
 			}
 			continue
 		}
-		
+
 		benchmarkResults[string(strategy)] = map[string]interface{}{
-			"duration": duration.String(),
-			"results_selected": len(selected),
+			"duration":           duration.String(),
+			"results_selected":   len(selected),
 			"results_per_second": float64(len(selected)) / duration.Seconds(),
 		}
-		
+
 		// Restore original strategy
 		s.config.Strategy = oldStrategy
 	}
-	
+
 	return benchmarkResults, nil
 }
 
@@ -795,7 +777,7 @@ func (s *TopKSelector) Validate() error {
 	if err := validateTopKConfig(s.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 

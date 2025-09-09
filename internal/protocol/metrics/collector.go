@@ -2,9 +2,15 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
+
+	"strings"
+
+	"go.uber.org/zap"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -15,26 +21,26 @@ import (
 var (
 	ErrCollectorNotRunning     = errors.New("metrics collector not running")
 	ErrCollectorAlreadyRunning = errors.New("metrics collector already running")
-	ErrInvalidConfig         = errors.New("invalid metrics collector configuration")
-	ErrMetricNotFound        = errors.New("metric not found")
-	ErrInvalidMetricType     = errors.New("invalid metric type")
+	ErrInvalidConfig           = errors.New("invalid metrics collector configuration")
+	ErrMetricNotFound          = errors.New("metric not found")
+	ErrInvalidMetricType       = errors.New("invalid metric type")
 )
 
 // MetricsConfig represents the metrics collector configuration
 type MetricsConfig struct {
-	Enabled           bool                   `yaml:"enabled" json:"enabled"`
-	EnableMetrics     bool                   `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableLogging     bool                   `yaml:"enable_logging" json:"enable_logging"`
-	EnableTracing     bool                   `yaml:"enable_tracing" json:"enable_tracing"`
-	EnableAggregation bool                   `yaml:"enable_aggregation" json:"enable_aggregation"`
-	EnableExport      bool                   `yaml:"enable_export" json:"enable_export"`
-	AggregationWindow time.Duration          `yaml:"aggregation_window" json:"aggregation_window"`
-	ExportInterval    time.Duration          `yaml:"export_interval" json:"export_interval"`
-	MaxMetrics        int                    `yaml:"max_metrics" json:"max_metrics"`
-	MetricTTL         time.Duration          `yaml:"metric_ttl" json:"metric_ttl"`
-	CustomMetrics     []CustomMetricConfig   `yaml:"custom_metrics" json:"custom_metrics"`
-	Exporters         []ExporterConfig       `yaml:"exporters" json:"exporters"`
-	Aggregators       []AggregatorConfig     `yaml:"aggregators" json:"aggregators"`
+	Enabled           bool                 `yaml:"enabled" json:"enabled"`
+	EnableMetrics     bool                 `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableLogging     bool                 `yaml:"enable_logging" json:"enable_logging"`
+	EnableTracing     bool                 `yaml:"enable_tracing" json:"enable_tracing"`
+	EnableAggregation bool                 `yaml:"enable_aggregation" json:"enable_aggregation"`
+	EnableExport      bool                 `yaml:"enable_export" json:"enable_export"`
+	AggregationWindow time.Duration        `yaml:"aggregation_window" json:"aggregation_window"`
+	ExportInterval    time.Duration        `yaml:"export_interval" json:"export_interval"`
+	MaxMetrics        int                  `yaml:"max_metrics" json:"max_metrics"`
+	MetricTTL         time.Duration        `yaml:"metric_ttl" json:"metric_ttl"`
+	CustomMetrics     []CustomMetricConfig `yaml:"custom_metrics" json:"custom_metrics"`
+	Exporters         []ExporterConfig     `yaml:"exporters" json:"exporters"`
+	Aggregators       []AggregatorConfig   `yaml:"aggregators" json:"aggregators"`
 }
 
 // CustomMetricConfig represents a custom metric configuration
@@ -60,12 +66,12 @@ type ExporterConfig struct {
 
 // AggregatorConfig represents an aggregator configuration
 type AggregatorConfig struct {
-	Name        string                 `yaml:"name" json:"name"`
-	Type        string                 `yaml:"type" json:"type"`
-	Enabled     bool                   `yaml:"enabled" json:"enabled"`
-	Window      time.Duration          `yaml:"window" json:"window"`
-	Functions   []string               `yaml:"functions" json:"functions"`
-	Config      map[string]interface{} `yaml:"config" json:"config"`
+	Name      string                 `yaml:"name" json:"name"`
+	Type      string                 `yaml:"type" json:"type"`
+	Enabled   bool                   `yaml:"enabled" json:"enabled"`
+	Window    time.Duration          `yaml:"window" json:"window"`
+	Functions []string               `yaml:"functions" json:"functions"`
+	Config    map[string]interface{} `yaml:"config" json:"config"`
 }
 
 // DefaultMetricsConfig returns the default metrics collector configuration
@@ -179,14 +185,14 @@ func getDefaultAggregators() []AggregatorConfig {
 
 // MetricEntry represents a metric entry
 type MetricEntry struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"`
-	Value       float64                `json:"value"`
-	Labels      map[string]string      `json:"labels"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Source      string                 `json:"source"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	ID        string                 `json:"id"`
+	Name      string                 `json:"name"`
+	Type      string                 `json:"type"`
+	Value     float64                `json:"value"`
+	Labels    map[string]string      `json:"labels"`
+	Timestamp time.Time              `json:"timestamp"`
+	Source    string                 `json:"source"`
+	Metadata  map[string]interface{} `json:"metadata"`
 }
 
 // AggregatedMetric represents an aggregated metric
@@ -202,44 +208,47 @@ type AggregatedMetric struct {
 
 // MetricsCollector represents a metrics collector
 type MetricsCollector struct {
-	config     *MetricsConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	
+	config  *MetricsConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+
 	// Metrics storage
-	metrics    []MetricEntry
+	entries     []MetricEntry
 	metricIndex map[string]int
-	mu         sync.RWMutex
-	
+	mu          sync.RWMutex
+
 	// Aggregation
 	aggregators map[string]*Aggregator
 	aggMu       sync.RWMutex
-	
+
 	// Export
-	exporters   map[string]*Exporter
-	exportMu    sync.RWMutex
-	
+	exporters map[string]*Exporter
+	exportMu  sync.RWMutex
+
 	// Lifecycle
-	started    bool
-	stopped    bool
-	startTime  time.Time
-	
+	started   bool
+	stopped   bool
+	startTime time.Time
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	// Statistics
-	stats      *MetricsCollectorStats
+	stats *MetricsCollectorStats
 }
 
 // MetricsCollectorStats represents metrics collector statistics
 type MetricsCollectorStats struct {
-	TotalMetrics      int64         `json:"total_metrics"`
-	ActiveMetrics     int64         `json:"active_metrics"`
-	ExpiredMetrics    int64         `json:"expired_metrics"`
-	AggregatedMetrics int64         `json:"aggregated_metrics"`
-	ExportedMetrics   int64         `json:"exported_metrics"`
-	FailedExports     int64         `json:"failed_exports"`
+	TotalMetrics      int64            `json:"total_metrics"`
+	ActiveMetrics     int64            `json:"active_metrics"`
+	ExpiredMetrics    int64            `json:"expired_metrics"`
+	AggregatedMetrics int64            `json:"aggregated_metrics"`
+	ExportedMetrics   int64            `json:"exported_metrics"`
+	FailedExports     int64            `json:"failed_exports"`
 	MetricsByType     map[string]int64 `json:"metrics_by_type"`
 	MetricsBySource   map[string]int64 `json:"metrics_by_source"`
-	StartTime         time.Time     `json:"start_time"`
-	Uptime            time.Duration `json:"uptime"`
+	StartTime         time.Time        `json:"start_time"`
+	Uptime            time.Duration    `json:"uptime"`
 }
 
 // Aggregator represents a metrics aggregator
@@ -258,9 +267,9 @@ type Exporter struct {
 }
 
 // NewMetricsCollector creates a new metrics collector
-func NewMetricsCollector(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*MetricsCollector, error) {
+func NewMetricsCollector(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*MetricsCollector, error) {
 	collectorConfig := DefaultMetricsConfig()
-	
+
 	if cfg != nil {
 		if metricsCfg, ok := cfg.Get("metrics_collector"); ok {
 			if cfgMap, ok := metricsCfg.(map[string]interface{}); ok {
@@ -303,17 +312,17 @@ func NewMetricsCollector(cfg *config.Config, logger logging.Logger, metrics *met
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateMetricsConfig(collectorConfig); err != nil {
 		return nil, fmt.Errorf("invalid metrics collector configuration: %w", err)
 	}
-	
+
 	collector := &MetricsCollector{
 		config:      collectorConfig,
 		logger:      logger,
 		metrics:     metrics,
-		metrics:     make([]MetricEntry, 0),
+		entries:     make([]MetricEntry, 0),
 		metricIndex: make(map[string]int),
 		aggregators: make(map[string]*Aggregator),
 		exporters:   make(map[string]*Exporter),
@@ -324,22 +333,19 @@ func NewMetricsCollector(cfg *config.Config, logger logging.Logger, metrics *met
 			StartTime:       time.Now(),
 		},
 	}
-	
+
 	// Initialize aggregators
 	if collectorConfig.EnableAggregation {
 		collector.initializeAggregators()
 	}
-	
+
 	// Initialize exporters
 	if collectorConfig.EnableExport {
 		collector.initializeExporters()
 	}
-	
-	collector.logger.Info("Created metrics collector",
-		"enabled", collectorConfig.Enabled,
-		"enable_aggregation", collectorConfig.EnableAggregation,
-		"enable_export", collectorConfig.EnableExport)
-	
+
+	collector.logger.Info("Created metrics collector")
+
 	return collector, nil
 }
 
@@ -348,23 +354,23 @@ func validateMetricsConfig(config *MetricsConfig) error {
 	if config == nil {
 		return errors.New("metrics collector configuration cannot be nil")
 	}
-	
+
 	if config.MaxMetrics <= 0 {
 		return errors.New("max metrics must be positive")
 	}
-	
+
 	if config.MetricTTL <= 0 {
 		return errors.New("metric TTL must be positive")
 	}
-	
+
 	if config.AggregationWindow <= 0 {
 		return errors.New("aggregation window must be positive")
 	}
-	
+
 	if config.ExportInterval <= 0 {
 		return errors.New("export interval must be positive")
 	}
-	
+
 	for _, metric := range config.CustomMetrics {
 		if metric.Name == "" {
 			return errors.New("metric name cannot be empty")
@@ -376,7 +382,7 @@ func validateMetricsConfig(config *MetricsConfig) error {
 			return fmt.Errorf("invalid metric type: %s", metric.Type)
 		}
 	}
-	
+
 	for _, aggregator := range config.Aggregators {
 		if aggregator.Name == "" {
 			return errors.New("aggregator name cannot be empty")
@@ -388,7 +394,7 @@ func validateMetricsConfig(config *MetricsConfig) error {
 			return errors.New("aggregator window must be positive")
 		}
 	}
-	
+
 	for _, exporter := range config.Exporters {
 		if exporter.Name == "" {
 			return errors.New("exporter name cannot be empty")
@@ -400,7 +406,7 @@ func validateMetricsConfig(config *MetricsConfig) error {
 			return errors.New("exporter interval must be positive")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -408,7 +414,7 @@ func validateMetricsConfig(config *MetricsConfig) error {
 func (c *MetricsCollector) initializeAggregators() {
 	c.aggMu.Lock()
 	defer c.aggMu.Unlock()
-	
+
 	for _, aggConfig := range c.config.Aggregators {
 		if aggConfig.Enabled {
 			c.aggregators[aggConfig.Name] = &Aggregator{
@@ -426,7 +432,7 @@ func (c *MetricsCollector) initializeAggregators() {
 func (c *MetricsCollector) initializeExporters() {
 	c.exportMu.Lock()
 	defer c.exportMu.Unlock()
-	
+
 	for _, expConfig := range c.config.Exporters {
 		if expConfig.Enabled {
 			c.exporters[expConfig.Name] = &Exporter{
@@ -441,31 +447,32 @@ func (c *MetricsCollector) initializeExporters() {
 func (c *MetricsCollector) Start() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.started {
 		return ErrCollectorAlreadyRunning
 	}
-	
+
 	if !c.config.Enabled {
 		c.logger.Info("Metrics collector is disabled")
 		return nil
 	}
-	
+
 	c.started = true
 	c.stopped = false
-	
+	c.ctx, c.cancel = context.WithCancel(context.Background())
+
 	// Start aggregation goroutine
 	if c.config.EnableAggregation {
 		go c.runAggregation()
 	}
-	
+
 	// Start export goroutine
 	if c.config.EnableExport {
 		go c.runExport()
 	}
-	
+
 	c.logger.Info("Started metrics collector")
-	
+
 	return nil
 }
 
@@ -473,20 +480,23 @@ func (c *MetricsCollector) Start() error {
 func (c *MetricsCollector) Stop() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.stopped {
 		return nil
 	}
-	
+
 	if !c.started {
 		return ErrCollectorNotRunning
 	}
-	
+
 	c.stopped = true
 	c.started = false
-	
+	if c.cancel != nil {
+		c.cancel()
+	}
+
 	c.logger.Info("Stopped metrics collector")
-	
+
 	return nil
 }
 
@@ -494,7 +504,7 @@ func (c *MetricsCollector) Stop() error {
 func (c *MetricsCollector) IsRunning() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	return c.started && !c.stopped
 }
 
@@ -503,14 +513,14 @@ func (c *MetricsCollector) RecordMetric(ctx context.Context, name, metricType st
 	if !c.config.Enabled {
 		return nil
 	}
-	
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if !c.started {
 		return ErrCollectorNotRunning
 	}
-	
+
 	// Create metric entry
 	entry := MetricEntry{
 		ID:        generateMetricID(),
@@ -522,23 +532,23 @@ func (c *MetricsCollector) RecordMetric(ctx context.Context, name, metricType st
 		Source:    source,
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	// Add to metrics storage
 	c.addMetricEntry(entry)
-	
+
 	// Update statistics
 	c.updateStats(entry)
-	
+
 	// Log metric if enabled
 	if c.config.EnableLogging {
 		c.logMetric(entry)
 	}
-	
+
 	// Update service metrics if enabled
 	if c.config.EnableMetrics && c.metrics != nil {
 		c.updateServiceMetrics(entry)
 	}
-	
+
 	return nil
 }
 
@@ -547,50 +557,50 @@ func (c *MetricsCollector) RecordRequestMetrics(ctx context.Context, req *adapte
 	if !c.config.Enabled {
 		return nil
 	}
-	
+
 	// Record request count
 	labels := map[string]string{
 		"protocol": string(req.Protocol),
 		"method":   req.Method,
-		"status":   fmt.Sprintf("%d", resp.StatusCode),
+		"status":   fmt.Sprintf("%d", resp.Status),
 	}
-	
+
 	if err := c.RecordMetric(ctx, "ingestion_requests_total", "counter", 1, labels, "request"); err != nil {
 		return err
 	}
-	
+
 	// Record request duration
 	durationLabels := map[string]string{
 		"protocol": string(req.Protocol),
 		"method":   req.Method,
 	}
-	
+
 	if err := c.RecordMetric(ctx, "ingestion_request_duration_seconds", "histogram", duration.Seconds(), durationLabels, "request"); err != nil {
 		return err
 	}
-	
+
 	// Record bytes processed
 	bytesLabels := map[string]string{
 		"protocol": string(req.Protocol),
 	}
-	
+
 	totalBytes := len(req.Body) + len(resp.Body)
 	if err := c.RecordMetric(ctx, "ingestion_bytes_total", "counter", float64(totalBytes), bytesLabels, "request"); err != nil {
 		return err
 	}
-	
+
 	// Record error if any
-	if resp.StatusCode >= 400 {
+	if resp.Status >= 400 {
 		errorLabels := map[string]string{
 			"protocol":   string(req.Protocol),
-			"error_type": getErrorTypeFromStatus(resp.StatusCode),
+			"error_type": getErrorTypeFromStatus(resp.Status),
 		}
-		
+
 		if err := c.RecordMetric(ctx, "ingestion_errors_total", "counter", 1, errorLabels, "request"); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -599,17 +609,17 @@ func (c *MetricsCollector) RecordVectorMetrics(ctx context.Context, protocol ada
 	if !c.config.Enabled {
 		return nil
 	}
-	
+
 	// Record vector count
 	labels := map[string]string{
 		"protocol": string(protocol),
 		"cluster":  clusterID,
 	}
-	
+
 	if err := c.RecordMetric(ctx, "ingestion_vectors_total", "counter", float64(vectorCount), labels, "vector"); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -618,21 +628,21 @@ func (c *MetricsCollector) RecordConnectionMetrics(ctx context.Context, protocol
 	if !c.config.Enabled {
 		return nil
 	}
-	
+
 	// Record active connections
 	connLabels := map[string]string{
 		"protocol": string(protocol),
 	}
-	
+
 	if err := c.RecordMetric(ctx, "ingestion_active_connections", "gauge", float64(activeConnections), connLabels, "connection"); err != nil {
 		return err
 	}
-	
+
 	// Record queue size
 	if err := c.RecordMetric(ctx, "ingestion_queue_size", "gauge", float64(queueSize), connLabels, "connection"); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -641,50 +651,50 @@ func (c *MetricsCollector) RecordThroughputMetrics(ctx context.Context, protocol
 	if !c.config.Enabled {
 		return nil
 	}
-	
+
 	// Record throughput
 	labels := map[string]string{
 		"protocol": string(protocol),
 	}
-	
+
 	if err := c.RecordMetric(ctx, "ingestion_throughput_vectors_per_second", "gauge", vectorsPerSecond, labels, "throughput"); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 // addMetricEntry adds a metric entry to the storage
 func (c *MetricsCollector) addMetricEntry(entry MetricEntry) {
-	c.metrics = append(c.metrics, entry)
-	c.metricIndex[entry.ID] = len(c.metrics) - 1
-	
+	c.entries = append(c.entries, entry)
+	c.metricIndex[entry.ID] = len(c.entries) - 1
+
 	// Clean up old metrics
-	if len(c.metrics) > c.config.MaxMetrics {
+	if len(c.entries) > c.config.MaxMetrics {
 		// Remove oldest metrics
-		removed := len(c.metrics) - c.config.MaxMetrics
-		c.metrics = c.metrics[removed:]
-		
+		removed := len(c.entries) - c.config.MaxMetrics
+		c.entries = c.entries[removed:]
+
 		// Rebuild index
 		c.metricIndex = make(map[string]int)
-		for i, metric := range c.metrics {
+		for i, metric := range c.entries {
 			c.metricIndex[metric.ID] = i
 		}
 	}
-	
+
 	// Clean up expired metrics
 	now := time.Now()
 	validMetrics := make([]MetricEntry, 0)
-	for _, metric := range c.metrics {
+	for _, metric := range c.entries {
 		if now.Sub(metric.Timestamp) <= c.config.MetricTTL {
 			validMetrics = append(validMetrics, metric)
 		}
 	}
-	
-	if len(validMetrics) != len(c.metrics) {
-		c.metrics = validMetrics
+
+	if len(validMetrics) != len(c.entries) {
+		c.entries = validMetrics
 		c.metricIndex = make(map[string]int)
-		for i, metric := range c.metrics {
+		for i, metric := range c.entries {
 			c.metricIndex[metric.ID] = i
 		}
 	}
@@ -693,7 +703,7 @@ func (c *MetricsCollector) addMetricEntry(entry MetricEntry) {
 // updateStats updates metrics collector statistics
 func (c *MetricsCollector) updateStats(entry MetricEntry) {
 	c.stats.TotalMetrics++
-	c.stats.ActiveMetrics = int64(len(c.metrics))
+	c.stats.ActiveMetrics = int64(len(c.entries))
 	c.stats.MetricsByType[entry.Type]++
 	c.stats.MetricsBySource[entry.Source]++
 }
@@ -701,11 +711,11 @@ func (c *MetricsCollector) updateStats(entry MetricEntry) {
 // logMetric logs a metric
 func (c *MetricsCollector) logMetric(entry MetricEntry) {
 	c.logger.Debug("Recorded metric",
-		"metric_id", entry.ID,
-		"name", entry.Name,
-		"type", entry.Type,
-		"value", entry.Value,
-		"source", entry.Source)
+		zap.String("metric_id", entry.ID),
+		zap.String("name", entry.Name),
+		zap.String("type", entry.Type),
+		zap.Float64("value", entry.Value),
+		zap.String("source", entry.Source))
 }
 
 // updateServiceMetrics updates service metrics
@@ -713,14 +723,14 @@ func (c *MetricsCollector) updateServiceMetrics(entry MetricEntry) {
 	if c.metrics == nil {
 		return
 	}
-	
+
 	switch entry.Type {
 	case "counter":
-		c.metrics.ServiceCounter.WithLabelValues("ingestion", entry.Name).Add(entry.Value)
+		c.metrics.RequestsTotal.Add(entry.Value, "ingestion", entry.Name, "success")
 	case "gauge":
-		c.metrics.ServiceGauge.WithLabelValues("ingestion", entry.Name).Set(entry.Value)
+		c.metrics.QueueSize.Set(entry.Value, "ingestion")
 	case "histogram":
-		c.metrics.ServiceHistogram.WithLabelValues("ingestion", entry.Name).Observe(entry.Value)
+		c.metrics.RequestsDuration.Observe(entry.Value, "ingestion", entry.Name)
 	}
 }
 
@@ -728,7 +738,7 @@ func (c *MetricsCollector) updateServiceMetrics(entry MetricEntry) {
 func (c *MetricsCollector) runAggregation() {
 	ticker := time.NewTicker(c.config.AggregationWindow)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -745,22 +755,22 @@ func (c *MetricsCollector) runAggregation() {
 func (c *MetricsCollector) aggregateMetrics() {
 	c.aggMu.Lock()
 	defer c.aggMu.Unlock()
-	
+
 	now := time.Now()
-	
+
 	for name, aggregator := range c.aggregators {
 		// Get metrics within the aggregation window
 		windowStart := now.Add(-aggregator.window)
 		windowMetrics := make([]MetricEntry, 0)
-		
+
 		c.mu.RLock()
-		for _, metric := range c.metrics {
+		for _, metric := range c.entries {
 			if metric.Timestamp.After(windowStart) {
 				windowMetrics = append(windowMetrics, metric)
 			}
 		}
 		c.mu.RUnlock()
-		
+
 		// Apply aggregation functions
 		for _, function := range aggregator.functions {
 			aggregated := c.applyAggregation(windowMetrics, function)
@@ -780,14 +790,14 @@ func (c *MetricsCollector) aggregateMetrics() {
 						"window":     aggregator.window,
 					},
 				}
-				
+
 				c.mu.Lock()
 				c.addMetricEntry(aggEntry)
 				c.stats.AggregatedMetrics++
 				c.mu.Unlock()
 			}
 		}
-		
+
 		aggregator.lastUpdate = now
 	}
 }
@@ -797,17 +807,17 @@ func (c *MetricsCollector) applyAggregation(metrics []MetricEntry, function stri
 	if len(metrics) == 0 {
 		return nil
 	}
-	
+
 	// Group metrics by name and labels
 	groups := make(map[string][]MetricEntry)
 	for _, metric := range metrics {
 		key := metric.Name + "|" + mapToString(metric.Labels)
 		groups[key] = append(groups[key], metric)
 	}
-	
+
 	// Apply aggregation function to each group
 	var results []AggregatedMetric
-	for key, group := range groups {
+	for _, group := range groups {
 		var value float64
 		switch function {
 		case "sum":
@@ -842,7 +852,7 @@ func (c *MetricsCollector) applyAggregation(metrics []MetricEntry, function stri
 		default:
 			continue
 		}
-		
+
 		results = append(results, AggregatedMetric{
 			Name:     group[0].Name,
 			Type:     group[0].Type,
@@ -851,11 +861,11 @@ func (c *MetricsCollector) applyAggregation(metrics []MetricEntry, function stri
 			Labels:   group[0].Labels,
 		})
 	}
-	
+
 	if len(results) == 0 {
 		return nil
 	}
-	
+
 	// Return the first result (in a real implementation, you might want to handle multiple results)
 	return &results[0]
 }
@@ -864,7 +874,7 @@ func (c *MetricsCollector) applyAggregation(metrics []MetricEntry, function stri
 func (c *MetricsCollector) runExport() {
 	ticker := time.NewTicker(c.config.ExportInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -881,31 +891,31 @@ func (c *MetricsCollector) runExport() {
 func (c *MetricsCollector) exportMetrics() {
 	c.exportMu.Lock()
 	defer c.exportMu.Unlock()
-	
+
 	now := time.Now()
-	
+
 	for name, exporter := range c.exporters {
 		// Check if it's time to export
 		if now.Sub(exporter.lastExport) < exporter.config.Interval {
 			continue
 		}
-		
+
 		// Get metrics to export
 		c.mu.RLock()
-		metricsToExport := make([]MetricEntry, len(c.metrics))
-		copy(metricsToExport, c.metrics)
+		metricsToExport := make([]MetricEntry, len(c.entries))
+		copy(metricsToExport, c.entries)
 		c.mu.RUnlock()
-		
+
 		// Export metrics
 		if err := c.doExport(exporter, metricsToExport); err != nil {
 			c.logger.Error("Failed to export metrics",
-				"exporter", name,
-				"error", err.Error())
+				zap.String("exporter", name),
+				zap.Error(err))
 			c.stats.FailedExports++
 		} else {
 			c.stats.ExportedMetrics += int64(len(metricsToExport))
 		}
-		
+
 		exporter.lastExport = now
 	}
 }
@@ -915,18 +925,14 @@ func (c *MetricsCollector) doExport(exporter *Exporter, metrics []MetricEntry) e
 	// This is a placeholder for export logic
 	// In a real implementation, you would export to various systems
 	// like Prometheus, InfluxDB, Graphite, etc.
-	
+
 	switch exporter.config.Type {
 	case "log":
-		c.logger.Info("Exporting metrics",
-			"exporter", exporter.config.Name,
-			"metrics_count", len(metrics))
+		c.logger.Info("Exporting metrics")
 		return nil
 	case "prometheus":
 		// Placeholder for Prometheus export
-		c.logger.Debug("Exporting to Prometheus",
-			"exporter", exporter.config.Name,
-			"metrics_count", len(metrics))
+		c.logger.Debug("Exporting to Prometheus")
 		return nil
 	default:
 		return fmt.Errorf("unknown exporter type: %s", exporter.config.Type)
@@ -937,9 +943,9 @@ func (c *MetricsCollector) doExport(exporter *Exporter, metrics []MetricEntry) e
 func (c *MetricsCollector) GetMetrics() []MetricEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
-	metricsCopy := make([]MetricEntry, len(c.metrics))
-	copy(metricsCopy, c.metrics)
+
+	metricsCopy := make([]MetricEntry, len(c.entries))
+	copy(metricsCopy, c.entries)
 	return metricsCopy
 }
 
@@ -947,13 +953,13 @@ func (c *MetricsCollector) GetMetrics() []MetricEntry {
 func (c *MetricsCollector) GetMetric(id string) (*MetricEntry, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	index, exists := c.metricIndex[id]
 	if !exists {
 		return nil, ErrMetricNotFound
 	}
-	
-	entry := c.metrics[index]
+
+	entry := c.entries[index]
 	return &entry, nil
 }
 
@@ -961,23 +967,23 @@ func (c *MetricsCollector) GetMetric(id string) (*MetricEntry, error) {
 func (c *MetricsCollector) GetStats() *MetricsCollectorStats {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Update uptime
 	c.stats.Uptime = time.Since(c.stats.StartTime)
-	
+
 	// Return a copy of stats
 	stats := *c.stats
 	stats.MetricsByType = make(map[string]int64)
 	stats.MetricsBySource = make(map[string]int64)
-	
+
 	for k, v := range c.stats.MetricsByType {
 		stats.MetricsByType[k] = v
 	}
-	
+
 	for k, v := range c.stats.MetricsBySource {
 		stats.MetricsBySource[k] = v
 	}
-	
+
 	return &stats
 }
 
@@ -985,13 +991,13 @@ func (c *MetricsCollector) GetStats() *MetricsCollectorStats {
 func (c *MetricsCollector) ResetStats() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.stats = &MetricsCollectorStats{
 		MetricsByType:   make(map[string]int64),
 		MetricsBySource: make(map[string]int64),
 		StartTime:       time.Now(),
 	}
-	
+
 	c.logger.Info("Metrics collector statistics reset")
 }
 
@@ -999,7 +1005,7 @@ func (c *MetricsCollector) ResetStats() {
 func (c *MetricsCollector) GetConfig() *MetricsConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *c.config
 	return &config
@@ -1009,25 +1015,25 @@ func (c *MetricsCollector) GetConfig() *MetricsConfig {
 func (c *MetricsCollector) UpdateConfig(config *MetricsConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateMetricsConfig(config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	c.config = config
-	
+
 	// Re-initialize aggregators and exporters
 	if config.EnableAggregation {
 		c.initializeAggregators()
 	}
-	
+
 	if config.EnableExport {
 		c.initializeExporters()
 	}
-	
-	c.logger.Info("Updated metrics collector configuration", "config", config)
-	
+
+	c.logger.Info("Updated metrics collector configuration")
+
 	return nil
 }
 
@@ -1035,12 +1041,12 @@ func (c *MetricsCollector) UpdateConfig(config *MetricsConfig) error {
 func (c *MetricsCollector) Validate() error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateMetricsConfig(c.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -1063,19 +1069,19 @@ func calculatePercentile(metrics []MetricEntry, percentile float64) float64 {
 	if len(metrics) == 0 {
 		return 0
 	}
-	
+
 	// Extract values
 	values := make([]float64, len(metrics))
 	for i, metric := range metrics {
 		values[i] = metric.Value
 	}
-	
+
 	// Sort values
 	sort.Float64s(values)
-	
+
 	// Calculate percentile index
 	index := int(float64(len(values)-1) * percentile)
-	
+
 	return values[index]
 }
 

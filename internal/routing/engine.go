@@ -1,34 +1,31 @@
-
 package routing
 
 import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"math"
 	"sort"
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
+	"go.uber.org/zap"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // RoutingEngine handles cluster routing and node selection
 type RoutingEngine struct {
-	logger          logging.Logger
-	metrics         *metrics.IngestionMetrics
-	config          *config.IngestionConfig
-	clusterConfig   *types.ClusterConfig
-	nodes           map[string]*NodeInfo
-	ring            *ConsistentHashRing
-	replicationMgr  *ReplicationManager
-	mu              sync.RWMutex
-	shutdown        chan struct{}
-	wg              sync.WaitGroup
+	logger         logging.Logger
+	metrics        *metrics.IngestionMetrics
+	config         *RoutingConfig
+	clusterConfig  *types.ClusterConfig
+	nodes          map[string]*NodeInfo
+	ring           *ConsistentHashRing
+	replicationMgr *ReplicationManager
+	mu             sync.RWMutex
+	shutdown       chan struct{}
+	wg             sync.WaitGroup
 }
 
 // NodeInfo represents information about a storage node
@@ -91,22 +88,22 @@ type NodeCapacity struct {
 
 // RoutingResult represents the result of a routing operation
 type RoutingResult struct {
-	PrimaryNode    *NodeInfo
-	ReplicaNodes   []*NodeInfo
-	ClusterID      uint32
-	RoutingPath    string
-	SelectedNodes  []*NodeInfo
-	FallbackNodes  []*NodeInfo
+	PrimaryNode   *NodeInfo
+	ReplicaNodes  []*NodeInfo
+	ClusterID     uint32
+	RoutingPath   string
+	SelectedNodes []*NodeInfo
+	FallbackNodes []*NodeInfo
 }
 
 // RoutingConfig represents the configuration for the routing engine
 type RoutingConfig struct {
 	ReplicationFactor    int           `yaml:"replication_factor" json:"replication_factor"`
 	HashRingVirtualNodes int           `yaml:"hash_ring_virtual_nodes" json:"hash_ring_virtual_nodes"`
-	NodeTimeout         time.Duration `yaml:"node_timeout" json:"node_timeout"`
-	HealthCheckInterval time.Duration `yaml:"health_check_interval" json:"health_check_interval"`
-	LoadBalanceStrategy string        `yaml:"load_balance_strategy" json:"load_balance_strategy"`
-	EnableMetrics       bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	NodeTimeout          time.Duration `yaml:"node_timeout" json:"node_timeout"`
+	HealthCheckInterval  time.Duration `yaml:"health_check_interval" json:"health_check_interval"`
+	LoadBalanceStrategy  string        `yaml:"load_balance_strategy" json:"load_balance_strategy"`
+	EnableMetrics        bool          `yaml:"enable_metrics" json:"enable_metrics"`
 }
 
 // DefaultRoutingConfig returns the default routing configuration
@@ -114,10 +111,10 @@ func DefaultRoutingConfig() *RoutingConfig {
 	return &RoutingConfig{
 		ReplicationFactor:    3,
 		HashRingVirtualNodes: 160,
-		NodeTimeout:         30 * time.Second,
-		HealthCheckInterval: 10 * time.Second,
-		LoadBalanceStrategy: "round_robin",
-		EnableMetrics:       true,
+		NodeTimeout:          30 * time.Second,
+		HealthCheckInterval:  10 * time.Second,
+		LoadBalanceStrategy:  "round_robin",
+		EnableMetrics:        true,
 	}
 }
 
@@ -227,7 +224,7 @@ func (e *RoutingEngine) RouteVector(vector *types.Vector) (*RoutingResult, error
 
 	// Update metrics
 	if e.metrics != nil {
-		e.metrics.IncrementRoutingOperations(primaryNode.Address)
+		e.metrics.IncrementRoutingOperations()
 	}
 
 	e.logger.Debug("Vector routed successfully",
@@ -618,19 +615,19 @@ func (e *RoutingEngine) initializeNodes() error {
 	}
 
 	for _, nodeConfig := range e.clusterConfig.Nodes {
+		var cr ClusterRange
+		if len(nodeConfig.ClusterRange) >= 2 {
+			cr = ClusterRange{Start: nodeConfig.ClusterRange[0], End: nodeConfig.ClusterRange[1]}
+		}
 		node := &NodeInfo{
-			ID:        nodeConfig.ID,
-			Address:   nodeConfig.Address,
-			Port:      nodeConfig.Port,
-			IsPrimary: nodeConfig.IsPrimary,
-			ReplicaOf: nodeConfig.ReplicaOf,
-			ClusterRange: ClusterRange{
-				Start: nodeConfig.ClusterStart,
-				End:   nodeConfig.ClusterEnd,
-			},
-			Status:    StatusHealthy,
-			LastSeen:  time.Now(),
-			LoadScore: 0.0,
+			ID:           nodeConfig.ID,
+			Address:      nodeConfig.Address,
+			Port:         nodeConfig.Port,
+			IsPrimary:    nodeConfig.IsPrimary,
+			ClusterRange: cr,
+			Status:       StatusHealthy,
+			LastSeen:     time.Now(),
+			LoadScore:    0.0,
 		}
 
 		if err := e.AddNode(node); err != nil {

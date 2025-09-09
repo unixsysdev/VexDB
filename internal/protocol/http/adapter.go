@@ -1,4 +1,3 @@
-
 package http
 
 import (
@@ -11,27 +10,28 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // HTTPAdapter implements the ProtocolAdapter interface for HTTP REST API
 type HTTPAdapter struct {
-	config     *HTTPConfig
-	server     *http.Server
-	listener   net.Listener
-	logger     logging.Logger
-	metrics    *metrics.IngestionMetrics
-	validator  adapter.Validator
-	handler    adapter.Handler
-	protocol   string
-	startTime  time.Time
-	mu         sync.RWMutex
-	shutdown   bool
+	config    *HTTPConfig
+	server    *http.Server
+	listener  net.Listener
+	logger    logging.Logger
+	metrics   *metrics.IngestionMetrics
+	validator adapter.Validator
+	handler   adapter.Handler
+	protocol  string
+	startTime time.Time
+	mu        sync.RWMutex
+	shutdown  bool
 }
 
 // HTTPConfig represents the HTTP adapter configuration
@@ -71,9 +71,9 @@ func DefaultHTTPConfig() *HTTPConfig {
 }
 
 // NewHTTPAdapter creates a new HTTP adapter
-func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*HTTPAdapter, error) {
+func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, reqHandler adapter.Handler) (*HTTPAdapter, error) {
 	httpConfig := DefaultHTTPConfig()
-	
+
 	if cfg != nil {
 		if httpCfg, ok := cfg.Get("http"); ok {
 			if cfgMap, ok := httpCfg.(map[string]interface{}); ok {
@@ -131,68 +131,68 @@ func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.I
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateHTTPConfig(httpConfig); err != nil {
 		return nil, fmt.Errorf("invalid HTTP configuration: %w", err)
 	}
-	
+
 	adapter := &HTTPAdapter{
 		config:    httpConfig,
 		logger:    logger,
 		metrics:   metrics,
 		validator: validator,
-		handler:   handler,
+		handler:   reqHandler,
 		protocol:  "http",
 		startTime: time.Now(),
 	}
-	
+
 	// Create HTTP server
 	adapter.server = &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", httpConfig.Host, httpConfig.Port),
-		ReadTimeout:  httpConfig.ReadTimeout,
-		WriteTimeout: httpConfig.WriteTimeout,
-		IdleTimeout:  httpConfig.IdleTimeout,
+		Addr:           fmt.Sprintf("%s:%d", httpConfig.Host, httpConfig.Port),
+		ReadTimeout:    httpConfig.ReadTimeout,
+		WriteTimeout:   httpConfig.WriteTimeout,
+		IdleTimeout:    httpConfig.IdleTimeout,
 		MaxHeaderBytes: httpConfig.MaxHeaderBytes,
 	}
-	
+
 	// Setup routes
 	mux := http.NewServeMux()
-	
+
 	// Vector ingestion endpoints
 	mux.HandleFunc("/api/v1/vectors", adapter.handleVectors)
 	mux.HandleFunc("/api/v1/vectors/", adapter.handleVectorByID)
-	
+
 	// Batch operations
 	mux.HandleFunc("/api/v1/batch", adapter.handleBatch)
-	
+
 	// Health check
 	if httpConfig.EnableHealth {
 		mux.HandleFunc("/health", adapter.handleHealth)
 		mux.HandleFunc("/ready", adapter.handleReady)
 	}
-	
+
 	// Metrics
 	if httpConfig.EnableMetrics {
 		mux.HandleFunc("/metrics", adapter.handleMetrics)
 	}
-	
+
 	// Apply CORS middleware if enabled
-	handler := http.Handler(mux)
+	h := http.Handler(mux)
 	if httpConfig.EnableCORS {
-		handler = adapter.corsMiddleware(handler)
+		h = adapter.corsMiddleware(h)
 	}
-	
+
 	// Apply metrics middleware if enabled
 	if httpConfig.EnableMetrics {
-		handler = adapter.metricsMiddleware(handler)
+		h = adapter.metricsMiddleware(h)
 	}
-	
+
 	// Apply logging middleware
-	handler = adapter.loggingMiddleware(handler)
-	
-	adapter.server.Handler = handler
-	
+	h = adapter.loggingMiddleware(h)
+
+	adapter.server.Handler = h
+
 	adapter.logger.Info("Created HTTP adapter",
 		zap.String("host", httpConfig.Host),
 		zap.Int("port", httpConfig.Port),
@@ -201,7 +201,7 @@ func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.I
 		zap.Bool("enable_cors", httpConfig.EnableCORS),
 		zap.Bool("enable_health", httpConfig.EnableHealth),
 		zap.Bool("enable_metrics", httpConfig.EnableMetrics))
-	
+
 	return adapter, nil
 }
 
@@ -228,61 +228,61 @@ func validateHTTPConfig(cfg *HTTPConfig) error {
 	if cfg.MaxRequestBodySize <= 0 {
 		return fmt.Errorf("max request body size must be positive")
 	}
-	
+
 	return nil
 }
 
 // Start starts the HTTP adapter
 func (a *HTTPAdapter) Start(ctx context.Context) error {
 	a.logger.Info("Starting HTTP adapter", zap.String("address", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port)))
-	
+
 	// Create listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port))
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	a.listener = listener
-	
+
 	// Start server in goroutine
 	go func() {
 		if err := a.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			a.logger.Error("HTTP server failed", zap.Error(err))
 		}
 	}()
-	
+
 	// Update metrics
 	a.metrics.AdaptersStarted.Inc("http", "start")
-	
+
 	return nil
 }
 
 // Stop stops the HTTP adapter
 func (a *HTTPAdapter) Stop(ctx context.Context) error {
 	a.logger.Info("Stopping HTTP adapter")
-	
+
 	a.mu.Lock()
 	a.shutdown = true
 	a.mu.Unlock()
-	
+
 	// Graceful shutdown
 	if a.server != nil {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
-		
+
 		if err := a.server.Shutdown(shutdownCtx); err != nil {
 			a.logger.Error("HTTP server shutdown failed", zap.Error(err))
 			return err
 		}
 	}
-	
+
 	// Close listener
 	if a.listener != nil {
 		a.listener.Close()
 	}
-	
+
 	// Update metrics
 	a.metrics.AdaptersStopped.Inc("http", "stop")
-	
+
 	return nil
 }
 
@@ -299,17 +299,17 @@ func (a *HTTPAdapter) GetAddress() string {
 // GetMetrics returns adapter metrics
 func (a *HTTPAdapter) GetMetrics() map[string]interface{} {
 	return map[string]interface{}{
-		"protocol":            a.protocol,
-		"address":             a.GetAddress(),
-		"uptime":              time.Since(a.startTime).String(),
-		"read_timeout":        a.config.ReadTimeout.String(),
-		"write_timeout":       a.config.WriteTimeout.String(),
-		"idle_timeout":        a.config.IdleTimeout.String(),
-		"max_header_bytes":    a.config.MaxHeaderBytes,
+		"protocol":              a.protocol,
+		"address":               a.GetAddress(),
+		"uptime":                time.Since(a.startTime).String(),
+		"read_timeout":          a.config.ReadTimeout.String(),
+		"write_timeout":         a.config.WriteTimeout.String(),
+		"idle_timeout":          a.config.IdleTimeout.String(),
+		"max_header_bytes":      a.config.MaxHeaderBytes,
 		"max_request_body_size": a.config.MaxRequestBodySize,
-		"enable_cors":         a.config.EnableCORS,
-		"enable_health":       a.config.EnableHealth,
-		"enable_metrics":      a.config.EnableMetrics,
+		"enable_cors":           a.config.EnableCORS,
+		"enable_health":         a.config.EnableHealth,
+		"enable_metrics":        a.config.EnableMetrics,
 	}
 }
 
@@ -347,12 +347,12 @@ func (a *HTTPAdapter) handleHealth(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	shutdown := a.shutdown
 	a.mu.RUnlock()
-	
+
 	if shutdown {
 		a.writeErrorResponse(w, http.StatusServiceUnavailable, "Service is shutting down")
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"status":    "healthy",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
@@ -360,7 +360,7 @@ func (a *HTTPAdapter) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"address":   a.GetAddress(),
 		"uptime":    time.Since(a.startTime).String(),
 	}
-	
+
 	a.writeJSONResponse(w, http.StatusOK, response)
 }
 
@@ -368,22 +368,29 @@ func (a *HTTPAdapter) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (a *HTTPAdapter) handleReady(w http.ResponseWriter, r *http.Request) {
 	// Check if the service is ready to accept requests
 	// This could include checking database connections, etc.
-	
+
 	response := map[string]interface{}{
 		"status":    "ready",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"protocol":  a.protocol,
 		"address":   a.GetAddress(),
 	}
-	
+
 	a.writeJSONResponse(w, http.StatusOK, response)
 }
 
 // handleMetrics handles metrics requests
 func (a *HTTPAdapter) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	// Return metrics in Prometheus format
-	// Implementation depends on metrics collection system
-	a.writeErrorResponse(w, http.StatusNotImplemented, "Metrics endpoint not implemented")
+	if a.metrics == nil {
+		a.writeErrorResponse(w, http.StatusServiceUnavailable, "Metrics disabled")
+		return
+	}
+	registry := a.metrics.Registry()
+	if registry == nil {
+		a.writeErrorResponse(w, http.StatusInternalServerError, "Metrics registry unavailable")
+		return
+	}
+	promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 }
 
 // handleInsertVector handles single vector insertion
@@ -394,16 +401,24 @@ func (a *HTTPAdapter) handleInsertVector(w http.ResponseWriter, r *http.Request)
 		a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
-	
-	// Validate vector
-	if err := a.validator.ValidateVector(&vector); err != nil {
-		a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid vector: %v", err))
+
+	// Validate vector if validator is provided
+	if a.validator != nil {
+		if err := a.validator.ValidateVector(&vector); err != nil {
+			a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid vector: %v", err))
+			return
+		}
+	}
+
+	if a.handler == nil {
+		a.writeErrorResponse(w, http.StatusServiceUnavailable, "No handler configured")
 		return
 	}
-	
-	// Handle vector insertion
-	// Implementation depends on handler interface
-	a.writeErrorResponse(w, http.StatusNotImplemented, "Vector insertion not implemented")
+	if err := a.handler.HandleVector(r.Context(), &vector); err != nil {
+		a.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to insert vector: %v", err))
+		return
+	}
+	a.writeJSONResponse(w, http.StatusCreated, map[string]any{"status": "ok"})
 }
 
 // handleListVectors handles vector listing
@@ -412,24 +427,32 @@ func (a *HTTPAdapter) handleListVectors(w http.ResponseWriter, r *http.Request) 
 	query := r.URL.Query()
 	limitStr := query.Get("limit")
 	offsetStr := query.Get("offset")
-	
+
 	limit := 100 // default limit
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
-	
+
 	offset := 0 // default offset
 	if offsetStr != "" {
 		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
 			offset = o
 		}
 	}
-	
-	// Handle vector listing
-	// Implementation depends on handler interface
-	a.writeErrorResponse(w, http.StatusNotImplemented, "Vector listing not implemented")
+
+	lister, ok := a.handler.(adapter.VectorLister)
+	if !ok {
+		a.writeErrorResponse(w, http.StatusNotFound, "Vector listing not supported")
+		return
+	}
+	vectors, err := lister.ListVectors(r.Context(), limit, offset)
+	if err != nil {
+		a.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to list vectors: %v", err))
+		return
+	}
+	a.writeJSONResponse(w, http.StatusOK, map[string]any{"vectors": vectors, "limit": limit, "offset": offset})
 }
 
 // handleBatchInsert handles batch vector insertion
@@ -440,25 +463,38 @@ func (a *HTTPAdapter) handleBatchInsert(w http.ResponseWriter, r *http.Request) 
 		a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
-	
-	// Validate vectors
-	for i, vector := range vectors {
-		if err := a.validator.ValidateVector(&vector); err != nil {
-			a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid vector at index %d: %v", i, err))
-			return
+
+	// Validate vectors if validator is provided
+	if a.validator != nil {
+		for i, vector := range vectors {
+			if err := a.validator.ValidateVector(&vector); err != nil {
+				a.writeErrorResponse(w, http.StatusBadRequest, fmt.Sprintf("Invalid vector at index %d: %v", i, err))
+				return
+			}
 		}
 	}
-	
-	// Handle batch insertion
-	// Implementation depends on handler interface
-	a.writeErrorResponse(w, http.StatusNotImplemented, "Batch insertion not implemented")
+
+	batcher, ok := a.handler.(adapter.BatchHandler)
+	if !ok {
+		a.writeErrorResponse(w, http.StatusNotFound, "Batch insertion not supported")
+		return
+	}
+	vecPtrs := make([]*types.Vector, len(vectors))
+	for i := range vectors {
+		vecPtrs[i] = &vectors[i]
+	}
+	if err := batcher.HandleVectors(r.Context(), vecPtrs); err != nil {
+		a.writeErrorResponse(w, http.StatusInternalServerError, fmt.Sprintf("Failed to insert batch: %v", err))
+		return
+	}
+	a.writeJSONResponse(w, http.StatusCreated, map[string]any{"status": "ok", "count": len(vecPtrs)})
 }
 
 // writeJSONResponse writes a JSON response
 func (a *HTTPAdapter) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		a.logger.Error("Failed to encode JSON response", zap.Error(err))
 	}
@@ -471,7 +507,7 @@ func (a *HTTPAdapter) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 		"status":    statusCode,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	a.writeJSONResponse(w, statusCode, response)
 }
 
@@ -483,13 +519,13 @@ func (a *HTTPAdapter) corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", a.getCORSMethods())
 		w.Header().Set("Access-Control-Allow-Headers", a.getCORSHeaders())
 		w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
-		
+
 		// Handle preflight requests
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -500,14 +536,14 @@ func (a *HTTPAdapter) getCORSOrigin(r *http.Request) string {
 	if origin == "" {
 		return "*"
 	}
-	
+
 	// Check if origin is allowed
 	for _, allowedOrigin := range a.config.CORSOrigins {
 		if allowedOrigin == "*" || allowedOrigin == origin {
 			return origin
 		}
 	}
-	
+
 	return ""
 }
 
@@ -516,7 +552,7 @@ func (a *HTTPAdapter) getCORSMethods() string {
 	if len(a.config.CORSMethods) == 0 {
 		return "GET,POST,PUT,DELETE,OPTIONS"
 	}
-	
+
 	result := ""
 	for i, method := range a.config.CORSMethods {
 		if i > 0 {
@@ -532,7 +568,7 @@ func (a *HTTPAdapter) getCORSHeaders() string {
 	if len(a.config.CORSHeaders) == 0 {
 		return "Content-Type,Authorization"
 	}
-	
+
 	result := ""
 	for i, header := range a.config.CORSHeaders {
 		if i > 0 {
@@ -547,14 +583,14 @@ func (a *HTTPAdapter) getCORSHeaders() string {
 func (a *HTTPAdapter) metricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Wrap response writer to capture status code
 		wrapped := &responseWriter{ResponseWriter: w}
-		
+
 		next.ServeHTTP(wrapped, r)
-		
+
 		duration := time.Since(start)
-		
+
 		// Record metrics
 		a.metrics.RequestDuration.Observe(duration.Seconds(), "http", r.Method+" "+r.URL.Path)
 		a.metrics.RequestsTotal.Inc("http", r.Method+" "+r.URL.Path, strconv.Itoa(wrapped.status))
@@ -565,20 +601,20 @@ func (a *HTTPAdapter) metricsMiddleware(next http.Handler) http.Handler {
 func (a *HTTPAdapter) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Wrap response writer to capture status code
 		wrapped := &responseWriter{ResponseWriter: w}
-		
+
 		a.logger.Info("HTTP request started",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.String("remote_addr", r.RemoteAddr),
 			zap.String("user_agent", r.UserAgent()))
-		
+
 		next.ServeHTTP(wrapped, r)
-		
+
 		duration := time.Since(start)
-		
+
 		a.logger.Info("HTTP request completed",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),

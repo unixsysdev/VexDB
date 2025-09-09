@@ -1,4 +1,3 @@
-
 package websocket
 
 import (
@@ -10,50 +9,51 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
-	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
 // WebSocketAdapter implements the ProtocolAdapter interface for WebSocket streaming
 type WebSocketAdapter struct {
-	config     *WebSocketConfig
-	server     *http.Server
-	listener   net.Listener
-	upgrader   *websocket.Upgrader
-	logger     logging.Logger
-	metrics    *metrics.IngestionMetrics
-	validator  adapter.Validator
-	handler    adapter.Handler
-	protocol   string
-	startTime  time.Time
-	mu         sync.RWMutex
-	shutdown   bool
+	config      *WebSocketConfig
+	server      *http.Server
+	listener    net.Listener
+	upgrader    *websocket.Upgrader
+	logger      logging.Logger
+	metrics     *metrics.IngestionMetrics
+	validator   adapter.Validator
+	handler     adapter.Handler
+	protocol    string
+	startTime   time.Time
+	mu          sync.RWMutex
+	shutdown    bool
 	connections map[*websocket.Conn]bool
 }
 
 // WebSocketConfig represents the WebSocket adapter configuration
 type WebSocketConfig struct {
-	Host               string        `yaml:"host" json:"host"`
-	Port               int           `yaml:"port" json:"port"`
-	ReadTimeout        time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout        time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	PingInterval       time.Duration `yaml:"ping_interval" json:"ping_interval"`
-	PongWait           time.Duration `yaml:"pong_wait" json:"pong_wait"`
-	WriteWait          time.Duration `yaml:"write_wait" json:"write_wait"`
-	MaxMessageSize     int64         `yaml:"max_message_size" json:"max_message_size"`
-	EnableMetrics      bool          `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableHealth       bool          `yaml:"enable_health" json:"enable_health"`
-	EnableCompression  bool          `yaml:"enable_compression" json:"enable_compression"`
-	MaxConnections     int           `yaml:"max_connections" json:"max_connections"`
-	ReadBufferSize     int           `yaml:"read_buffer_size" json:"read_buffer_size"`
-	WriteBufferSize    int           `yaml:"write_buffer_size" json:"write_buffer_size"`
-	AllowedOrigins     []string      `yaml:"allowed_origins" json:"allowed_origins"`
+	Host              string        `yaml:"host" json:"host"`
+	Port              int           `yaml:"port" json:"port"`
+	ReadTimeout       time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout      time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	IdleTimeout       time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	PingInterval      time.Duration `yaml:"ping_interval" json:"ping_interval"`
+	PongWait          time.Duration `yaml:"pong_wait" json:"pong_wait"`
+	WriteWait         time.Duration `yaml:"write_wait" json:"write_wait"`
+	MaxMessageSize    int64         `yaml:"max_message_size" json:"max_message_size"`
+	EnableMetrics     bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableHealth      bool          `yaml:"enable_health" json:"enable_health"`
+	EnableCompression bool          `yaml:"enable_compression" json:"enable_compression"`
+	MaxConnections    int           `yaml:"max_connections" json:"max_connections"`
+	ReadBufferSize    int           `yaml:"read_buffer_size" json:"read_buffer_size"`
+	WriteBufferSize   int           `yaml:"write_buffer_size" json:"write_buffer_size"`
+	AllowedOrigins    []string      `yaml:"allowed_origins" json:"allowed_origins"`
 }
 
 // DefaultWebSocketConfig returns the default WebSocket configuration
@@ -81,7 +81,7 @@ func DefaultWebSocketConfig() *WebSocketConfig {
 // NewWebSocketAdapter creates a new WebSocket adapter
 func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*WebSocketAdapter, error) {
 	wsConfig := DefaultWebSocketConfig()
-	
+
 	if cfg != nil {
 		if wsCfg, ok := cfg.Get("websocket"); ok {
 			if cfgMap, ok := wsCfg.(map[string]interface{}); ok {
@@ -140,32 +140,32 @@ func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metr
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateWebSocketConfig(wsConfig); err != nil {
 		return nil, fmt.Errorf("invalid WebSocket configuration: %w", err)
 	}
-	
+
 	adapter := &WebSocketAdapter{
-		config:       wsConfig,
-		logger:       logger,
-		metrics:      metrics,
-		validator:    validator,
-		handler:      handler,
-		protocol:     "websocket",
-		startTime:    time.Now(),
-		connections:  make(map[*websocket.Conn]bool),
+		config:      wsConfig,
+		logger:      logger,
+		metrics:     metrics,
+		validator:   validator,
+		handler:     handler,
+		protocol:    "websocket",
+		startTime:   time.Now(),
+		connections: make(map[*websocket.Conn]bool),
 	}
-	
+
 	// Create WebSocket upgrader
 	adapter.upgrader = &websocket.Upgrader{
 		ReadBufferSize:    wsConfig.ReadBufferSize,
 		WriteBufferSize:   wsConfig.WriteBufferSize,
 		HandshakeTimeout:  wsConfig.WriteTimeout,
 		EnableCompression: wsConfig.EnableCompression,
-		CheckOrigin:      adapter.checkOrigin,
+		CheckOrigin:       adapter.checkOrigin,
 	}
-	
+
 	// Create HTTP server
 	adapter.server = &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", wsConfig.Host, wsConfig.Port),
@@ -173,28 +173,25 @@ func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metr
 		WriteTimeout: wsConfig.WriteTimeout,
 		IdleTimeout:  wsConfig.IdleTimeout,
 	}
-	
+
 	// Setup routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", adapter.handleWebSocket)
-	
+
 	// Health check
 	if wsConfig.EnableHealth {
 		mux.HandleFunc("/health", adapter.handleHealth)
 		mux.HandleFunc("/ready", adapter.handleReady)
 	}
-	
+
 	// Metrics
 	if wsConfig.EnableMetrics {
 		mux.HandleFunc("/metrics", adapter.handleMetrics)
 	}
-	
-	// Apply logging middleware
-	handler := http.Handler(mux)
-	handler = adapter.loggingMiddleware(handler)
-	
-	adapter.server.Handler = handler
-	
+
+	// Apply logging middleware to mux
+	adapter.server.Handler = adapter.loggingMiddleware(mux)
+
 	adapter.logger.Info("Created WebSocket adapter",
 		zap.String("host", wsConfig.Host),
 		zap.Int("port", wsConfig.Port),
@@ -203,7 +200,7 @@ func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metr
 		zap.Duration("ping_interval", wsConfig.PingInterval),
 		zap.Bool("enable_compression", wsConfig.EnableCompression),
 		zap.Int("max_connections", wsConfig.MaxConnections))
-	
+
 	return adapter, nil
 }
 
@@ -245,64 +242,64 @@ func validateWebSocketConfig(cfg *WebSocketConfig) error {
 	if cfg.WriteBufferSize <= 0 {
 		return fmt.Errorf("write buffer size must be positive")
 	}
-	
+
 	return nil
 }
 
 // Start starts the WebSocket adapter
 func (a *WebSocketAdapter) Start(ctx context.Context) error {
 	a.logger.Info("Starting WebSocket adapter", zap.String("address", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port)))
-	
+
 	// Create listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port))
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	a.listener = listener
-	
+
 	// Start server in goroutine
 	go func() {
 		if err := a.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			a.logger.Error("WebSocket server failed", zap.Error(err))
 		}
 	}()
-	
+
 	// Update metrics
 	a.metrics.AdaptersStarted.Inc("websocket", "start")
-	
+
 	return nil
 }
 
 // Stop stops the WebSocket adapter
 func (a *WebSocketAdapter) Stop(ctx context.Context) error {
 	a.logger.Info("Stopping WebSocket adapter")
-	
+
 	a.mu.Lock()
 	a.shutdown = true
 	a.mu.Unlock()
-	
+
 	// Close all WebSocket connections
 	a.closeAllConnections()
-	
+
 	// Graceful shutdown
 	if a.server != nil {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
-		
+
 		if err := a.server.Shutdown(shutdownCtx); err != nil {
 			a.logger.Error("WebSocket server shutdown failed", zap.Error(err))
 			return err
 		}
 	}
-	
+
 	// Close listener
 	if a.listener != nil {
 		a.listener.Close()
 	}
-	
+
 	// Update metrics
 	a.metrics.AdaptersStopped.Inc("websocket", "stop")
-	
+
 	return nil
 }
 
@@ -321,21 +318,21 @@ func (a *WebSocketAdapter) GetMetrics() map[string]interface{} {
 	a.mu.RLock()
 	connectionCount := len(a.connections)
 	a.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"protocol":            a.protocol,
-		"address":             a.GetAddress(),
-		"uptime":              time.Since(a.startTime).String(),
-		"read_timeout":        a.config.ReadTimeout.String(),
-		"write_timeout":       a.config.WriteTimeout.String(),
-		"idle_timeout":        a.config.IdleTimeout.String(),
-		"ping_interval":       a.config.PingInterval.String(),
-		"max_message_size":    a.config.MaxMessageSize,
-		"enable_compression":  a.config.EnableCompression,
-		"max_connections":     a.config.MaxConnections,
-		"active_connections":  connectionCount,
-		"enable_health":       a.config.EnableHealth,
-		"enable_metrics":      a.config.EnableMetrics,
+		"protocol":           a.protocol,
+		"address":            a.GetAddress(),
+		"uptime":             time.Since(a.startTime).String(),
+		"read_timeout":       a.config.ReadTimeout.String(),
+		"write_timeout":      a.config.WriteTimeout.String(),
+		"idle_timeout":       a.config.IdleTimeout.String(),
+		"ping_interval":      a.config.PingInterval.String(),
+		"max_message_size":   a.config.MaxMessageSize,
+		"enable_compression": a.config.EnableCompression,
+		"max_connections":    a.config.MaxConnections,
+		"active_connections": connectionCount,
+		"enable_health":      a.config.EnableHealth,
+		"enable_metrics":     a.config.EnableMetrics,
 	}
 }
 
@@ -346,34 +343,34 @@ func (a *WebSocketAdapter) handleWebSocket(w http.ResponseWriter, r *http.Reques
 	connectionCount := len(a.connections)
 	shutdown := a.shutdown
 	a.mu.RUnlock()
-	
+
 	if shutdown {
 		a.writeHTTPErrorResponse(w, http.StatusServiceUnavailable, "Service is shutting down")
 		return
 	}
-	
+
 	if connectionCount >= a.config.MaxConnections {
 		a.writeHTTPErrorResponse(w, http.StatusServiceUnavailable, "Maximum connections reached")
 		return
 	}
-	
+
 	// Upgrade HTTP connection to WebSocket
 	conn, err := a.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		a.logger.Error("Failed to upgrade WebSocket connection", zap.Error(err))
 		return
 	}
-	
+
 	// Add connection to tracking
 	a.mu.Lock()
 	a.connections[conn] = true
 	a.mu.Unlock()
-	
+
 	// Update metrics
 	a.metrics.ConnectionsActive.Inc("websocket")
-	
+
 	a.logger.Info("WebSocket connection established", zap.String("remote_addr", conn.RemoteAddr().String()))
-	
+
 	// Handle connection in goroutine
 	go a.handleConnection(conn)
 }
@@ -385,16 +382,16 @@ func (a *WebSocketAdapter) handleConnection(conn *websocket.Conn) {
 		a.mu.Lock()
 		delete(a.connections, conn)
 		a.mu.Unlock()
-		
+
 		// Update metrics
 		a.metrics.ConnectionsActive.Dec("websocket")
-		
+
 		// Close connection
 		conn.Close()
-		
+
 		a.logger.Info("WebSocket connection closed", zap.String("remote_addr", conn.RemoteAddr().String()))
 	}()
-	
+
 	// Set connection parameters
 	conn.SetReadLimit(a.config.MaxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(a.config.PongWait))
@@ -402,11 +399,11 @@ func (a *WebSocketAdapter) handleConnection(conn *websocket.Conn) {
 		conn.SetReadDeadline(time.Now().Add(a.config.PongWait))
 		return nil
 	})
-	
+
 	// Start ping ticker
 	ticker := time.NewTicker(a.config.PingInterval)
 	defer ticker.Stop()
-	
+
 	// Handle messages
 	for {
 		select {
@@ -416,7 +413,7 @@ func (a *WebSocketAdapter) handleConnection(conn *websocket.Conn) {
 				a.logger.Error("Failed to send ping", zap.Error(err))
 				return
 			}
-			
+
 		default:
 			// Read message
 			messageType, data, err := conn.ReadMessage()
@@ -426,7 +423,7 @@ func (a *WebSocketAdapter) handleConnection(conn *websocket.Conn) {
 				}
 				return
 			}
-			
+
 			// Handle message
 			if messageType == websocket.TextMessage {
 				a.handleWebSocketMessage(conn, data)
@@ -443,14 +440,14 @@ func (a *WebSocketAdapter) handleWebSocketMessage(conn *websocket.Conn, data []b
 		a.sendWebSocketError(conn, "Invalid JSON message")
 		return
 	}
-	
+
 	// Get message type
 	messageType, ok := message["type"].(string)
 	if !ok {
 		a.sendWebSocketError(conn, "Missing message type")
 		return
 	}
-	
+
 	switch messageType {
 	case "insert_vector":
 		a.handleInsertVector(conn, message)
@@ -469,26 +466,28 @@ func (a *WebSocketAdapter) handleInsertVector(conn *websocket.Conn, message map[
 		a.sendWebSocketError(conn, "Invalid vector data")
 		return
 	}
-	
+
 	// Convert to Vector struct
 	vectorBytes, err := json.Marshal(vectorData)
 	if err != nil {
 		a.sendWebSocketError(conn, "Invalid vector format")
 		return
 	}
-	
+
 	var vector types.Vector
 	if err := json.Unmarshal(vectorBytes, &vector); err != nil {
 		a.sendWebSocketError(conn, "Invalid vector format")
 		return
 	}
-	
-	// Validate vector
-	if err := a.validator.ValidateVector(&vector); err != nil {
-		a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector: %v", err))
-		return
+
+	// Validate vector if validator provided
+	if a.validator != nil {
+		if err := a.validator.ValidateVector(&vector); err != nil {
+			a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector: %v", err))
+			return
+		}
 	}
-	
+
 	// Handle vector insertion
 	// Implementation depends on handler interface
 	response := map[string]interface{}{
@@ -497,7 +496,7 @@ func (a *WebSocketAdapter) handleInsertVector(conn *websocket.Conn, message map[
 		"message":   "Vector inserted successfully",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	a.sendWebSocketResponse(conn, response)
 }
 
@@ -509,7 +508,7 @@ func (a *WebSocketAdapter) handleInsertBatch(conn *websocket.Conn, message map[s
 		a.sendWebSocketError(conn, "Invalid vectors data")
 		return
 	}
-	
+
 	// Convert to Vector structs
 	var vectors []types.Vector
 	for i, vectorData := range vectorsData {
@@ -518,28 +517,30 @@ func (a *WebSocketAdapter) handleInsertBatch(conn *websocket.Conn, message map[s
 			a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector data at index %d", i))
 			return
 		}
-		
+
 		vectorBytes, err := json.Marshal(vectorMap)
 		if err != nil {
 			a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector format at index %d", i))
 			return
 		}
-		
+
 		var vector types.Vector
 		if err := json.Unmarshal(vectorBytes, &vector); err != nil {
 			a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector format at index %d", i))
 			return
 		}
-		
-		// Validate vector
-		if err := a.validator.ValidateVector(&vector); err != nil {
-			a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector at index %d: %v", i, err))
-			return
+
+		// Validate vector if validator provided
+		if a.validator != nil {
+			if err := a.validator.ValidateVector(&vector); err != nil {
+				a.sendWebSocketError(conn, fmt.Sprintf("Invalid vector at index %d: %v", i, err))
+				return
+			}
 		}
-		
+
 		vectors = append(vectors, vector)
 	}
-	
+
 	// Handle batch insertion
 	// Implementation depends on handler interface
 	response := map[string]interface{}{
@@ -549,14 +550,14 @@ func (a *WebSocketAdapter) handleInsertBatch(conn *websocket.Conn, message map[s
 		"message":   "Batch inserted successfully",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	a.sendWebSocketResponse(conn, response)
 }
 
 // sendWebSocketResponse sends a WebSocket response
 func (a *WebSocketAdapter) sendWebSocketResponse(conn *websocket.Conn, response map[string]interface{}) {
 	conn.SetWriteDeadline(time.Now().Add(a.config.WriteWait))
-	
+
 	if err := conn.WriteJSON(response); err != nil {
 		a.logger.Error("Failed to send WebSocket response", zap.Error(err))
 	}
@@ -569,7 +570,7 @@ func (a *WebSocketAdapter) sendWebSocketError(conn *websocket.Conn, message stri
 		"error":     message,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	a.sendWebSocketResponse(conn, response)
 }
 
@@ -577,13 +578,13 @@ func (a *WebSocketAdapter) sendWebSocketError(conn *websocket.Conn, message stri
 func (a *WebSocketAdapter) writeHTTPErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	response := map[string]interface{}{
 		"error":     message,
 		"status":    statusCode,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		a.logger.Error("Failed to encode HTTP error response", zap.Error(err))
 	}
@@ -594,12 +595,12 @@ func (a *WebSocketAdapter) handleHealth(w http.ResponseWriter, r *http.Request) 
 	a.mu.RLock()
 	shutdown := a.shutdown
 	a.mu.RUnlock()
-	
+
 	if shutdown {
 		a.writeHTTPErrorResponse(w, http.StatusServiceUnavailable, "Service is shutting down")
 		return
 	}
-	
+
 	response := map[string]interface{}{
 		"status":    "healthy",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
@@ -607,7 +608,7 @@ func (a *WebSocketAdapter) handleHealth(w http.ResponseWriter, r *http.Request) 
 		"address":   a.GetAddress(),
 		"uptime":    time.Since(a.startTime).String(),
 	}
-	
+
 	a.writeHTTPJSONResponse(w, http.StatusOK, response)
 }
 
@@ -619,20 +620,29 @@ func (a *WebSocketAdapter) handleReady(w http.ResponseWriter, r *http.Request) {
 		"protocol":  a.protocol,
 		"address":   a.GetAddress(),
 	}
-	
+
 	a.writeHTTPJSONResponse(w, http.StatusOK, response)
 }
 
 // handleMetrics handles metrics requests
 func (a *WebSocketAdapter) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	a.writeHTTPErrorResponse(w, http.StatusNotImplemented, "Metrics endpoint not implemented")
+	if a.metrics == nil {
+		a.writeHTTPErrorResponse(w, http.StatusServiceUnavailable, "Metrics disabled")
+		return
+	}
+	registry := a.metrics.Registry()
+	if registry == nil {
+		a.writeHTTPErrorResponse(w, http.StatusInternalServerError, "Metrics registry unavailable")
+		return
+	}
+	promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 }
 
 // writeHTTPJSONResponse writes an HTTP JSON response
 func (a *WebSocketAdapter) writeHTTPJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		a.logger.Error("Failed to encode HTTP JSON response", zap.Error(err))
 	}
@@ -644,25 +654,21 @@ func (a *WebSocketAdapter) checkOrigin(r *http.Request) bool {
 	if origin == "" {
 		return true
 	}
-	
+
 	// Check if origin is allowed
 	for _, allowedOrigin := range a.config.AllowedOrigins {
 		if allowedOrigin == "*" || allowedOrigin == origin {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
-// closeAllConnections closes all active WebSocket connections
-func (a
-
-// closeAllConnections closes all active WebSocket connections
 func (a *WebSocketAdapter) closeAllConnections() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	for conn := range a.connections {
 		// Send close message
 		conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
@@ -675,17 +681,17 @@ func (a *WebSocketAdapter) closeAllConnections() {
 func (a *WebSocketAdapter) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		a.logger.Info("HTTP request started",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.String("remote_addr", r.RemoteAddr),
 			zap.String("user_agent", r.UserAgent()))
-		
+
 		next.ServeHTTP(w, r)
-		
+
 		duration := time.Since(start)
-		
+
 		a.logger.Info("HTTP request completed",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),

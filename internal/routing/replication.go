@@ -1,4 +1,3 @@
-
 package routing
 
 import (
@@ -8,10 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // ReplicationManager handles replication of vectors across multiple nodes
@@ -29,10 +28,11 @@ type ReplicationManager struct {
 
 // ReplicationPool manages a pool of workers for concurrent replication
 type ReplicationPool struct {
-	workers    []*ReplicationWorker
-	taskQueue  chan *ReplicationTask
-	resultChan chan *ReplicationResult
-	mu         sync.RWMutex
+        workers    []*ReplicationWorker
+        taskQueue  chan *ReplicationTask
+        resultChan chan *ReplicationResult
+        logger     logging.Logger
+        mu         sync.RWMutex
 }
 
 // ReplicationWorker represents a worker that handles replication tasks
@@ -47,37 +47,37 @@ type ReplicationWorker struct {
 
 // ReplicationTask represents a replication task
 type ReplicationTask struct {
-	Vector      *types.Vector
-	Nodes       []*NodeInfo
-	Timeout     time.Duration
-	RetryCount  int
-	MaxRetries  int
-	CreatedAt   time.Time
-	Context     context.Context
+	Vector     *types.Vector
+	Nodes      []*NodeInfo
+	Timeout    time.Duration
+	RetryCount int
+	MaxRetries int
+	CreatedAt  time.Time
+	Context    context.Context
 }
 
 // ReplicationResult represents the result of a replication task
 type ReplicationResult struct {
-	TaskID      string
-	VectorID    string
-	Success     bool
+	TaskID       string
+	VectorID     string
+	Success      bool
 	ReplicatedTo []string
-	FailedNodes []string
-	Error       error
-	Duration    time.Duration
-	Retries     int
+	FailedNodes  []string
+	Error        error
+	Duration     time.Duration
+	Retries      int
 }
 
 // CircuitBreaker implements the circuit breaker pattern for node failures
 type CircuitBreaker struct {
-	nodeID        string
-	state         CircuitState
-	failureCount  int
-	successCount  int
-	lastFailure   time.Time
-	lastSuccess   time.Time
-	config        *CircuitBreakerConfig
-	mu            sync.RWMutex
+	nodeID       string
+	state        CircuitState
+	failureCount int
+	successCount int
+	lastFailure  time.Time
+	lastSuccess  time.Time
+	config       *CircuitBreakerConfig
+	mu           sync.RWMutex
 }
 
 // CircuitState represents the state of a circuit breaker
@@ -105,18 +105,18 @@ func (s CircuitState) String() string {
 
 // CircuitBreakerConfig represents the configuration for a circuit breaker
 type CircuitBreakerConfig struct {
-	FailureThreshold    int           `yaml:"failure_threshold" json:"failure_threshold"`
-	SuccessThreshold    int           `yaml:"success_threshold" json:"success_threshold"`
-	Timeout            time.Duration `yaml:"timeout" json:"timeout"`
-	HalfOpenMaxCalls   int           `yaml:"half_open_max_calls" json:"half_open_max_calls"`
-	EnableMetrics      bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	FailureThreshold int           `yaml:"failure_threshold" json:"failure_threshold"`
+	SuccessThreshold int           `yaml:"success_threshold" json:"success_threshold"`
+	Timeout          time.Duration `yaml:"timeout" json:"timeout"`
+	HalfOpenMaxCalls int           `yaml:"half_open_max_calls" json:"half_open_max_calls"`
+	EnableMetrics    bool          `yaml:"enable_metrics" json:"enable_metrics"`
 }
 
 // DefaultCircuitBreakerConfig returns the default circuit breaker configuration
 func DefaultCircuitBreakerConfig() *CircuitBreakerConfig {
 	return &CircuitBreakerConfig{
-		FailureThreshold:  5,
-		SuccessThreshold:  3,
+		FailureThreshold: 5,
+		SuccessThreshold: 3,
 		Timeout:          60 * time.Second,
 		HalfOpenMaxCalls: 3,
 		EnableMetrics:    true,
@@ -216,8 +216,7 @@ func (m *ReplicationManager) ReplicateVector(ctx context.Context, vector *types.
 	}
 
 	// Submit task to replication pool
-	result, err := m.replicationPool.SubmitTask
-(task)
+	result, err := m.replicationPool.SubmitTask(task)
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit replication task: %w", err)
 	}
@@ -328,10 +327,11 @@ func (m *ReplicationManager) monitorCircuitBreakers() {
 
 // NewReplicationPool creates a new replication pool
 func NewReplicationPool(workerCount int, logger logging.Logger, metrics *metrics.IngestionMetrics) *ReplicationPool {
-	pool := &ReplicationPool{
-		taskQueue:  make(chan *ReplicationTask, 1000),
-		resultChan: make(chan *ReplicationResult, 1000),
-	}
+        pool := &ReplicationPool{
+                taskQueue:  make(chan *ReplicationTask, 1000),
+                resultChan: make(chan *ReplicationResult, 1000),
+                logger:     logger,
+        }
 
 	// Create workers
 	for i := 0; i < workerCount; i++ {
@@ -419,12 +419,12 @@ func (w *ReplicationWorker) run(ctx context.Context) {
 func (w *ReplicationWorker) processTask(task *ReplicationTask) *ReplicationResult {
 	startTime := time.Now()
 	result := &ReplicationResult{
-		TaskID:      fmt.Sprintf("%s-%d", task.Vector.ID, time.Now().UnixNano()),
-		VectorID:    task.Vector.ID,
-		Success:     false,
+		TaskID:       fmt.Sprintf("%s-%d", task.Vector.ID, time.Now().UnixNano()),
+		VectorID:     task.Vector.ID,
+		Success:      false,
 		ReplicatedTo: make([]string, 0),
-		FailedNodes: make([]string, 0),
-		Retries:     task.RetryCount,
+		FailedNodes:  make([]string, 0),
+		Retries:      task.RetryCount,
 	}
 
 	// Process replication with retry logic

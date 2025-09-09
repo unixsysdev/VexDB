@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -9,31 +10,32 @@ import (
 	"time"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/types"
+
+	"go.uber.org/zap"
 )
 
 var (
-    ErrInvalidQuery      = errors.New("invalid query")
-    ErrInvalidDistance   = errors.New("invalid distance metric")
-    ErrInvalidLimit      = errors.New("invalid limit")
-    ErrSearchFailed      = errors.New("search failed")
-    ErrNoResults         = errors.New("no results found")
-    ErrInvalidThreshold  = errors.New("invalid threshold")
+	ErrInvalidQuery     = errors.New("invalid query")
+	ErrInvalidDistance  = errors.New("invalid distance metric")
+	ErrInvalidLimit     = errors.New("invalid limit")
+	ErrSearchFailed     = errors.New("search failed")
+	ErrNoResults        = errors.New("no results found")
+	ErrInvalidThreshold = errors.New("invalid threshold")
 )
 
 // types DistanceMetric, SearchResult, SearchQuery, MetadataFilter are defined in interface.go/filter.go
 
 // LinearSearchConfig represents the linear search configuration
 type LinearSearchConfig struct {
-	EnableSIMD       bool            `yaml:"enable_simd" json:"enable_simd"`
-	BatchSize        int             `yaml:"batch_size" json:"batch_size"`
-	MaxConcurrency   int             `yaml:"max_concurrency" json:"max_concurrency"`
-	DistanceMetric   DistanceMetric  `yaml:"distance_metric" json:"distance_metric"`
-	EnableCache      bool            `yaml:"enable_cache" json:"enable_cache"`
-	CacheSize        int             `yaml:"cache_size" json:"cache_size"`
-	EnableValidation bool            `yaml:"enable_validation" json:"enable_validation"`
+	EnableSIMD       bool           `yaml:"enable_simd" json:"enable_simd"`
+	BatchSize        int            `yaml:"batch_size" json:"batch_size"`
+	MaxConcurrency   int            `yaml:"max_concurrency" json:"max_concurrency"`
+	DistanceMetric   DistanceMetric `yaml:"distance_metric" json:"distance_metric"`
+	EnableCache      bool           `yaml:"enable_cache" json:"enable_cache"`
+	CacheSize        int            `yaml:"cache_size" json:"cache_size"`
+	EnableValidation bool           `yaml:"enable_validation" json:"enable_validation"`
 }
 
 // DefaultLinearSearchConfig returns the default linear search configuration
@@ -51,29 +53,38 @@ func DefaultLinearSearchConfig() *LinearSearchConfig {
 
 // LinearSearch represents a linear search engine
 type LinearSearch struct {
-	config      *LinearSearchConfig
-	cache       map[string][]*SearchResult
-	mu          sync.RWMutex
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
+	config  *LinearSearchConfig
+	cache   map[string][]*SearchResult
+	vectors []*types.Vector
+	mu      sync.RWMutex
+	logger  *zap.Logger
+	metrics *metrics.StorageMetrics
 }
 
-// LinearSearchStats represents linear search statistics
-type LinearSearchStats struct {
-	TotalSearches     int64     `json:"total_searches"`
-	CacheHits         int64     `json:"cache_hits"`
-	CacheMisses       int64     `json:"cache_misses"`
-	AverageLatency    float64   `json:"average_latency"`
-	VectorsSearched   int64     `json:"vectors_searched"`
-	ResultsFound      int64     `json:"results_found"`
-	LastSearchAt      time.Time `json:"last_search_at"`
-	FailureCount      int64     `json:"failure_count"`
+func (s *LinearSearch) Start() error { return nil }
+
+func (s *LinearSearch) Stop() error { return nil }
+
+func (s *LinearSearch) GetType() IndexType { return IndexTypeLinear }
+
+func (s *LinearSearch) GetStatus() IndexStatus { return IndexStatusReady }
+
+func (s *LinearSearch) GetConfig() *IndexConfig { return nil }
+
+func (s *LinearSearch) GetStats() *IndexStats {
+	return &IndexStats{Type: IndexTypeLinear, Status: IndexStatusReady}
 }
+
+func (s *LinearSearch) IsReady() bool { return true }
+
+func (s *LinearSearch) Rebuild() error { return nil }
+
+func (s *LinearSearch) Optimize() error { return nil }
 
 // NewLinearSearch creates a new linear search engine
-func NewLinearSearch(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*LinearSearch, error) {
+func NewLinearSearch(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics) (*LinearSearch, error) {
 	searchConfig := DefaultLinearSearchConfig()
-	
+
 	if cfg != nil {
 		if searchCfg, ok := cfg.Get("linear_search"); ok {
 			if cfgMap, ok := searchCfg.(map[string]interface{}); ok {
@@ -101,32 +112,32 @@ func NewLinearSearch(cfg *config.Config, logger logging.Logger, metrics *metrics
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateLinearSearchConfig(searchConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidDistance, err)
 	}
-	
+
 	search := &LinearSearch{
-		config: searchConfig,
-		cache:  make(map[string][]*SearchResult),
-		logger: logger,
+		config:  searchConfig,
+		cache:   make(map[string][]*SearchResult),
+		logger:  logger,
 		metrics: metrics,
 	}
-	
+
 	// Pre-allocate cache if enabled
 	if searchConfig.EnableCache && searchConfig.CacheSize > 0 {
 		search.cache = make(map[string][]*SearchResult, searchConfig.CacheSize)
 	}
-	
+
 	search.logger.Info("Created linear search engine",
-		"enable_simd", searchConfig.EnableSIMD,
-		"batch_size", searchConfig.BatchSize,
-		"max_concurrency", searchConfig.MaxConcurrency,
-		"distance_metric", searchConfig.DistanceMetric,
-		"enable_cache", searchConfig.EnableCache,
-		"cache_size", searchConfig.CacheSize)
-	
+		zap.Bool("enable_simd", searchConfig.EnableSIMD),
+		zap.Int("batch_size", searchConfig.BatchSize),
+		zap.Int("max_concurrency", searchConfig.MaxConcurrency),
+		zap.String("distance_metric", string(searchConfig.DistanceMetric)),
+		zap.Bool("enable_cache", searchConfig.EnableCache),
+		zap.Int("cache_size", searchConfig.CacheSize))
+
 	return search, nil
 }
 
@@ -140,31 +151,31 @@ func validateLinearSearchConfig(cfg *LinearSearchConfig) error {
 		cfg.DistanceMetric != DistanceJaccard {
 		return fmt.Errorf("unsupported distance metric: %s", cfg.DistanceMetric)
 	}
-	
+
 	if cfg.BatchSize <= 0 {
 		return errors.New("batch size must be positive")
 	}
-	
+
 	if cfg.MaxConcurrency <= 0 {
 		return errors.New("max concurrency must be positive")
 	}
-	
+
 	if cfg.CacheSize < 0 {
 		return errors.New("cache size must be non-negative")
 	}
-	
+
 	return nil
 }
 
 // Search performs a linear search on the given vectors
-func (s *LinearSearch) Search(query *SearchQuery, vectors []*types.Vector) ([]*SearchResult, error) {
+func (s *LinearSearch) searchVectors(query *SearchQuery, vectors []*types.Vector) ([]*SearchResult, error) {
 	if s.config.EnableValidation {
 		if err := query.Validate(); err != nil {
 			s.metrics.Errors.Inc("search", "validation_failed")
 			return nil, fmt.Errorf("%w: %v", ErrInvalidQuery, err)
 		}
 	}
-	
+
 	// Check cache first
 	if s.config.EnableCache {
 		cacheKey := s.getCacheKey(query)
@@ -174,28 +185,28 @@ func (s *LinearSearch) Search(query *SearchQuery, vectors []*types.Vector) ([]*S
 		}
 		s.metrics.CacheMisses.Inc("search", "linear_search")
 	}
-	
+
 	start := time.Now()
-	
+
 	// Perform search
 	results, err := s.performSearch(query, vectors)
 	if err != nil {
 		s.metrics.Errors.Inc("search", "search_failed")
 		return nil, fmt.Errorf("%w: %v", ErrSearchFailed, err)
 	}
-	
+
 	duration := time.Since(start)
-	
+
 	// Update metrics
 	s.metrics.SearchOperations.Inc("search", "linear_search")
-	s.metrics.SearchLatency.Observe(duration.Seconds())
-	
+	s.metrics.SearchLatency.Observe(duration.Seconds(), "search", "linear_search")
+
 	// Update cache
 	if s.config.EnableCache {
 		cacheKey := s.getCacheKey(query)
 		s.addToCache(cacheKey, results)
 	}
-	
+
 	return results, nil
 }
 
@@ -204,95 +215,81 @@ func (s *LinearSearch) performSearch(query *SearchQuery, vectors []*types.Vector
 	if len(vectors) == 0 {
 		return nil, ErrNoResults
 	}
-	
-	// Filter vectors if metadata filter is specified
-	filteredVectors := vectors
-	if query.Filter != nil {
-		var err error
-		filteredVectors, err = s.filterVectors(vectors, query.Filter)
-		if err != nil {
-			return nil, err
-		}
-	}
-	
-	if len(filteredVectors) == 0 {
-		return nil, ErrNoResults
-	}
-	
+
 	// Calculate distances
-	results := make([]*SearchResult, 0, len(filteredVectors))
-	
+	results := make([]*SearchResult, 0, len(vectors))
+
 	if s.config.EnableSIMD {
 		// Use SIMD-optimized search if available
-		simdResults, err := s.simdSearch(query, filteredVectors)
+		simdResults, err := s.simdSearch(query, vectors)
 		if err == nil {
 			results = simdResults
 		} else {
 			// Fall back to regular search if SIMD fails
-			s.logger.Warn("SIMD search failed, falling back to regular search", "error", err)
-			results = s.regularSearch(query, filteredVectors)
+			s.logger.Warn("SIMD search failed, falling back to regular search", zap.Error(err))
+			results = s.regularSearch(query, vectors)
 		}
 	} else {
 		// Use regular search
-		results = s.regularSearch(query, filteredVectors)
+		results = s.regularSearch(query, vectors)
 	}
-	
+
 	// Sort results by distance
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Distance < results[j].Distance
 	})
-	
+
 	// Apply limit
 	if query.Limit > 0 && len(results) > query.Limit {
 		results = results[:query.Limit]
 	}
-	
+
 	// Apply threshold
 	if query.Threshold > 0 {
 		filtered := make([]*SearchResult, 0, len(results))
 		for _, result := range results {
-			if result.Distance <= query.Threshold {
+			if result.Distance <= float64(query.Threshold) {
 				filtered = append(filtered, result)
 			}
 		}
 		results = filtered
 	}
-	
+
 	// Set ranks
 	for i, result := range results {
 		result.Rank = i + 1
 	}
-	
+
 	return results, nil
 }
 
 // regularSearch performs regular (non-SIMD) search
 func (s *LinearSearch) regularSearch(query *SearchQuery, vectors []*types.Vector) []*SearchResult {
 	results := make([]*SearchResult, 0, len(vectors))
-	
+
 	for _, vector := range vectors {
 		distance, err := s.calculateDistance(query.QueryVector, vector, query.DistanceMetric)
 		if err != nil {
-			s.logger.Error("Failed to calculate distance", "vector_id", vector.ID, "error", err)
+			s.logger.Error("Failed to calculate distance", zap.String("vector_id", vector.ID), zap.Error(err))
 			continue
 		}
-		
+
 		score := s.calculateScore(distance, query.DistanceMetric)
-		
+
 		result := &SearchResult{
 			Vector:   vector,
-			Distance: distance,
+			Distance: float64(distance),
 			Score:    score,
 			Metadata: vector.Metadata,
 		}
-		
+
 		if !query.IncludeVector {
 			result.Vector = nil
 		}
-		
+
 		results = append(results, result)
 	}
-	
+
 	return results
 }
 
@@ -310,7 +307,7 @@ func (s *LinearSearch) calculateDistance(v1, v2 *types.Vector, metric DistanceMe
 	if len(v1.Data) != len(v2.Data) {
 		return 0, ErrInvalidVector
 	}
-	
+
 	switch metric {
 	case DistanceEuclidean:
 		return s.euclideanDistance(v1.Data, v2.Data), nil
@@ -344,17 +341,17 @@ func (s *LinearSearch) cosineDistance(v1, v2 []float32) float32 {
 	var dotProduct float32
 	var norm1 float32
 	var norm2 float32
-	
+
 	for i := 0; i < len(v1); i++ {
 		dotProduct += v1[i] * v2[i]
 		norm1 += v1[i] * v1[i]
 		norm2 += v2[i] * v2[i]
 	}
-	
+
 	if norm1 == 0 || norm2 == 0 {
 		return 1.0
 	}
-	
+
 	cosine := dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
 	return 1.0 - cosine
 }
@@ -392,7 +389,7 @@ func (s *LinearSearch) hammingDistance(v1, v2 []float32) float32 {
 func (s *LinearSearch) jaccardDistance(v1, v2 []float32) float32 {
 	var intersection float32
 	var union float32
-	
+
 	for i := 0; i < len(v1); i++ {
 		if v1[i] > 0 && v2[i] > 0 {
 			intersection++
@@ -401,11 +398,11 @@ func (s *LinearSearch) jaccardDistance(v1, v2 []float32) float32 {
 			union++
 		}
 	}
-	
+
 	if union == 0 {
 		return 0.0
 	}
-	
+
 	return 1.0 - (intersection / union)
 }
 
@@ -426,62 +423,6 @@ func (s *LinearSearch) calculateScore(distance float32, metric DistanceMetric) f
 	}
 }
 
-// filterVectors filters vectors based on metadata criteria
-func (s *LinearSearch) filterVectors(vectors []*types.Vector, filter *MetadataFilter) ([]*types.Vector, error) {
-	filtered := make([]*types.Vector, 0, len(vectors))
-	
-	for _, vector := range vectors {
-		if s.matchesFilter(vector.Metadata, filter) {
-			filtered = append(filtered, vector)
-		}
-	}
-	
-	return filtered, nil
-}
-
-// matchesFilter checks if vector metadata matches the filter criteria
-func (s *LinearSearch) matchesFilter(metadata map[string]interface{}, filter *MetadataFilter) bool {
-	if filter == nil || len(filter.Filters) == 0 {
-		return true
-	}
-	
-	if metadata == nil {
-		return false
-	}
-	
-	results := make([]bool, 0, len(filter.Filters))
-	
-	for key, value := range filter.Filters {
-		metadataValue, exists := metadata[key]
-		if !exists {
-			results = append(results, false)
-			continue
-		}
-		
-		// Simple equality check for now
-		// In a real implementation, you would support various comparison operators
-		results = append(results, metadataValue == value)
-	}
-	
-	// Apply operator
-	if filter.Operator == "OR" {
-		for _, result := range results {
-			if result {
-				return true
-			}
-		}
-		return false
-	} else {
-		// Default to AND
-		for _, result := range results {
-			if !result {
-				return false
-			}
-		}
-		return true
-	}
-}
-
 // getCacheKey generates a cache key for a query
 func (s *LinearSearch) getCacheKey(query *SearchQuery) string {
 	// Simple cache key generation
@@ -494,12 +435,12 @@ func (s *LinearSearch) getCacheKey(query *SearchQuery) string {
 func (s *LinearSearch) getFromCache(key string) ([]*SearchResult, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	results, exists := s.cache[key]
 	if !exists {
 		return nil, false
 	}
-	
+
 	// Return a copy of results
 	copy := make([]*SearchResult, len(results))
 	for i, result := range results {
@@ -511,7 +452,7 @@ func (s *LinearSearch) getFromCache(key string) ([]*SearchResult, bool) {
 			Metadata: result.Metadata,
 		}
 	}
-	
+
 	return copy, true
 }
 
@@ -519,7 +460,7 @@ func (s *LinearSearch) getFromCache(key string) ([]*SearchResult, bool) {
 func (s *LinearSearch) addToCache(key string, results []*SearchResult) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Simple cache management - evict oldest if cache is full
 	if len(s.cache) >= s.config.CacheSize {
 		// Evict a random entry (simple approach)
@@ -528,7 +469,7 @@ func (s *LinearSearch) addToCache(key string, results []*SearchResult) {
 			break
 		}
 	}
-	
+
 	// Store a copy of results
 	copy := make([]*SearchResult, len(results))
 	for i, result := range results {
@@ -540,46 +481,20 @@ func (s *LinearSearch) addToCache(key string, results []*SearchResult) {
 			Metadata: result.Metadata,
 		}
 	}
-	
+
 	s.cache[key] = copy
-}
-
-// GetStats returns linear search statistics
-func (s *LinearSearch) GetStats() *LinearSearchStats {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	
-	return &LinearSearchStats{
-		TotalSearches:   s.metrics.SearchOperations.Get("search", "linear_search"),
-		CacheHits:       s.metrics.CacheHits.Get("search", "linear_search"),
-		CacheMisses:     s.metrics.CacheMisses.Get("search", "linear_search"),
-		AverageLatency:  s.metrics.SearchLatency.Get("search", "linear_search"),
-		VectorsSearched: s.metrics.VectorsProcessed.Get("search", "linear_search"),
-		ResultsFound:    s.metrics.ResultsFound.Get("search", "linear_search"),
-		FailureCount:    s.metrics.Errors.Get("search", "search_failed"),
-	}
-}
-
-// GetConfig returns the linear search configuration
-func (s *LinearSearch) GetConfig() *LinearSearchConfig {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	
-	// Return a copy of config
-	config := *s.config
-	return &config
 }
 
 // UpdateConfig updates the linear search configuration
 func (s *LinearSearch) UpdateConfig(config *LinearSearchConfig) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateLinearSearchConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidDistance, err)
 	}
-	
+
 	// Clear cache if configuration changed significantly
 	if config.DistanceMetric != s.config.DistanceMetric ||
 		config.EnableCache != s.config.EnableCache ||
@@ -589,11 +504,11 @@ func (s *LinearSearch) UpdateConfig(config *LinearSearchConfig) error {
 			s.cache = make(map[string][]*SearchResult, config.CacheSize)
 		}
 	}
-	
+
 	s.config = config
-	
-	s.logger.Info("Updated linear search configuration", "config", config)
-	
+
+	s.logger.Info("Updated linear search configuration", zap.Any("config", config))
+
 	return nil
 }
 
@@ -601,26 +516,94 @@ func (s *LinearSearch) UpdateConfig(config *LinearSearchConfig) error {
 func (s *LinearSearch) ClearCache() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.cache = make(map[string][]*SearchResult)
 	if s.config.EnableCache && s.config.CacheSize > 0 {
 		s.cache = make(map[string][]*SearchResult, s.config.CacheSize)
 	}
-	
+
 	s.logger.Info("Cleared linear search cache")
+}
+
+// Build replaces the current vector set
+func (s *LinearSearch) Build(vectors []*types.Vector) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.vectors = append([]*types.Vector(nil), vectors...)
+	return nil
+}
+
+// Update adds new vectors to the search set
+func (s *LinearSearch) Update(vectors []*types.Vector) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.vectors = append(s.vectors, vectors...)
+	return nil
+}
+
+// Delete removes vectors with the given IDs
+func (s *LinearSearch) Delete(ids []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(ids) == 0 {
+		return nil
+	}
+	idset := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		idset[id] = struct{}{}
+	}
+	filtered := s.vectors[:0]
+	for _, v := range s.vectors {
+		if _, ok := idset[v.ID]; !ok {
+			filtered = append(filtered, v)
+		}
+	}
+	s.vectors = filtered
+	return nil
+}
+
+// Clear removes all vectors
+func (s *LinearSearch) Clear() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.vectors = nil
+	s.cache = make(map[string][]*SearchResult)
+	return nil
+}
+
+// Search implements the SearchIndex interface.
+func (s *LinearSearch) Search(ctx context.Context, query *SearchQuery) ([]*SearchResult, error) {
+	s.mu.RLock()
+	vectors := make([]*types.Vector, len(s.vectors))
+	copy(vectors, s.vectors)
+	s.mu.RUnlock()
+	return s.searchVectors(query, vectors)
+}
+
+// BatchSearch implements the SearchIndex interface.
+func (s *LinearSearch) BatchSearch(ctx context.Context, queries []*SearchQuery) ([][]*SearchResult, error) {
+	results := make([][]*SearchResult, len(queries))
+	for i, q := range queries {
+		r, err := s.Search(ctx, q)
+		if err != nil {
+			return nil, fmt.Errorf("batch search failed at query %d: %w", i, err)
+		}
+		results[i] = r
+	}
+	return results, nil
 }
 
 // GetCacheInfo returns cache information
 func (s *LinearSearch) GetCacheInfo() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	info := make(map[string]interface{})
 	info["size"] = len(s.cache)
 	info["max_size"] = s.config.CacheSize
 	info["enabled"] = s.config.EnableCache
 	info["usage"] = float64(len(s.cache)) / float64(s.config.CacheSize) * 100
-	
+
 	return info
 }
 
@@ -628,12 +611,12 @@ func (s *LinearSearch) GetCacheInfo() map[string]interface{} {
 func (s *LinearSearch) Validate() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateLinearSearchConfig(s.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Validate cache consistency
 	if s.config.EnableCache {
 		for key, results := range s.cache {
@@ -647,18 +630,18 @@ func (s *LinearSearch) Validate() error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // BenchmarkSearch benchmarks search performance
 func (s *LinearSearch) BenchmarkSearch(query *SearchQuery, vectors []*types.Vector) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
-	
+
 	if len(vectors) == 0 {
 		return results, nil
 	}
-	
+
 	// Test all distance metrics
 	metrics := []DistanceMetric{
 		DistanceEuclidean,
@@ -668,33 +651,33 @@ func (s *LinearSearch) BenchmarkSearch(query *SearchQuery, vectors []*types.Vect
 		DistanceHamming,
 		DistanceJaccard,
 	}
-	
+
 	for _, metric := range metrics {
 		// Temporarily set metric
 		oldMetric := query.DistanceMetric
 		query.DistanceMetric = metric
-		
+
 		start := time.Now()
-		searchResults, err := s.Search(query, vectors)
+		searchResults, err := s.searchVectors(query, vectors)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			results[string(metric)] = map[string]interface{}{
 				"error": err.Error(),
 			}
 			continue
 		}
-		
+
 		results[string(metric)] = map[string]interface{}{
-			"duration": duration.String(),
+			"duration":           duration.String(),
 			"vectors_per_second": float64(len(vectors)) / duration.Seconds(),
-			"results_found": len(searchResults),
+			"results_found":      len(searchResults),
 		}
-		
+
 		// Restore original metric
 		query.DistanceMetric = oldMetric
 	}
-	
+
 	return results, nil
 }
 
@@ -713,7 +696,7 @@ func (s *LinearSearch) GetSupportedMetrics() []DistanceMetric {
 // GetMetricInfo returns information about a distance metric
 func (s *LinearSearch) GetMetricInfo(metric DistanceMetric) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch metric {
 	case DistanceEuclidean:
 		info["name"] = "Euclidean"
@@ -721,42 +704,42 @@ func (s *LinearSearch) GetMetricInfo(metric DistanceMetric) map[string]interface
 		info["range"] = "[0, +∞)"
 		info["lower_is_better"] = true
 		info["best_for"] = "Geometric similarity, continuous data"
-		
+
 	case DistanceCosine:
 		info["name"] = "Cosine"
 		info["description"] = "Cosine similarity distance"
 		info["range"] = "[0, 2]"
 		info["lower_is_better"] = true
 		info["best_for"] = "Text similarity, direction-based comparison"
-		
+
 	case DistanceManhattan:
 		info["name"] = "Manhattan"
 		info["description"] = "Manhattan distance (L1 norm)"
 		info["range"] = "[0, +∞)"
 		info["lower_is_better"] = true
 		info["best_for"] = "Grid-based data, discrete features"
-		
+
 	case DistanceDotProduct:
 		info["name"] = "Dot Product"
 		info["description"] = "Dot product distance"
 		info["range"] = "(-∞, +∞)"
 		info["lower_is_better"] = false
 		info["best_for"] = "Neural network embeddings, magnitude matters"
-		
+
 	case DistanceHamming:
 		info["name"] = "Hamming"
 		info["description"] = "Hamming distance"
 		info["range"] = "[0, +∞)"
 		info["lower_is_better"] = true
 		info["best_for"] = "Binary data, categorical features"
-		
+
 	case DistanceJaccard:
 		info["name"] = "Jaccard"
 		info["description"] = "Jaccard distance"
 		info["range"] = "[0, 1]"
 		info["lower_is_better"] = true
 		info["best_for"] = "Set similarity, binary data"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown distance metric"
@@ -764,27 +747,8 @@ func (s *LinearSearch) GetMetricInfo(metric DistanceMetric) map[string]interface
 		info["lower_is_better"] = true
 		info["best_for"] = "Unknown"
 	}
-	
+
 	return info
 }
 
 // Validate validates the search query
-func (q *SearchQuery) Validate() error {
-	if q.QueryVector == nil {
-		return ErrInvalidVector
-	}
-	
-	if err := q.QueryVector.Validate(); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidVector, err)
-	}
-	
-	if q.Limit < 0 {
-		return ErrInvalidLimit
-	}
-	
-	if q.Threshold < 0 {
-		return ErrInvalidThreshold
-	}
-	
-	return nil
-}

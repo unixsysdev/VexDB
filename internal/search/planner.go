@@ -1,51 +1,47 @@
-
 package search
 
 import (
 	"context"
 	"fmt"
-	"math"
-	"sort"
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
+	"go.uber.org/zap"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/routing"
 	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // QueryPlanner handles query planning and optimization for similarity searches
 type QueryPlanner struct {
-	logger          logging.Logger
-	metrics         *metrics.SearchMetrics
-	config          *config.SearchConfig
-	routingEngine   *routing.RoutingEngine
-	clusterConfig   *types.ClusterConfig
-	queryCache      *QueryCache
-	nodeSelector    *NodeSelector
-	dispatcher      *QueryDispatcher
-	merger          *ResultMerger
-	mu              sync.RWMutex
-	shutdown        chan struct{}
-	wg              sync.WaitGroup
+	logger        logging.Logger
+	metrics       *metrics.SearchMetrics
+	config        *QueryPlannerConfig
+	routingEngine *routing.RoutingEngine
+	clusterConfig *types.ClusterConfig
+	queryCache    *QueryCache
+	nodeSelector  *NodeSelector
+	dispatcher    *QueryDispatcher
+	merger        *ResultMerger
+	mu            sync.RWMutex
+	shutdown      chan struct{}
+	wg            sync.WaitGroup
 }
 
 // QueryPlan represents a query execution plan
 type QueryPlan struct {
-	ID               string
-	QueryVector      *types.Vector
-	TopK             int
-	MetadataFilter   *types.MetadataFilter
-	SelectedNodes    []*routing.NodeInfo
-	FallbackNodes    []*routing.NodeInfo
+	ID                string
+	QueryVector       *types.Vector
+	TopK              int
+	MetadataFilter    *types.MetadataFilter
+	SelectedNodes     []*routing.NodeInfo
+	FallbackNodes     []*routing.NodeInfo
 	ExecutionStrategy ExecutionStrategy
-	EstimatedCost    float64
-	EstimatedLatency time.Duration
-	CreatedAt        time.Time
-	Timeout          time.Duration
+	EstimatedCost     float64
+	EstimatedLatency  time.Duration
+	CreatedAt         time.Time
+	Timeout           time.Duration
 }
 
 // ExecutionStrategy represents the strategy for executing a query
@@ -94,15 +90,15 @@ type NodeSelector struct {
 	logger        logging.Logger
 	metrics       *metrics.SearchMetrics
 	routingEngine *routing.RoutingEngine
-	config        *config.SearchConfig
+	config        *QueryPlannerConfig
 }
 
 // QueryDispatcher handles dispatching queries to selected nodes
 type QueryDispatcher struct {
-	logger        logging.Logger
-	metrics       *metrics.SearchMetrics
-	config        *config.SearchConfig
-	workerPool    *WorkerPool
+	logger     logging.Logger
+	metrics    *metrics.SearchMetrics
+	config     *QueryPlannerConfig
+	workerPool *WorkerPool
 }
 
 // WorkerPool manages a pool of workers for concurrent query execution
@@ -134,31 +130,31 @@ type QueryTask struct {
 
 // QueryResult represents the result of a query execution
 type QueryResult struct {
-	TaskID    string
-	NodeID    string
-	Success   bool
-	Results   []*types.SearchResult
-	Error     error
-	Duration  time.Duration
+	TaskID      string
+	NodeID      string
+	Success     bool
+	Results     []*types.SearchResult
+	Error       error
+	Duration    time.Duration
 	VectorCount int
 }
 
 // QueryPlannerConfig represents the configuration for the query planner
 type QueryPlannerConfig struct {
-	CacheSize              int           `yaml:"cache_size" json:"cache_size"`
-	CacheTTL              time.Duration `yaml:"cache_ttl" json:"cache_ttl"`
-	MaxConcurrentQueries  int           `yaml:"max_concurrent_queries" json:"max_concurrent_queries"`
-	QueryTimeout          time.Duration `yaml:"query_timeout" json:"query_timeout"`
-	NodeTimeout           time.Duration `yaml:"node_timeout" json:"node_timeout"`
-	EnableMetrics         bool          `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableCaching         bool          `yaml:"enable_caching" json:"enable_caching"`
-	EnableOptimization    bool          `yaml:"enable_optimization" json:"enable_optimization"`
+	CacheSize            int           `yaml:"cache_size" json:"cache_size"`
+	CacheTTL             time.Duration `yaml:"cache_ttl" json:"cache_ttl"`
+	MaxConcurrentQueries int           `yaml:"max_concurrent_queries" json:"max_concurrent_queries"`
+	QueryTimeout         time.Duration `yaml:"query_timeout" json:"query_timeout"`
+	NodeTimeout          time.Duration `yaml:"node_timeout" json:"node_timeout"`
+	EnableMetrics        bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableCaching        bool          `yaml:"enable_caching" json:"enable_caching"`
+	EnableOptimization   bool          `yaml:"enable_optimization" json:"enable_optimization"`
 }
 
 // DefaultQueryPlannerConfig returns the default query planner configuration
 func DefaultQueryPlannerConfig() *QueryPlannerConfig {
 	return &QueryPlannerConfig{
-		CacheSize:             1000,
+		CacheSize:            1000,
 		CacheTTL:             5 * time.Minute,
 		MaxConcurrentQueries: 100,
 		QueryTimeout:         30 * time.Second,
@@ -178,6 +174,7 @@ func NewQueryPlanner(config *QueryPlannerConfig, clusterConfig *types.ClusterCon
 	planner := &QueryPlanner{
 		logger:        logger,
 		metrics:       metrics,
+		config:        config,
 		clusterConfig: clusterConfig,
 		shutdown:      make(chan struct{}),
 	}
@@ -201,8 +198,7 @@ func NewQueryPlanner(config *QueryPlannerConfig, clusterConfig *types.ClusterCon
 		zap.Duration("cache_ttl", config.CacheTTL),
 		zap.Int("max_concurrent_queries", config.MaxConcurrentQueries),
 		zap.Duration("query_timeout", config.QueryTimeout),
-		zap.Duration("
-		node_timeout", config.NodeTimeout))
+		zap.Duration("node_timeout", config.NodeTimeout))
 
 	return planner
 }

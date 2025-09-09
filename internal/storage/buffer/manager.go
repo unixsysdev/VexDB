@@ -16,46 +16,46 @@ import (
 )
 
 var (
-	ErrBufferFull      = errors.New("buffer is full")
-	ErrBufferClosed    = errors.New("buffer is closed")
-	ErrInvalidVector   = errors.New("invalid vector")
-	ErrFlushFailed     = errors.New("flush failed")
-	ErrVectorNotFound  = errors.New("vector not found")
-	ErrConfigInvalid   = errors.New("invalid configuration")
+	ErrBufferFull     = errors.New("buffer is full")
+	ErrBufferClosed   = errors.New("buffer is closed")
+	ErrInvalidVector  = errors.New("invalid vector")
+	ErrFlushFailed    = errors.New("flush failed")
+	ErrVectorNotFound = errors.New("vector not found")
+	ErrConfigInvalid  = errors.New("invalid configuration")
 )
 
 // BufferEntry represents an entry in the memory buffer
 type BufferEntry struct {
-	Vector     *types.Vector
-	AddedAt    time.Time
-	LastAccess time.Time
+	Vector      *types.Vector
+	AddedAt     time.Time
+	LastAccess  time.Time
 	AccessCount int
-	Index      int // For heap operations
+	Index       int // For heap operations
 }
 
 // BufferConfig represents the configuration for the memory buffer
 type BufferConfig struct {
-	MaxSize         int           `yaml:"max_size" json:"max_size"`                     // Maximum number of vectors in buffer
-	MaxMemoryMB     int           `yaml:"max_memory_mb" json:"max_memory_mb"`         // Maximum memory usage in MB
-	FlushThreshold  float64       `yaml:"flush_threshold" json:"flush_threshold"`     // Flush when buffer reaches this percentage (0.0-1.0)
-	FlushInterval   time.Duration `yaml:"flush_interval" json:"flush_interval"`       // Auto-flush interval
-	EvictionPolicy  string        `yaml:"eviction_policy" json:"eviction_policy"`     // lru, lfu, fifo
-	EnableCompression bool        `yaml:"enable_compression" json:"enable_compression"` // Enable compression for buffered vectors
-	PreallocateSize int           `yaml:"preallocate_size" json:"preallocate_size"`   // Pre-allocate buffer size
-	EnableStats     bool          `yaml:"enable_stats" json:"enable_stats"`           // Enable detailed statistics
+	MaxSize           int           `yaml:"max_size" json:"max_size"`                     // Maximum number of vectors in buffer
+	MaxMemoryMB       int           `yaml:"max_memory_mb" json:"max_memory_mb"`           // Maximum memory usage in MB
+	FlushThreshold    float64       `yaml:"flush_threshold" json:"flush_threshold"`       // Flush when buffer reaches this percentage (0.0-1.0)
+	FlushInterval     time.Duration `yaml:"flush_interval" json:"flush_interval"`         // Auto-flush interval
+	EvictionPolicy    string        `yaml:"eviction_policy" json:"eviction_policy"`       // lru, lfu, fifo
+	EnableCompression bool          `yaml:"enable_compression" json:"enable_compression"` // Enable compression for buffered vectors
+	PreallocateSize   int           `yaml:"preallocate_size" json:"preallocate_size"`     // Pre-allocate buffer size
+	EnableStats       bool          `yaml:"enable_stats" json:"enable_stats"`             // Enable detailed statistics
 }
 
 // DefaultBufferConfig returns the default buffer configuration
 func DefaultBufferConfig() *BufferConfig {
 	return &BufferConfig{
-		MaxSize:         100000,
-		MaxMemoryMB:     512,
-		FlushThreshold:  0.8,
-		FlushInterval:   30 * time.Second,
-		EvictionPolicy:  "lru",
+		MaxSize:           100000,
+		MaxMemoryMB:       512,
+		FlushThreshold:    0.8,
+		FlushInterval:     30 * time.Second,
+		EvictionPolicy:    "lru",
 		EnableCompression: false,
-		PreallocateSize: 10000,
-		EnableStats:     true,
+		PreallocateSize:   10000,
+		EnableStats:       true,
 	}
 }
 
@@ -73,24 +73,27 @@ type Buffer struct {
 	stats       *BufferStats
 }
 
+// Manager is an alias for Buffer for backwards compatibility.
+type Manager = Buffer
+
 // BufferStats represents buffer statistics
 type BufferStats struct {
-	TotalVectors     int64     `json:"total_vectors"`
-	TotalMemoryMB    float64   `json:"total_memory_mb"`
-	HitCount         int64     `json:"hit_count"`
-	MissCount        int64     `json:"miss_count"`
-	EvictionCount    int64     `json:"eviction_count"`
-	FlushCount       int64     `json:"flush_count"`
-	LastFlushAt      time.Time `json:"last_flush_at"`
-	AvgAccessTime    float64   `json:"avg_access_time"`
-	MemoryUsage      float64   `json:"memory_usage"`
-	BufferUsage      float64   `json:"buffer_usage"`
+	TotalVectors  int64     `json:"total_vectors"`
+	TotalMemoryMB float64   `json:"total_memory_mb"`
+	HitCount      int64     `json:"hit_count"`
+	MissCount     int64     `json:"miss_count"`
+	EvictionCount int64     `json:"eviction_count"`
+	FlushCount    int64     `json:"flush_count"`
+	LastFlushAt   time.Time `json:"last_flush_at"`
+	AvgAccessTime float64   `json:"avg_access_time"`
+	MemoryUsage   float64   `json:"memory_usage"`
+	BufferUsage   float64   `json:"buffer_usage"`
 }
 
 // NewBuffer creates a new memory buffer
 func NewBuffer(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics, flushFunc func([]*types.Vector) error) (*Buffer, error) {
 	bufferConfig := DefaultBufferConfig()
-	
+
 	if cfg != nil {
 		if bufferCfg, ok := cfg.Get("buffer"); ok {
 			if cfgMap, ok := bufferCfg.(map[string]interface{}); ok {
@@ -123,12 +126,12 @@ func NewBuffer(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateBufferConfig(bufferConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrConfigInvalid, err)
 	}
-	
+
 	buffer := &Buffer{
 		config:      bufferConfig,
 		vectors:     make(map[string]*BufferEntry),
@@ -139,21 +142,21 @@ func NewBuffer(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 		flushFunc:   flushFunc,
 		stats:       &BufferStats{},
 	}
-	
+
 	// Pre-allocate if configured
 	if bufferConfig.PreallocateSize > 0 {
 		buffer.vectors = make(map[string]*BufferEntry, bufferConfig.PreallocateSize)
 	}
-	
+
 	// Start auto-flush goroutine
 	go buffer.autoFlush()
-	
+
 	buffer.logger.Info("Created memory buffer",
 		zap.Int("max_size", bufferConfig.MaxSize),
 		zap.Int("max_memory_mb", bufferConfig.MaxMemoryMB),
 		zap.Float64("flush_threshold", bufferConfig.FlushThreshold),
 		zap.String("eviction_policy", bufferConfig.EvictionPolicy))
-	
+
 	return buffer, nil
 }
 
@@ -181,23 +184,23 @@ func validateBufferConfig(cfg *BufferConfig) error {
 func (b *Buffer) Add(vector *types.Vector) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	// Validate vector
-    if err := vector.ValidateWithConfig(nil); err != nil {
-        return fmt.Errorf("%w: %v", ErrInvalidVector, err)
-    }
-	
+	if err := vector.ValidateWithConfig(nil); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidVector, err)
+	}
+
 	// Check if buffer is full
 	if b.shouldEvict() {
 		if err := b.evict(); err != nil {
 			return fmt.Errorf("failed to evict vectors: %w", err)
 		}
 	}
-	
+
 	// Check if vector already exists
 	if entry, exists := b.vectors[vector.ID]; exists {
 		// Update existing entry
@@ -207,38 +210,38 @@ func (b *Buffer) Add(vector *types.Vector) error {
 		heap.Fix(b.accessOrder, entry.Index)
 		return nil
 	}
-	
+
 	// Create new entry
 	now := time.Now()
 	entry := &BufferEntry{
-		Vector:     vector,
-		AddedAt:    now,
-		LastAccess: now,
+		Vector:      vector,
+		AddedAt:     now,
+		LastAccess:  now,
 		AccessCount: 1,
 	}
-	
+
 	// Add to buffer
 	b.vectors[vector.ID] = entry
 	heap.Push(b.accessOrder, entry)
-	
+
 	// Update stats
 	b.stats.TotalVectors++
 	b.updateMemoryUsage()
 	b.updateBufferUsage()
-	
+
 	// Check if we need to flush
 	if b.shouldFlush() {
 		select {
 		case b.flushChan <- struct{}{}:
 		default:
-		// Flush already pending
+			// Flush already pending
 		}
 	}
-	
+
 	// Update metrics
-    b.metrics.BufferOperations.Inc("add", "buffer")
-    b.metrics.BufferSize.Set(float64(len(b.vectors)))
-	
+	b.metrics.BufferOperations.Inc("add", "buffer")
+	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+
 	return nil
 }
 
@@ -246,27 +249,27 @@ func (b *Buffer) Add(vector *types.Vector) error {
 func (b *Buffer) Get(vectorID string) (*types.Vector, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return nil, ErrBufferClosed
 	}
-	
+
 	entry, exists := b.vectors[vectorID]
 	if !exists {
-    b.stats.MissCount++
-    b.metrics.BufferMisses.Inc("miss")
+		b.stats.MissCount++
+		b.metrics.BufferMisses.Inc("miss")
 		return nil, ErrVectorNotFound
 	}
-	
+
 	// Update access information
 	entry.LastAccess = time.Now()
 	entry.AccessCount++
 	heap.Fix(b.accessOrder, entry.Index)
-	
+
 	// Update stats
-    b.stats.HitCount++
-    b.metrics.BufferHits.Inc("hit")
-	
+	b.stats.HitCount++
+	b.metrics.BufferHits.Inc("hit")
+
 	return entry.Vector, nil
 }
 
@@ -274,29 +277,29 @@ func (b *Buffer) Get(vectorID string) (*types.Vector, error) {
 func (b *Buffer) Remove(vectorID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	entry, exists := b.vectors[vectorID]
 	if !exists {
 		return ErrVectorNotFound
 	}
-	
+
 	// Remove from buffer
 	delete(b.vectors, vectorID)
 	heap.Remove(b.accessOrder, entry.Index)
-	
+
 	// Update stats
 	b.stats.TotalVectors--
 	b.updateMemoryUsage()
 	b.updateBufferUsage()
-	
+
 	// Update metrics
-    b.metrics.BufferOperations.Inc("remove", "buffer")
-    b.metrics.BufferSize.Set(float64(len(b.vectors)))
-	
+	b.metrics.BufferOperations.Inc("remove", "buffer")
+	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+
 	return nil
 }
 
@@ -304,15 +307,15 @@ func (b *Buffer) Remove(vectorID string) error {
 func (b *Buffer) Flush() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	if len(b.vectors) == 0 {
 		return nil
 	}
-	
+
 	return b.flush()
 }
 
@@ -321,36 +324,36 @@ func (b *Buffer) flush() error {
 	if b.flushFunc == nil {
 		return errors.New("flush function not set")
 	}
-	
+
 	// Collect all vectors
 	vectors := make([]*types.Vector, 0, len(b.vectors))
 	for _, entry := range b.vectors {
 		vectors = append(vectors, entry.Vector)
 	}
-	
+
 	// Call flush function
-    if err := b.flushFunc(vectors); err != nil {
-        b.metrics.Errors.Inc("buffer", "flush_failed")
-        return fmt.Errorf("%w: %v", ErrFlushFailed, err)
-    }
-	
+	if err := b.flushFunc(vectors); err != nil {
+		b.metrics.Errors.Inc("buffer", "flush_failed")
+		return fmt.Errorf("%w: %v", ErrFlushFailed, err)
+	}
+
 	// Clear buffer
 	b.vectors = make(map[string]*BufferEntry)
 	b.accessOrder = NewAccessOrderHeap(b.config.EvictionPolicy)
-	
+
 	// Update stats
 	b.stats.FlushCount++
 	b.stats.LastFlushAt = time.Now()
 	b.stats.TotalVectors = 0
 	b.updateMemoryUsage()
 	b.updateBufferUsage()
-	
+
 	// Update metrics
-    b.metrics.BufferOperations.Inc("flush", "buffer")
+	b.metrics.BufferOperations.Inc("flush", "buffer")
 	b.metrics.BufferSize.Set(0)
-	
+
 	b.logger.Info("Flushed buffer", zap.Int("vectors", len(vectors)))
-	
+
 	return nil
 }
 
@@ -360,12 +363,12 @@ func (b *Buffer) shouldEvict() bool {
 	if len(b.vectors) >= b.config.MaxSize {
 		return true
 	}
-	
+
 	// Check memory limit
 	if b.stats.MemoryUsage >= float64(b.config.MaxMemoryMB) {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -374,25 +377,25 @@ func (b *Buffer) evict() error {
 	if b.accessOrder.Len() == 0 {
 		return nil
 	}
-	
+
 	// Evict 10% of vectors or enough to get under limits
 	evictCount := max(1, len(b.vectors)/10)
-	
+
 	for i := 0; i < evictCount && b.accessOrder.Len() > 0; i++ {
 		entry := heap.Pop(b.accessOrder).(*BufferEntry)
 		delete(b.vectors, entry.Vector.ID)
 		b.stats.EvictionCount++
 	}
-	
+
 	// Update stats
 	b.stats.TotalVectors = int64(len(b.vectors))
 	b.updateMemoryUsage()
 	b.updateBufferUsage()
-	
+
 	// Update metrics
-    b.metrics.BufferOperations.Inc("evict", "buffer")
-    b.metrics.BufferSize.Set(float64(len(b.vectors)))
-	
+	b.metrics.BufferOperations.Inc("evict", "buffer")
+	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+
 	return nil
 }
 
@@ -405,7 +408,7 @@ func (b *Buffer) shouldFlush() bool {
 func (b *Buffer) autoFlush() {
 	ticker := time.NewTicker(b.config.FlushInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -416,7 +419,7 @@ func (b *Buffer) autoFlush() {
 				}
 			}
 			b.mu.Unlock()
-			
+
 		case <-b.flushChan:
 			b.mu.Lock()
 			if !b.closed && len(b.vectors) > 0 {
@@ -434,7 +437,7 @@ func (b *Buffer) updateMemoryUsage() {
 	if !b.config.EnableStats {
 		return
 	}
-	
+
 	var totalMemory int64
 	for _, entry := range b.vectors {
 		// Estimate memory usage
@@ -446,7 +449,7 @@ func (b *Buffer) updateMemoryUsage() {
 		}
 		totalMemory += vectorSize + metadataSize + int64(unsafe.Sizeof(BufferEntry{}))
 	}
-	
+
 	b.stats.MemoryUsage = float64(totalMemory) / (1024 * 1024) // Convert to MB
 }
 
@@ -455,7 +458,7 @@ func (b *Buffer) updateBufferUsage() {
 	if !b.config.EnableStats {
 		return
 	}
-	
+
 	b.stats.BufferUsage = float64(len(b.vectors)) / float64(b.config.MaxSize)
 }
 
@@ -463,23 +466,23 @@ func (b *Buffer) updateBufferUsage() {
 func (b *Buffer) Close() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return nil
 	}
-	
+
 	// Flush remaining vectors
 	if len(b.vectors) > 0 {
 		if err := b.flush(); err != nil {
 			b.logger.Error("Failed to flush buffer on close", zap.Error(err))
 		}
 	}
-	
+
 	b.closed = true
 	close(b.flushChan)
-	
+
 	b.logger.Info("Closed memory buffer")
-	
+
 	return nil
 }
 
@@ -487,7 +490,7 @@ func (b *Buffer) Close() error {
 func (b *Buffer) GetSize() int {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	return len(b.vectors)
 }
 
@@ -495,7 +498,7 @@ func (b *Buffer) GetSize() int {
 func (b *Buffer) GetMemoryUsage() float64 {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	return b.stats.MemoryUsage
 }
 
@@ -503,7 +506,7 @@ func (b *Buffer) GetMemoryUsage() float64 {
 func (b *Buffer) GetUsage() float64 {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	return b.stats.BufferUsage
 }
 
@@ -511,7 +514,7 @@ func (b *Buffer) GetUsage() float64 {
 func (b *Buffer) GetStats() *BufferStats {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	// Return a copy of stats
 	stats := *b.stats
 	return &stats
@@ -521,7 +524,7 @@ func (b *Buffer) GetStats() *BufferStats {
 func (b *Buffer) GetConfig() *BufferConfig {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *b.config
 	return &config
@@ -531,18 +534,18 @@ func (b *Buffer) GetConfig() *BufferConfig {
 func (b *Buffer) UpdateConfig(config *BufferConfig) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	// Validate new configuration
 	if err := validateBufferConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrConfigInvalid, err)
 	}
-	
+
 	b.config = config
-	
+
 	// Update access order heap if eviction policy changed
 	if b.accessOrder.policy != config.EvictionPolicy {
 		b.accessOrder = NewAccessOrderHeap(config.EvictionPolicy)
@@ -551,9 +554,9 @@ func (b *Buffer) UpdateConfig(config *BufferConfig) error {
 			heap.Push(b.accessOrder, entry)
 		}
 	}
-	
+
 	b.logger.Info("Updated buffer configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -561,7 +564,7 @@ func (b *Buffer) UpdateConfig(config *BufferConfig) error {
 func (b *Buffer) IsClosed() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	return b.closed
 }
 
@@ -569,12 +572,12 @@ func (b *Buffer) IsClosed() bool {
 func (b *Buffer) GetVectorIDs() []string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	ids := make([]string, 0, len(b.vectors))
 	for id := range b.vectors {
 		ids = append(ids, id)
 	}
-	
+
 	return ids
 }
 
@@ -582,7 +585,7 @@ func (b *Buffer) GetVectorIDs() []string {
 func (b *Buffer) HasVector(vectorID string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	_, exists := b.vectors[vectorID]
 	return exists
 }
@@ -591,23 +594,23 @@ func (b *Buffer) HasVector(vectorID string) bool {
 func (b *Buffer) Clear() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	b.vectors = make(map[string]*BufferEntry)
 	b.accessOrder = NewAccessOrderHeap(b.config.EvictionPolicy)
-	
+
 	// Update stats
 	b.stats.TotalVectors = 0
 	b.updateMemoryUsage()
 	b.updateBufferUsage()
-	
+
 	// Update metrics
-    b.metrics.BufferOperations.Inc("clear", "buffer")
-    b.metrics.BufferSize.Set(0)
-	
+	b.metrics.BufferOperations.Inc("clear", "buffer")
+	b.metrics.BufferSize.Set(0)
+
 	return nil
 }
 
@@ -615,23 +618,23 @@ func (b *Buffer) Clear() error {
 func (b *Buffer) Validate() error {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	if b.closed {
 		return ErrBufferClosed
 	}
-	
+
 	// Validate vector count
 	if int64(len(b.vectors)) != b.stats.TotalVectors {
 		return errors.New("vector count mismatch")
 	}
-	
+
 	// Validate all vectors
 	for _, entry := range b.vectors {
-        if err := entry.Vector.ValidateWithConfig(nil); err != nil {
-            return fmt.Errorf("invalid vector %s: %w", entry.Vector.ID, err)
-        }
+		if err := entry.Vector.ValidateWithConfig(nil); err != nil {
+			return fmt.Errorf("invalid vector %s: %w", entry.Vector.ID, err)
+		}
 	}
-	
+
 	return nil
 }
 

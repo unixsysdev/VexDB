@@ -10,63 +10,62 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/protocol/adapter"
-	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // RedisAdapter implements the ProtocolAdapter interface for Redis protocol (RESP)
 type RedisAdapter struct {
-	config     *RedisConfig
-	listener   net.Listener
-	logger     logging.Logger
-	metrics    *metrics.IngestionMetrics
-	validator  adapter.Validator
-	handler    adapter.Handler
-	protocol   string
-	startTime  time.Time
-	mu         sync.RWMutex
-	shutdown   bool
+	config      *RedisConfig
+	listener    net.Listener
+	logger      logging.Logger
+	metrics     *metrics.IngestionMetrics
+	validator   adapter.Validator
+	handler     adapter.Handler
+	protocol    string
+	startTime   time.Time
+	mu          sync.RWMutex
+	shutdown    bool
 	connections map[net.Conn]bool
 }
 
 // RedisConfig represents the Redis adapter configuration
 type RedisConfig struct {
-	Host               string        `yaml:"host" json:"host"`
-	Port               int           `yaml:"port" json:"port"`
-	ReadTimeout        time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout       time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout        time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	MaxMessageSize     int64         `yaml:"max_message_size" json:"max_message_size"`
-	EnableMetrics      bool          `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableHealth       bool          `yaml:"enable_health" json:"enable_health"`
-	MaxConnections     int           `yaml:"max_connections" json:"max_connections"`
-	BufferSize         int           `yaml:"buffer_size" json:"buffer_size"`
+	Host           string        `yaml:"host" json:"host"`
+	Port           int           `yaml:"port" json:"port"`
+	ReadTimeout    time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout   time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	IdleTimeout    time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	MaxMessageSize int64         `yaml:"max_message_size" json:"max_message_size"`
+	EnableMetrics  bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableHealth   bool          `yaml:"enable_health" json:"enable_health"`
+	MaxConnections int           `yaml:"max_connections" json:"max_connections"`
+	BufferSize     int           `yaml:"buffer_size" json:"buffer_size"`
 }
 
 // DefaultRedisConfig returns the default Redis configuration
 func DefaultRedisConfig() *RedisConfig {
 	return &RedisConfig{
-		Host:            "0.0.0.0",
-		Port:            6379,
-		ReadTimeout:     30 * time.Second,
-		WriteTimeout:    30 * time.Second,
-		IdleTimeout:     60 * time.Second,
-		MaxMessageSize:  10 << 20, // 10MB
-		EnableMetrics:   true,
-		EnableHealth:    true,
-		MaxConnections:  1000,
-		BufferSize:      4096,
+		Host:           "0.0.0.0",
+		Port:           6379,
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxMessageSize: 10 << 20, // 10MB
+		EnableMetrics:  true,
+		EnableHealth:   true,
+		MaxConnections: 1000,
+		BufferSize:     4096,
 	}
 }
 
 // NewRedisAdapter creates a new Redis adapter
 func NewRedisAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*RedisAdapter, error) {
 	redisConfig := DefaultRedisConfig()
-	
+
 	if cfg != nil {
 		if redisCfg, ok := cfg.Get("redis"); ok {
 			if cfgMap, ok := redisCfg.(map[string]interface{}); ok {
@@ -103,30 +102,30 @@ func NewRedisAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateRedisConfig(redisConfig); err != nil {
 		return nil, fmt.Errorf("invalid Redis configuration: %w", err)
 	}
-	
+
 	adapter := &RedisAdapter{
-		config:       redisConfig,
-		logger:       logger,
-		metrics:      metrics,
-		validator:    validator,
-		handler:      handler,
-		protocol:     "redis",
-		startTime:    time.Now(),
-		connections:  make(map[net.Conn]bool),
+		config:      redisConfig,
+		logger:      logger,
+		metrics:     metrics,
+		validator:   validator,
+		handler:     handler,
+		protocol:    "redis",
+		startTime:   time.Now(),
+		connections: make(map[net.Conn]bool),
 	}
-	
+
 	adapter.logger.Info("Created Redis adapter",
 		zap.String("host", redisConfig.Host),
 		zap.Int("port", redisConfig.Port),
 		zap.Duration("read_timeout", redisConfig.ReadTimeout),
 		zap.Duration("write_timeout", redisConfig.WriteTimeout),
 		zap.Int("max_connections", redisConfig.MaxConnections))
-	
+
 	return adapter, nil
 }
 
@@ -156,49 +155,49 @@ func validateRedisConfig(cfg *RedisConfig) error {
 	if cfg.BufferSize <= 0 {
 		return fmt.Errorf("buffer size must be positive")
 	}
-	
+
 	return nil
 }
 
 // Start starts the Redis adapter
 func (a *RedisAdapter) Start(ctx context.Context) error {
 	a.logger.Info("Starting Redis adapter", zap.String("address", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port)))
-	
+
 	// Create listener
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", a.config.Host, a.config.Port))
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
 	}
 	a.listener = listener
-	
+
 	// Start accepting connections
 	go a.acceptConnections()
-	
+
 	// Update metrics
 	a.metrics.AdaptersStarted.Inc("redis", "start")
-	
+
 	return nil
 }
 
 // Stop stops the Redis adapter
 func (a *RedisAdapter) Stop(ctx context.Context) error {
 	a.logger.Info("Stopping Redis adapter")
-	
+
 	a.mu.Lock()
 	a.shutdown = true
 	a.mu.Unlock()
-	
+
 	// Close all connections
 	a.closeAllConnections()
-	
+
 	// Close listener
 	if a.listener != nil {
 		a.listener.Close()
 	}
-	
+
 	// Update metrics
 	a.metrics.AdaptersStopped.Inc("redis", "stop")
-	
+
 	return nil
 }
 
@@ -217,7 +216,7 @@ func (a *RedisAdapter) GetMetrics() map[string]interface{} {
 	a.mu.RLock()
 	connectionCount := len(a.connections)
 	a.mu.RUnlock()
-	
+
 	return map[string]interface{}{
 		"protocol":           a.protocol,
 		"address":            a.GetAddress(),
@@ -241,41 +240,41 @@ func (a *RedisAdapter) acceptConnections() {
 			a.mu.RLock()
 			shutdown := a.shutdown
 			a.mu.RUnlock()
-			
+
 			if shutdown {
 				return
 			}
-			
+
 			a.logger.Error("Failed to accept connection", zap.Error(err))
 			continue
 		}
-		
+
 		// Check connection limit
 		a.mu.RLock()
 		connectionCount := len(a.connections)
 		shutdown := a.shutdown
 		a.mu.RUnlock()
-		
+
 		if shutdown {
 			conn.Close()
 			continue
 		}
-		
+
 		if connectionCount >= a.config.MaxConnections {
 			conn.Close()
 			continue
 		}
-		
+
 		// Add connection to tracking
 		a.mu.Lock()
 		a.connections[conn] = true
 		a.mu.Unlock()
-		
+
 		// Update metrics
 		a.metrics.ConnectionsActive.Inc("redis")
-		
+
 		a.logger.Info("Redis connection established", zap.String("remote_addr", conn.RemoteAddr().String()))
-		
+
 		// Handle connection in goroutine
 		go a.handleConnection(conn)
 	}
@@ -288,23 +287,23 @@ func (a *RedisAdapter) handleConnection(conn net.Conn) {
 		a.mu.Lock()
 		delete(a.connections, conn)
 		a.mu.Unlock()
-		
+
 		// Update metrics
 		a.metrics.ConnectionsActive.Dec("redis")
-		
+
 		// Close connection
 		conn.Close()
-		
+
 		a.logger.Info("Redis connection closed", zap.String("remote_addr", conn.RemoteAddr().String()))
 	}()
-	
+
 	// Set connection timeouts
 	conn.SetReadDeadline(time.Now().Add(a.config.ReadTimeout))
 	conn.SetWriteDeadline(time.Now().Add(a.config.WriteTimeout))
-	
+
 	// Create reader
 	reader := bufio.NewReaderSize(conn, a.config.BufferSize)
-	
+
 	// Handle commands
 	for {
 		// Read command
@@ -315,14 +314,14 @@ func (a *RedisAdapter) handleConnection(conn net.Conn) {
 			}
 			return
 		}
-		
+
 		// Reset deadlines
 		conn.SetReadDeadline(time.Now().Add(a.config.ReadTimeout))
 		conn.SetWriteDeadline(time.Now().Add(a.config.WriteTimeout))
-		
+
 		// Handle command
 		response := a.handleRedisCommand(command)
-		
+
 		// Send response
 		if _, err := conn.Write([]byte(response)); err != nil {
 			a.logger.Error("Failed to send Redis response", zap.Error(err))
@@ -338,21 +337,21 @@ func (a *RedisAdapter) readRESPCommand(reader *bufio.Reader) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(line) < 2 {
 		return nil, fmt.Errorf("invalid RESP command")
 	}
-	
+
 	prefix := line[0]
 	content := strings.TrimSpace(line[1 : len(line)-2]) // Remove \r\n
-	
+
 	switch prefix {
 	case '*': // Array
 		arrayLength, err := strconv.Atoi(content)
 		if err != nil {
 			return nil, fmt.Errorf("invalid array length: %w", err)
 		}
-		
+
 		command := make([]string, arrayLength)
 		for i := 0; i < arrayLength; i++ {
 			// Read bulk string prefix
@@ -360,22 +359,22 @@ func (a *RedisAdapter) readRESPCommand(reader *bufio.Reader) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			if len(bulkLine) < 2 || bulkLine[0] != '$' {
 				return nil, fmt.Errorf("expected bulk string prefix")
 			}
-			
+
 			// Read bulk string content
 			bulkContent, err := reader.ReadString('\n')
 			if err != nil {
 				return nil, err
 			}
-			
+
 			command[i] = strings.TrimSpace(bulkContent[:len(bulkContent)-2]) // Remove \r\n
 		}
-		
+
 		return command, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unsupported RESP prefix: %c", prefix)
 	}
@@ -386,28 +385,28 @@ func (a *RedisAdapter) handleRedisCommand(command []string) string {
 	if len(command) == 0 {
 		return "-ERR empty command\r\n"
 	}
-	
+
 	cmd := strings.ToUpper(command[0])
-	
+
 	switch cmd {
 	case "PING":
 		return "+PONG\r\n"
-		
+
 	case "VECTOR.ADD":
 		return a.handleVectorAdd(command[1:])
-		
+
 	case "VECTOR.MADD":
 		return a.handleVectorMAdd(command[1:])
-		
+
 	case "HELLO":
 		return a.handleHello()
-		
+
 	case "COMMAND":
 		return a.handleCommand()
-		
+
 	case "INFO":
 		return a.handleInfo()
-		
+
 	default:
 		return "-ERR unknown command '" + cmd + "'\r\n"
 	}
@@ -418,7 +417,7 @@ func (a *RedisAdapter) handleVectorAdd(args []string) string {
 	if len(args) < 1 {
 		return "-ERR wrong number of arguments for 'vector.add' command\r\n"
 	}
-	
+
 	// Parse vector data (simplified - in real implementation would parse JSON)
 	// For now, we'll just acknowledge the command
 	return "+OK\r\n"
@@ -429,7 +428,7 @@ func (a *RedisAdapter) handleVectorMAdd(args []string) string {
 	if len(args) < 1 {
 		return "-ERR wrong number of arguments for 'vector.madd' command\r\n"
 	}
-	
+
 	// Parse multiple vector data (simplified)
 	// For now, we'll just acknowledge the command
 	return fmt.Sprintf(":%d\r\n", len(args))
@@ -530,7 +529,7 @@ func (a *RedisAdapter) handleInfo() string {
 func (a *RedisAdapter) closeAllConnections() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	for conn := range a.connections {
 		conn.Close()
 		delete(a.connections, conn)

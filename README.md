@@ -10,6 +10,7 @@ VexDB is a distributed, high-throughput streaming vector database designed for r
 - **Unified IVF (Inverted File) indexing** for fast approximate search
 - **Stateless query coordination** with scatter-gather execution
 - **Prometheus, Grafana, and Jaeger** integration for observability
+- **Dedicated query planner configuration** with extensible search metrics
 
 ## Architecture
 ```

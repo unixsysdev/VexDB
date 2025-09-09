@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/storage/segment"
 	"vexdb/internal/types"
@@ -23,18 +22,18 @@ type ParallelSearchSegment struct {
 
 // ParallelSearch provides parallel search functionality across multiple segments
 type ParallelSearch struct {
-	config      *config.Config
-	logger      *zap.Logger
-	metrics     *metrics.Collector
-	
-	linear      *LinearSearch
-	
-	mu          sync.RWMutex
-	started     bool
+	config  config.Config
+	logger  *zap.Logger
+	metrics *metrics.StorageMetrics
+
+	linear *LinearSearch
+
+	mu      sync.RWMutex
+	started bool
 }
 
 // NewParallelSearch creates a new parallel search instance
-func NewParallelSearch(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector) (*ParallelSearch, error) {
+func NewParallelSearch(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics) (*ParallelSearch, error) {
 	p := &ParallelSearch{
 		config:  cfg,
 		logger:  logger,
@@ -63,7 +62,7 @@ func (p *ParallelSearch) Start(ctx context.Context) error {
 	p.logger.Info("Starting parallel search")
 
 	// Start linear search
-	if err := p.linear.Start(ctx); err != nil {
+	if err := p.linear.Start(); err != nil {
 		return err
 	}
 
@@ -84,7 +83,7 @@ func (p *ParallelSearch) Stop(ctx context.Context) error {
 	p.logger.Info("Stopping parallel search")
 
 	// Stop linear search
-	if err := p.linear.Stop(ctx); err != nil {
+	if err := p.linear.Stop(); err != nil {
 		p.logger.Error("Failed to stop linear search", zap.Error(err))
 	}
 
@@ -94,7 +93,7 @@ func (p *ParallelSearch) Stop(ctx context.Context) error {
 }
 
 // SearchSegments performs parallel search across multiple segments
-func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []ParallelSearchSegment) ([]*types.SearchResult, error) {
+func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []ParallelSearchSegment) ([]*SearchResult, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -103,11 +102,11 @@ func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []Parallel
 	}
 
 	if len(segments) == 0 {
-		return []*types.SearchResult{}, nil
+		return []*SearchResult{}, nil
 	}
 
 	// Create channels for results and errors
-	resultsChan := make(chan []*types.SearchResult, len(segments))
+	resultsChan := make(chan []*SearchResult, len(segments))
 	errorsChan := make(chan error, len(segments))
 
 	// Use WaitGroup to wait for all goroutines to complete
@@ -118,7 +117,7 @@ func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []Parallel
 	for _, segment := range segments {
 		go func(s ParallelSearchSegment) {
 			defer wg.Done()
-			
+
 			results, err := p.searchSegment(ctx, s)
 			if err != nil {
 				errorsChan <- err
@@ -136,7 +135,7 @@ func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []Parallel
 	}()
 
 	// Collect results and errors
-	var allResults []*types.SearchResult
+	var allResults []*SearchResult
 	var searchErrors []error
 
 	// Process results and errors as they come in
@@ -148,14 +147,14 @@ func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []Parallel
 				continue
 			}
 			allResults = append(allResults, results...)
-			
+
 		case err, ok := <-errorsChan:
 			if !ok {
 				errorsChan = nil
 				continue
 			}
 			searchErrors = append(searchErrors, err)
-			
+
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
@@ -173,14 +172,14 @@ func (p *ParallelSearch) SearchSegments(ctx context.Context, segments []Parallel
 
 	// If no results found, return empty slice
 	if len(allResults) == 0 {
-		return []*types.SearchResult{}, nil
+		return []*SearchResult{}, nil
 	}
 
 	return allResults, nil
 }
 
 // searchSegment performs search on a single segment
-func (p *ParallelSearch) searchSegment(ctx context.Context, segment ParallelSearchSegment) ([]*types.SearchResult, error) {
+func (p *ParallelSearch) searchSegment(ctx context.Context, segment ParallelSearchSegment) ([]*SearchResult, error) {
 	// Get vectors from segment
 	vectors, err := segment.Segment.GetVectors(ctx)
 	if err != nil {
@@ -189,7 +188,7 @@ func (p *ParallelSearch) searchSegment(ctx context.Context, segment ParallelSear
 
 	// If no vectors in segment, return empty results
 	if len(vectors) == 0 {
-		return []*types.SearchResult{}, nil
+		return []*SearchResult{}, nil
 	}
 
 	// Perform linear search on segment vectors
@@ -197,7 +196,7 @@ func (p *ParallelSearch) searchSegment(ctx context.Context, segment ParallelSear
 		QueryVector: segment.Query,
 		Limit:       segment.K,
 	}
-	results, err := p.linear.Search(query, vectors)
+	results, err := p.linear.searchVectors(query, vectors)
 	if err != nil {
 		return nil, err
 	}
@@ -212,6 +211,5 @@ func (p *ParallelSearch) GetStatus() *types.ParallelSearchStatus {
 
 	return &types.ParallelSearchStatus{
 		Started: p.started,
-		Linear:  p.linear.GetStatus(),
 	}
 }

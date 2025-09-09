@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -12,21 +13,21 @@ import (
 // MockSearchService implements a mock search service for testing
 type MockSearchService struct {
 	mu sync.RWMutex
-	
+
 	// Configuration
-	ShouldFail      bool
-	FailureError    error
-	SearchDelay     time.Duration
-	
+	ShouldFail   bool
+	FailureError error
+	SearchDelay  time.Duration
+
 	// Search results to return
-	SearchResults   []*types.SearchResult
-	
+	SearchResults []*types.SearchResult
+
 	// Call tracking
-	SearchCalls     []SearchCall
+	SearchCalls       []SearchCall
 	MultiClusterCalls []MultiClusterCall
-	HealthCheckCalls []HealthCheckCall
-	GetMetricsCalls []GetMetricsCall
-	GetConfigCalls  []GetConfigCall
+	HealthCheckCalls  []HealthCheckCall
+	GetMetricsCalls   []GetMetricsCall
+	GetConfigCalls    []GetConfigCall
 	UpdateConfigCalls []UpdateConfigCall
 }
 
@@ -75,12 +76,12 @@ type UpdateConfigCall struct {
 // NewMockSearchService creates a new mock search service
 func NewMockSearchService() *MockSearchService {
 	return &MockSearchService{
-		SearchResults: make([]*types.SearchResult, 0),
-		SearchCalls: make([]SearchCall, 0),
+		SearchResults:     make([]*types.SearchResult, 0),
+		SearchCalls:       make([]SearchCall, 0),
 		MultiClusterCalls: make([]MultiClusterCall, 0),
-		HealthCheckCalls: make([]HealthCheckCall, 0),
-		GetMetricsCalls: make([]GetMetricsCall, 0),
-		GetConfigCalls: make([]GetConfigCall, 0),
+		HealthCheckCalls:  make([]HealthCheckCall, 0),
+		GetMetricsCalls:   make([]GetMetricsCall, 0),
+		GetConfigCalls:    make([]GetConfigCall, 0),
 		UpdateConfigCalls: make([]UpdateConfigCall, 0),
 	}
 }
@@ -89,7 +90,7 @@ func NewMockSearchService() *MockSearchService {
 func (m *MockSearchService) Search(ctx context.Context, query *types.Vector, k int, filter map[string]string) ([]*types.SearchResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := SearchCall{
 		Ctx:            ctx,
 		Query:          query,
@@ -97,12 +98,12 @@ func (m *MockSearchService) Search(ctx context.Context, query *types.Vector, k i
 		MetadataFilter: filter,
 	}
 	m.SearchCalls = append(m.SearchCalls, call)
-	
+
 	// Simulate delay if configured
 	if m.SearchDelay > 0 {
 		time.Sleep(m.SearchDelay)
 	}
-	
+
 	// Check if we should fail
 	if m.ShouldFail {
 		if m.FailureError != nil {
@@ -110,7 +111,7 @@ func (m *MockSearchService) Search(ctx context.Context, query *types.Vector, k i
 		}
 		return nil, errors.New("mock search service failure")
 	}
-	
+
 	// Return configured results
 	results := make([]*types.SearchResult, len(m.SearchResults))
 	copy(results, m.SearchResults)
@@ -121,7 +122,7 @@ func (m *MockSearchService) Search(ctx context.Context, query *types.Vector, k i
 func (m *MockSearchService) MultiClusterSearch(ctx context.Context, query *types.Vector, k int, clusterIDs []string, filter map[string]string) ([]*types.SearchResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := MultiClusterCall{
 		Ctx:            ctx,
 		Query:          query,
@@ -130,12 +131,12 @@ func (m *MockSearchService) MultiClusterSearch(ctx context.Context, query *types
 		MetadataFilter: filter,
 	}
 	m.MultiClusterCalls = append(m.MultiClusterCalls, call)
-	
+
 	// Simulate delay if configured
 	if m.SearchDelay > 0 {
 		time.Sleep(m.SearchDelay)
 	}
-	
+
 	// Check if we should fail
 	if m.ShouldFail {
 		if m.FailureError != nil {
@@ -143,7 +144,7 @@ func (m *MockSearchService) MultiClusterSearch(ctx context.Context, query *types
 		}
 		return nil, errors.New("mock multi-cluster search service failure")
 	}
-	
+
 	// Return configured results
 	results := make([]*types.SearchResult, len(m.SearchResults))
 	copy(results, m.SearchResults)
@@ -155,7 +156,7 @@ func (m *MockSearchService) GetClusterInfo(ctx context.Context, clusterID string
 	if m.ShouldFail {
 		return nil, errors.New("mock get cluster info failure")
 	}
-	
+
 	return &types.ClusterInfo{
 		ID:        clusterID,
 		Name:      "test-cluster",
@@ -171,7 +172,7 @@ func (m *MockSearchService) GetClusterStatus(ctx context.Context) (*types.Cluste
 	if m.ShouldFail {
 		return nil, errors.New("mock get cluster status failure")
 	}
-	
+
 	return &types.ClusterStatus{
 		ID:        "test-cluster-status",
 		Status:    "active",
@@ -187,23 +188,23 @@ func (m *MockSearchService) GetClusterStatus(ctx context.Context) (*types.Cluste
 func (m *MockSearchService) HealthCheck(ctx context.Context, detailed bool) (*types.HealthStatus, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := HealthCheckCall{
 		Ctx:      ctx,
 		Detailed: detailed,
 	}
 	m.HealthCheckCalls = append(m.HealthCheckCalls, call)
-	
+
 	if m.ShouldFail {
 		return nil, errors.New("mock health check failure")
 	}
-	
+
 	return &types.HealthStatus{
 		Healthy: true,
 		Status:  "healthy",
 		Message: "Service is healthy",
 		Details: map[string]string{
-			"uptime": "1h30m",
+			"uptime":  "1h30m",
 			"version": "1.0.0",
 		},
 	}, nil
@@ -213,7 +214,7 @@ func (m *MockSearchService) HealthCheck(ctx context.Context, detailed bool) (*ty
 func (m *MockSearchService) GetMetrics(ctx context.Context, metricType, clusterID, nodeID string) (map[string]float64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := GetMetricsCall{
 		Ctx:        ctx,
 		MetricType: metricType,
@@ -221,11 +222,11 @@ func (m *MockSearchService) GetMetrics(ctx context.Context, metricType, clusterI
 		NodeID:     nodeID,
 	}
 	m.GetMetricsCalls = append(m.GetMetricsCalls, call)
-	
+
 	if m.ShouldFail {
 		return nil, errors.New("mock get metrics failure")
 	}
-	
+
 	return map[string]float64{
 		"requests_total": 1000,
 		"avg_latency":    0.05,
@@ -237,16 +238,16 @@ func (m *MockSearchService) GetMetrics(ctx context.Context, metricType, clusterI
 func (m *MockSearchService) GetConfig(ctx context.Context) (map[string]string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := GetConfigCall{
 		Ctx: ctx,
 	}
 	m.GetConfigCalls = append(m.GetConfigCalls, call)
-	
+
 	if m.ShouldFail {
 		return nil, errors.New("mock get config failure")
 	}
-	
+
 	return map[string]string{
 		"search.engine.max_results": "1000",
 		"search.engine.default_k":   "10",
@@ -258,17 +259,17 @@ func (m *MockSearchService) GetConfig(ctx context.Context) (map[string]string, e
 func (m *MockSearchService) UpdateConfig(ctx context.Context, updates map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := UpdateConfigCall{
 		Ctx:     ctx,
 		Updates: updates,
 	}
 	m.UpdateConfigCalls = append(m.UpdateConfigCalls, call)
-	
+
 	if m.ShouldFail {
 		return errors.New("mock update config failure")
 	}
-	
+
 	return nil
 }
 
@@ -355,7 +356,7 @@ func (m *MockSearchService) GetLastHealthCheckCall() *HealthCheckCall {
 func (m *MockSearchService) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.SearchCalls = make([]SearchCall, 0)
 	m.MultiClusterCalls = make([]MultiClusterCall, 0)
 	m.HealthCheckCalls = make([]HealthCheckCall, 0)
@@ -383,14 +384,14 @@ func (g *MockVectorGenerator) GenerateVector(id string) *types.Vector {
 	data := make([]float32, g.dimension)
 	for i := 0; i < g.dimension; i++ {
 		// Simple deterministic generation
-		data[i] = float32((i + int(g.seed)) % 100) / 100.0
+		data[i] = float32((i+int(g.seed))%100) / 100.0
 	}
-	
+
 	return &types.Vector{
-		ID:       id,
-		Data:     data,
+		ID:   id,
+		Data: data,
 		Metadata: map[string]interface{}{
-			"source": "test",
+			"source":    "test",
 			"dimension": g.dimension,
 		},
 		ClusterID: uint32(g.seed % 10),
@@ -400,31 +401,31 @@ func (g *MockVectorGenerator) GenerateVector(id string) *types.Vector {
 // GenerateSearchResults generates mock search results
 func (g *MockVectorGenerator) GenerateSearchResults(query *types.Vector, k int) []*types.SearchResult {
 	results := make([]*types.SearchResult, k)
-	
+
 	for i := 0; i < k; i++ {
 		vectorID := fmt.Sprintf("result_%d", i+1)
 		vector := g.GenerateVector(vectorID)
-		
+
 		// Calculate a simple distance (not mathematically correct, just for testing)
 		distance := float64(i) * 0.1
-		
+
 		results[i] = &types.SearchResult{
 			Vector:   vector,
 			Distance: distance,
 		}
 	}
-	
+
 	return results
 }
 
 // MockMetricsCollector implements a mock metrics collector
 type MockMetricsCollector struct {
 	mu sync.RWMutex
-	
+
 	// Metrics storage
 	metrics map[string]float64
 	labels  map[string]map[string]string
-	
+
 	// Call tracking
 	RecordHistogramCalls []RecordHistogramCall
 	RecordCounterCalls   []RecordCounterCall
@@ -454,8 +455,8 @@ type RecordGaugeCall struct {
 // NewMockMetricsCollector creates a new mock metrics collector
 func NewMockMetricsCollector() *MockMetricsCollector {
 	return &MockMetricsCollector{
-		metrics: make(map[string]float64),
-		labels:  make(map[string]map[string]string),
+		metrics:              make(map[string]float64),
+		labels:               make(map[string]map[string]string),
 		RecordHistogramCalls: make([]RecordHistogramCall, 0),
 		RecordCounterCalls:   make([]RecordCounterCall, 0),
 		RecordGaugeCalls:     make([]RecordGaugeCall, 0),
@@ -466,14 +467,14 @@ func NewMockMetricsCollector() *MockMetricsCollector {
 func (m *MockMetricsCollector) RecordHistogram(name string, value float64, labels map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := RecordHistogramCall{
 		Name:   name,
 		Value:  value,
 		Labels: labels,
 	}
 	m.RecordHistogramCalls = append(m.RecordHistogramCalls, call)
-	
+
 	// Store the metric
 	key := m.buildMetricKey(name, labels)
 	m.metrics[key] = value
@@ -484,13 +485,13 @@ func (m *MockMetricsCollector) RecordHistogram(name string, value float64, label
 func (m *MockMetricsCollector) RecordCounter(name string, labels map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := RecordCounterCall{
 		Name:   name,
 		Labels: labels,
 	}
 	m.RecordCounterCalls = append(m.RecordCounterCalls, call)
-	
+
 	// Increment the counter
 	key := m.buildMetricKey(name, labels)
 	m.metrics[key]++
@@ -503,14 +504,14 @@ func (m *MockMetricsCollector) RecordCounter(name string, labels map[string]stri
 func (m *MockMetricsCollector) RecordGauge(name string, value float64, labels map[string]string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	call := RecordGaugeCall{
 		Name:   name,
 		Value:  value,
 		Labels: labels,
 	}
 	m.RecordGaugeCalls = append(m.RecordGaugeCalls, call)
-	
+
 	// Set the gauge value
 	key := m.buildMetricKey(name, labels)
 	m.metrics[key] = value
@@ -521,7 +522,7 @@ func (m *MockMetricsCollector) RecordGauge(name string, value float64, labels ma
 func (m *MockMetricsCollector) GetMetric(name string, labels map[string]string) (float64, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	key := m.buildMetricKey(name, labels)
 	value, exists := m.metrics[key]
 	return value, exists
@@ -531,7 +532,7 @@ func (m *MockMetricsCollector) GetMetric(name string, labels map[string]string) 
 func (m *MockMetricsCollector) GetAllMetrics() map[string]float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	result := make(map[string]float64)
 	for k, v := range m.metrics {
 		result[k] = v
@@ -564,7 +565,7 @@ func (m *MockMetricsCollector) GetGaugeCallCount() int {
 func (m *MockMetricsCollector) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.metrics = make(map[string]float64)
 	m.labels = make(map[string]map[string]string)
 	m.RecordHistogramCalls = make([]RecordHistogramCall, 0)
@@ -584,7 +585,7 @@ func (m *MockMetricsCollector) buildMetricKey(name string, labels map[string]str
 // MockLogger implements a mock logger for testing
 type MockLogger struct {
 	mu sync.RWMutex
-	
+
 	// Log storage
 	DebugLogs []LogEntry
 	InfoLogs  []LogEntry
@@ -690,7 +691,7 @@ func (l *MockLogger) GetInfoCount() int {
 func (l *MockLogger) Reset() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	l.DebugLogs = make([]LogEntry, 0)
 	l.InfoLogs = make([]LogEntry, 0)
 	l.WarnLogs = make([]LogEntry, 0)

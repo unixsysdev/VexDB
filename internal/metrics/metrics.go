@@ -1,14 +1,14 @@
 package metrics
 
 import (
-    "context"
-    "sort"
-    "strings"
-    "sync"
-    "time"
+	"context"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 
-    "github.com/prometheus/client_golang/prometheus"
-    "github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // Collector is a type alias for Metrics to provide a consistent interface
@@ -16,66 +16,167 @@ type Collector = Metrics
 
 // Metrics represents the metrics collection system
 type Metrics struct {
-    config     interface{}
-    registry   *prometheus.Registry
-    collectors map[string]prometheus.Collector
-    mu         sync.RWMutex
+	config     interface{}
+	registry   *prometheus.Registry
+	collectors map[string]prometheus.Collector
+	mu         sync.RWMutex
 }
 
 // IngestionMetrics provides counters used by connection health monitoring and ingestion paths
 type IngestionMetrics struct {
-    totalConnections     *Counter
-    unhealthyConnections *Counter
+	collector            *Metrics
+	totalConnections     *Counter
+	unhealthyConnections *Counter
+	AdaptersStarted      *Counter
+	AdaptersStopped      *Counter
+	ConnectionsActive    *Gauge
+	RequestDuration      *Histogram
+	RequestsTotal        *Counter
+	RoutingOperations    *Counter
+	NodeCount            *Gauge
+	HealthyNodes         *Gauge
+	CircuitBreakerOpen   *Counter
+	ReplicationSuccess   *Counter
+	ReplicationFailure   *Counter
+	ReplicationLatency   *Histogram
 }
 
 // NewIngestionMetrics constructs ingestion-related metrics on top of Metrics
 func NewIngestionMetrics(m *Metrics) *IngestionMetrics {
-    return &IngestionMetrics{
-        totalConnections: m.NewCounter("connections_total", "Total connections by protocol", []string{"protocol"}),
-        unhealthyConnections: m.NewCounter("connections_unhealthy_total", "Unhealthy connections by protocol", []string{"protocol"}),
-    }
+	return &IngestionMetrics{
+		collector:            m,
+		totalConnections:     m.NewCounter("connections_total", "Total connections by protocol", []string{"protocol"}),
+		unhealthyConnections: m.NewCounter("connections_unhealthy_total", "Unhealthy connections by protocol", []string{"protocol"}),
+		AdaptersStarted:      m.NewCounter("adapters_started_total", "Adapters started", []string{"protocol", "action"}),
+		AdaptersStopped:      m.NewCounter("adapters_stopped_total", "Adapters stopped", []string{"protocol", "action"}),
+		ConnectionsActive:    m.NewGauge("connections_active", "Active connections by protocol", []string{"protocol"}),
+		RequestDuration:      m.NewHistogram("request_duration_seconds", "Request duration in seconds", []string{"protocol", "path"}, nil),
+		RequestsTotal:        m.NewCounter("requests_total", "Total requests by protocol", []string{"protocol", "path", "status"}),
+		RoutingOperations:    m.NewCounter("routing_operations_total", "Total routing operations", nil),
+		NodeCount:            m.NewGauge("routing_nodes", "Current number of routing nodes", nil),
+		HealthyNodes:         m.NewGauge("routing_nodes_healthy", "Current number of healthy routing nodes", nil),
+		CircuitBreakerOpen:   m.NewCounter("routing_circuit_breakers_open_total", "Times circuit breakers opened", nil),
+		ReplicationSuccess:   m.NewCounter("replication_success_total", "Successful replications", nil),
+		ReplicationFailure:   m.NewCounter("replication_failure_total", "Failed replications", nil),
+		ReplicationLatency:   m.NewHistogram("replication_latency_seconds", "Replication latency in seconds", nil, nil),
+	}
+}
+
+// Registry exposes the underlying Prometheus registry used by the metrics collector.
+func (im *IngestionMetrics) Registry() *prometheus.Registry {
+	if im == nil || im.collector == nil {
+		return nil
+	}
+	return im.collector.GetRegistry()
 }
 
 func (im *IngestionMetrics) IncrementConnectionCount(protocol string) {
-    if im == nil { return }
-    im.totalConnections.Inc(protocol)
+	if im == nil {
+		return
+	}
+	im.totalConnections.Inc(protocol)
 }
 
 func (im *IngestionMetrics) DecrementConnectionCount(protocol string) {
-    // Counters cannot decrement; expose as no-op to retain API compatibility
+	// Counters cannot decrement; expose as no-op to retain API compatibility
 }
 
 func (im *IngestionMetrics) IncrementUnhealthyConnections(protocol string) {
-    if im == nil { return }
-    im.unhealthyConnections.Inc(protocol)
+	if im == nil {
+		return
+	}
+	im.unhealthyConnections.Inc(protocol)
 }
 
 func (im *IngestionMetrics) DecrementUnhealthyConnections(protocol string) {
-    // Counters cannot decrement; expose as no-op to retain API compatibility
+	// Counters cannot decrement; expose as no-op to retain API compatibility
+}
+
+func (im *IngestionMetrics) IncrementRoutingOperations() {
+	if im == nil {
+		return
+	}
+	im.RoutingOperations.Inc()
+}
+
+func (im *IngestionMetrics) IncrementNodeCount() {
+	if im == nil {
+		return
+	}
+	im.NodeCount.Inc()
+}
+
+func (im *IngestionMetrics) DecrementNodeCount() {
+	if im == nil {
+		return
+	}
+	im.NodeCount.Dec()
+}
+
+func (im *IngestionMetrics) IncrementHealthyNodes() {
+	if im == nil {
+		return
+	}
+	im.HealthyNodes.Inc()
+}
+
+func (im *IngestionMetrics) DecrementHealthyNodes() {
+	if im == nil {
+		return
+	}
+	im.HealthyNodes.Dec()
+}
+
+func (im *IngestionMetrics) IncrementCircuitBreakerOpenCount() {
+	if im == nil {
+		return
+	}
+	im.CircuitBreakerOpen.Inc()
+}
+
+func (im *IngestionMetrics) IncrementReplicationSuccess() {
+	if im == nil {
+		return
+	}
+	im.ReplicationSuccess.Inc()
+}
+
+func (im *IngestionMetrics) IncrementReplicationFailure() {
+	if im == nil {
+		return
+	}
+	im.ReplicationFailure.Inc()
+}
+
+func (im *IngestionMetrics) ObserveReplicationLatency(d time.Duration) {
+	if im == nil {
+		return
+	}
+	im.ReplicationLatency.Observe(d.Seconds())
 }
 
 // Config represents metrics configuration
 type Config struct {
-	Enabled      bool          `yaml:"enabled" json:"enabled"`
-	Port         int           `yaml:"port" json:"port"`
-	Path         string        `yaml:"path" json:"path"`
-	Namespace    string        `yaml:"namespace" json:"namespace"`
-	Subsystem    string        `yaml:"subsystem" json:"subsystem"`
-	Interval     time.Duration `yaml:"interval" json:"interval"`
-	Buckets      []float64     `yaml:"buckets" json:"buckets"`
-	Labels       []string      `yaml:"labels" json:"labels"`
+	Enabled   bool          `yaml:"enabled" json:"enabled"`
+	Port      int           `yaml:"port" json:"port"`
+	Path      string        `yaml:"path" json:"path"`
+	Namespace string        `yaml:"namespace" json:"namespace"`
+	Subsystem string        `yaml:"subsystem" json:"subsystem"`
+	Interval  time.Duration `yaml:"interval" json:"interval"`
+	Buckets   []float64     `yaml:"buckets" json:"buckets"`
+	Labels    []string      `yaml:"labels" json:"labels"`
 }
 
 // Counter represents a counter metric
 type Counter struct {
-    metric *prometheus.CounterVec
-    labels []string
+	metric *prometheus.CounterVec
+	labels []string
 }
 
 // Gauge represents a gauge metric
 type Gauge struct {
-    metric *prometheus.GaugeVec
-    labels []string
+	metric *prometheus.GaugeVec
+	labels []string
 }
 
 // Histogram represents a histogram metric
@@ -108,8 +209,8 @@ func NewMetrics(cfg interface{}) (*Metrics, error) {
 
 // NewCollector provides a simple constructor compatible with callers expecting a Collector
 func NewCollector() *Metrics {
-    m, _ := NewMetrics(nil)
-    return m
+	m, _ := NewMetrics(nil)
+	return m
 }
 
 // NewCounter creates a new counter metric
@@ -240,7 +341,7 @@ func (m *Metrics) NewSummary(name, help string, labels []string) *Summary {
 
 // GetRegistry returns the Prometheus registry
 func (m *Metrics) GetRegistry() *prometheus.Registry {
-    return m.registry
+	return m.registry
 }
 
 // GetConfig returns the metrics configuration
@@ -294,74 +395,84 @@ func (m *Metrics) IsEnabled() bool {
 
 // collectSystemMetrics collects system metrics
 func (m *Metrics) collectSystemMetrics(ctx context.Context) {
-    // Collect system-level metrics here
-    // This could include CPU, memory, disk, network metrics
+	// Collect system-level metrics here
+	// This could include CPU, memory, disk, network metrics
 }
 
 // RecordCounter increments a counter by value with provided labels (creates lazily)
 func (m *Metrics) RecordCounter(name string, value float64, labels map[string]string) {
-    if m == nil { return }
-    m.mu.Lock()
-    defer m.mu.Unlock()
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-    // Build or fetch CounterVec keyed by name+labelnames
-    labelNames, labelValues := splitLabels(labels)
-    fullKey := "counter:" + name + ":" + strings.Join(labelNames, ",")
+	// Build or fetch CounterVec keyed by name+labelnames
+	labelNames, labelValues := splitLabels(labels)
+	fullKey := "counter:" + name + ":" + strings.Join(labelNames, ",")
 
-    var cv *prometheus.CounterVec
-    if existing, ok := m.collectors[fullKey]; ok {
-        cv = existing.(*prometheus.CounterVec)
-    } else {
-        cv = promauto.With(m.registry).NewCounterVec(
-            prometheus.CounterOpts{
-                Name:      m.getFullName(name),
-                Help:      name,
-                Namespace: m.getNamespace(),
-                Subsystem: m.getSubsystem(),
-            },
-            labelNames,
-        )
-        m.collectors[fullKey] = cv
-    }
-    cv.WithLabelValues(labelValues...).Add(value)
+	var cv *prometheus.CounterVec
+	if existing, ok := m.collectors[fullKey]; ok {
+		cv = existing.(*prometheus.CounterVec)
+	} else {
+		cv = promauto.With(m.registry).NewCounterVec(
+			prometheus.CounterOpts{
+				Name:      m.getFullName(name),
+				Help:      name,
+				Namespace: m.getNamespace(),
+				Subsystem: m.getSubsystem(),
+			},
+			labelNames,
+		)
+		m.collectors[fullKey] = cv
+	}
+	cv.WithLabelValues(labelValues...).Add(value)
 }
 
 // RecordHistogram observes a histogram value with provided labels (creates lazily)
 func (m *Metrics) RecordHistogram(name string, value float64, labels map[string]string) {
-    if m == nil { return }
-    m.mu.Lock()
-    defer m.mu.Unlock()
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-    labelNames, labelValues := splitLabels(labels)
-    fullKey := "histogram:" + name + ":" + strings.Join(labelNames, ",")
+	labelNames, labelValues := splitLabels(labels)
+	fullKey := "histogram:" + name + ":" + strings.Join(labelNames, ",")
 
-    var hv *prometheus.HistogramVec
-    if existing, ok := m.collectors[fullKey]; ok {
-        hv = existing.(*prometheus.HistogramVec)
-    } else {
-        hv = promauto.With(m.registry).NewHistogramVec(
-            prometheus.HistogramOpts{
-                Name:      m.getFullName(name),
-                Help:      name,
-                Namespace: m.getNamespace(),
-                Subsystem: m.getSubsystem(),
-                Buckets:   prometheus.DefBuckets,
-            },
-            labelNames,
-        )
-        m.collectors[fullKey] = hv
-    }
-    hv.WithLabelValues(labelValues...).Observe(value)
+	var hv *prometheus.HistogramVec
+	if existing, ok := m.collectors[fullKey]; ok {
+		hv = existing.(*prometheus.HistogramVec)
+	} else {
+		hv = promauto.With(m.registry).NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:      m.getFullName(name),
+				Help:      name,
+				Namespace: m.getNamespace(),
+				Subsystem: m.getSubsystem(),
+				Buckets:   prometheus.DefBuckets,
+			},
+			labelNames,
+		)
+		m.collectors[fullKey] = hv
+	}
+	hv.WithLabelValues(labelValues...).Observe(value)
 }
 
 func splitLabels(labels map[string]string) ([]string, []string) {
-    if labels == nil || len(labels) == 0 { return []string{}, []string{} }
-    keys := make([]string, 0, len(labels))
-    for k := range labels { keys = append(keys, k) }
-    sort.Strings(keys)
-    vals := make([]string, len(keys))
-    for i, k := range keys { vals[i] = labels[k] }
-    return keys, vals
+	if labels == nil || len(labels) == 0 {
+		return []string{}, []string{}
+	}
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	vals := make([]string, len(keys))
+	for i, k := range keys {
+		vals[i] = labels[k]
+	}
+	return keys, vals
 }
 
 // getFullName returns the full metric name with namespace and subsystem
@@ -392,12 +503,12 @@ func (m *Metrics) getSubsystem() string {
 
 // Inc increments the counter
 func (c *Counter) Inc(labels ...string) {
-    c.metric.WithLabelValues(labels...).Inc()
+	c.metric.WithLabelValues(labels...).Inc()
 }
 
 // Add adds a value to the counter
 func (c *Counter) Add(value float64, labels ...string) {
-    c.metric.WithLabelValues(labels...).Add(value)
+	c.metric.WithLabelValues(labels...).Add(value)
 }
 
 // Get returns the current counter value if available (approximate; returns 0 by default)
@@ -408,7 +519,7 @@ func (c *Counter) Get(labels ...string) int64 { return 0 }
 
 // Set sets the gauge value
 func (g *Gauge) Set(value float64, labels ...string) {
-    g.metric.WithLabelValues(labels...).Set(value)
+	g.metric.WithLabelValues(labels...).Set(value)
 }
 
 // Inc increments the gauge
@@ -438,6 +549,10 @@ func (h *Histogram) Observe(value float64, labels ...string) {
 	h.metric.WithLabelValues(labels...).Observe(value)
 }
 
+// Get returns the current value for the histogram for provided labels.
+// Histogram vectors don't expose retrieval in Prometheus, so this is a stub for compatibility.
+func (h *Histogram) Get(labels ...string) float64 { return 0 }
+
 // Summary methods
 
 // Observe observes a value
@@ -459,13 +574,13 @@ type ServiceMetrics struct {
 	MemoryUsage       *Gauge
 	DiskUsage         *Gauge
 	NetworkUsage      *Gauge
-    ConnectionsActive *Gauge
-    ConnectionsTotal  *Counter
-    // Additional metrics used by server packages
-    GRPCRequests      *Counter
-    GRPCLatency       *Histogram
-    GRPCErrors        *Counter
-    ServiceErrors     *Counter
+	ConnectionsActive *Gauge
+	ConnectionsTotal  *Counter
+	// Additional metrics used by server packages
+	GRPCRequests  *Counter
+	GRPCLatency   *Histogram
+	GRPCErrors    *Counter
+	ServiceErrors *Counter
 }
 
 // NewServiceMetrics creates service-specific metrics
@@ -539,65 +654,74 @@ func NewServiceMetrics(m *Metrics, serviceName string) *ServiceMetrics {
 			"Number of active connections",
 			[]string{"service"},
 		),
-        ConnectionsTotal: m.NewCounter(
-            "connections_total",
-            "Total number of connections",
-            []string{"service"},
-        ),
-        GRPCRequests: m.NewCounter(
-            "grpc_requests_total",
-            "Total gRPC requests",
-            []string{"protocol"},
-        ),
-        GRPCLatency: m.NewHistogram(
-            "grpc_latency_seconds",
-            "gRPC request latency in seconds",
-            []string{},
-            []float64{0.001, 0.01, 0.1, 1, 5},
-        ),
-        GRPCErrors: m.NewCounter(
-            "grpc_errors_total",
-            "Total gRPC errors",
-            []string{"protocol"},
-        ),
-        ServiceErrors: m.NewCounter(
-            "service_errors_total",
-            "Service errors by component/status",
-            []string{"component", "status"},
-        ),
+		ConnectionsTotal: m.NewCounter(
+			"connections_total",
+			"Total number of connections",
+			[]string{"service"},
+		),
+		GRPCRequests: m.NewCounter(
+			"grpc_requests_total",
+			"Total gRPC requests",
+			[]string{"protocol"},
+		),
+		GRPCLatency: m.NewHistogram(
+			"grpc_latency_seconds",
+			"gRPC request latency in seconds",
+			[]string{},
+			[]float64{0.001, 0.01, 0.1, 1, 5},
+		),
+		GRPCErrors: m.NewCounter(
+			"grpc_errors_total",
+			"Total gRPC errors",
+			[]string{"protocol"},
+		),
+		ServiceErrors: m.NewCounter(
+			"service_errors_total",
+			"Service errors by component/status",
+			[]string{"component", "status"},
+		),
 	}
 }
 
 // StorageMetrics represents storage-specific metrics
 type StorageMetrics struct {
-	VectorsTotal      *Counter
-	VectorsSize       *Gauge
-	SegmentsTotal     *Gauge
-	SegmentsSize      *Gauge
-	ReadOperations    *Counter
-	WriteOperations   *Counter
-	DeleteOperations  *Counter
-	ReadLatency       *Histogram
-	WriteLatency      *Histogram
-	DeleteLatency     *Histogram
-	CompactionTime    *Histogram
-	IndexSize         *Gauge
-	CacheHits         *Counter
-	CacheMisses       *Counter
-	CacheHitRatio     *Gauge
-	DiskReadBytes     *Counter
-    DiskWriteBytes    *Counter
-    MemoryUsage       *Gauge
-    DiskUsage         *Gauge
-    // Added for buffer/compression/hashing metrics used elsewhere
-    BufferOperations  *Counter
-    BufferSize        *Gauge
-    BufferHits        *Counter
-    BufferMisses      *Counter
-    HashingOperations *Counter
-    CompressionOperations *Counter
-    CompressionRatio  *Gauge
-    Errors            *Counter
+	VectorsTotal     *Counter
+	VectorsSize      *Gauge
+	SegmentsTotal    *Gauge
+	SegmentsSize     *Gauge
+	ReadOperations   *Counter
+	WriteOperations  *Counter
+	DeleteOperations *Counter
+	ReadLatency      *Histogram
+	WriteLatency     *Histogram
+	DeleteLatency    *Histogram
+	CompactionTime   *Histogram
+	IndexSize        *Gauge
+	CacheHits        *Counter
+	CacheMisses      *Counter
+	CacheHitRatio    *Gauge
+	DiskReadBytes    *Counter
+	DiskWriteBytes   *Counter
+	MemoryUsage      *Gauge
+	DiskUsage        *Gauge
+	// Added for buffer/compression/hashing metrics used elsewhere
+	BufferOperations      *Counter
+	BufferSize            *Gauge
+	BufferHits            *Counter
+	BufferMisses          *Counter
+	HashingOperations     *Counter
+	CompressionOperations *Counter
+	CompressionRatio      *Gauge
+	Errors                *Counter
+	// Filter-specific metrics
+	FilterOperations  *Counter
+	ConditionsApplied *Counter
+	VectorsFiltered   *Counter
+	VectorsPassed     *Counter
+	FilterLatency     *Histogram
+	SearchOperations  *Counter
+	SearchLatency     *Histogram
+	ResultsReturned   *Counter
 }
 
 // NewStorageMetrics creates storage-specific metrics
@@ -697,73 +821,115 @@ func NewStorageMetrics(m *Metrics, storageName string) *StorageMetrics {
 			"Memory usage in bytes",
 			[]string{"storage"},
 		),
-        DiskUsage: m.NewGauge(
-            "disk_usage_bytes",
-            "Disk usage in bytes",
-            []string{"storage"},
-        ),
-        BufferOperations: m.NewCounter(
-            "buffer_operations_total",
-            "Total number of buffer operations",
-            []string{"operation", "component"},
-        ),
-        BufferSize: m.NewGauge(
-            "buffer_size",
-            "Current buffer size (vectors)",
-            []string{},
-        ),
-        BufferHits: m.NewCounter(
-            "buffer_hits_total",
-            "Total number of buffer hits",
-            []string{"result"},
-        ),
-        BufferMisses: m.NewCounter(
-            "buffer_misses_total",
-            "Total number of buffer misses",
-            []string{"result"},
-        ),
-        HashingOperations: m.NewCounter(
-            "hashing_operations_total",
-            "Total number of hashing operations",
-            []string{"component", "operation"},
-        ),
-        CompressionOperations: m.NewCounter(
-            "compression_operations_total",
-            "Total number of compression operations",
-            []string{"component", "operation"},
-        ),
-        CompressionRatio: m.NewGauge(
-            "compression_ratio",
-            "Observed compression ratio",
-            []string{},
-        ),
-        Errors: m.NewCounter(
-            "storage_errors_total",
-            "Total number of storage errors",
-            []string{"component", "error_type"},
-        ),
-    }
+		DiskUsage: m.NewGauge(
+			"disk_usage_bytes",
+			"Disk usage in bytes",
+			[]string{"storage"},
+		),
+		BufferOperations: m.NewCounter(
+			"buffer_operations_total",
+			"Total number of buffer operations",
+			[]string{"operation", "component"},
+		),
+		BufferSize: m.NewGauge(
+			"buffer_size",
+			"Current buffer size (vectors)",
+			[]string{},
+		),
+		BufferHits: m.NewCounter(
+			"buffer_hits_total",
+			"Total number of buffer hits",
+			[]string{"result"},
+		),
+		BufferMisses: m.NewCounter(
+			"buffer_misses_total",
+			"Total number of buffer misses",
+			[]string{"result"},
+		),
+		HashingOperations: m.NewCounter(
+			"hashing_operations_total",
+			"Total number of hashing operations",
+			[]string{"component", "operation"},
+		),
+		CompressionOperations: m.NewCounter(
+			"compression_operations_total",
+			"Total number of compression operations",
+			[]string{"component", "operation"},
+		),
+		CompressionRatio: m.NewGauge(
+			"compression_ratio",
+			"Observed compression ratio",
+			[]string{},
+		),
+		Errors: m.NewCounter(
+			"storage_errors_total",
+			"Total number of storage errors",
+			[]string{"component", "error_type"},
+		),
+		FilterOperations: m.NewCounter(
+			"filter_operations_total",
+			"Total number of filter operations",
+			[]string{"component", "operation"},
+		),
+		ConditionsApplied: m.NewCounter(
+			"filter_conditions_applied_total",
+			"Total number of filter conditions applied",
+			[]string{"component", "operation"},
+		),
+		VectorsFiltered: m.NewCounter(
+			"filter_vectors_processed_total",
+			"Total number of vectors processed by filter",
+			[]string{"component", "operation"},
+		),
+		VectorsPassed: m.NewCounter(
+			"filter_vectors_passed_total",
+			"Total number of vectors passing filter",
+			[]string{"component", "operation"},
+		),
+		FilterLatency: m.NewHistogram(
+			"filter_latency_seconds",
+			"Latency of filtering operations in seconds",
+			[]string{"component", "operation"},
+			[]float64{0.0001, 0.001, 0.01, 0.1, 1},
+		),
+		SearchOperations: m.NewCounter(
+			"search_operations_total",
+			"Total number of search operations",
+			[]string{"component", "operation"},
+		),
+		SearchLatency: m.NewHistogram(
+			"search_latency_seconds",
+			"Latency of search operations in seconds",
+			[]string{"component", "operation"},
+			[]float64{0.0001, 0.001, 0.01, 0.1, 1},
+		),
+		ResultsReturned: m.NewCounter(
+			"search_results_returned_total",
+			"Total number of results returned from searches",
+			[]string{"component", "operation"},
+		),
+	}
 }
 
 // SearchMetrics represents search-specific metrics
 type SearchMetrics struct {
-	QueriesTotal      *Counter
-	QueriesDuration   *Histogram
-	QueriesActive     *Gauge
-	ResultsTotal      *Counter
-	ResultsSize       *Gauge
-	Accuracy          *Gauge
-	Recall            *Gauge
-	Precision         *Gauge
-	IndexSearchTime   *Histogram
-	VectorSearchTime  *Histogram
-	FilteringTime     *Histogram
-	RankingTime       *Histogram
-	MergingTime       *Histogram
-	CacheHits         *Counter
-	CacheMisses       *Counter
-	Timeouts          *Counter
-	Errors            *Counter
+	QueriesTotal     *Counter
+	QueriesDuration  *Histogram
+	QueriesActive    *Gauge
+	ResultsTotal     *Counter
+	ResultsSize      *Gauge
+	Accuracy         *Gauge
+	Recall           *Gauge
+	Precision        *Gauge
+	IndexSearchTime  *Histogram
+	VectorSearchTime *Histogram
+	FilteringTime    *Histogram
+	RankingTime      *Histogram
+	MergingTime      *Histogram
+	CacheHits        *Counter
+	CacheMisses      *Counter
+	Timeouts         *Counter
+	Errors           *Counter
 }
 
 // NewSearchMetrics creates search-specific metrics
@@ -863,19 +1029,99 @@ func NewSearchMetrics(m *Metrics, searchName string) *SearchMetrics {
 	}
 }
 
+// IncrementQueryCount records a new query execution
+func (sm *SearchMetrics) IncrementQueryCount() {
+	if sm == nil || sm.QueriesTotal == nil {
+		return
+	}
+	sm.QueriesTotal.Inc("search", "query")
+}
+
+// ObserveQueryPlanCost records the planning cost for a query
+func (sm *SearchMetrics) ObserveQueryPlanCost(cost float64) {
+	if sm == nil || sm.MergingTime == nil {
+		return
+	}
+	sm.MergingTime.Observe(cost, "planner")
+}
+
+// IncrementQueryFailure increments the query failure counter
+func (sm *SearchMetrics) IncrementQueryFailure() {
+	if sm == nil || sm.Errors == nil {
+		return
+	}
+	sm.Errors.Inc("search", "query", "failure")
+}
+
+// IncrementQuerySuccess increments the successful query counter
+func (sm *SearchMetrics) IncrementQuerySuccess() {
+	if sm == nil || sm.ResultsTotal == nil {
+		return
+	}
+	sm.ResultsTotal.Inc("search", "success")
+}
+
+// ObserveQueryLatency records the latency of a completed query
+func (sm *SearchMetrics) ObserveQueryLatency(d time.Duration) {
+	if sm == nil || sm.QueriesDuration == nil {
+		return
+	}
+	sm.QueriesDuration.Observe(d.Seconds(), "search", "total")
+}
+
+// IncrementNodeQuerySuccess records a successful node query
+func (sm *SearchMetrics) IncrementNodeQuerySuccess(nodeID string) {
+	if sm == nil || sm.ResultsTotal == nil {
+		return
+	}
+	sm.ResultsTotal.Inc(nodeID, "success")
+}
+
+// IncrementNodeQueryFailure records a failed node query
+func (sm *SearchMetrics) IncrementNodeQueryFailure(nodeID string) {
+	if sm == nil || sm.Errors == nil {
+		return
+	}
+	sm.Errors.Inc(nodeID, "query", "failure")
+}
+
+// ObserveNodeQueryLatency records the latency for a node-level query
+func (sm *SearchMetrics) ObserveNodeQueryLatency(nodeID string, d time.Duration) {
+	if sm == nil || sm.QueriesDuration == nil {
+		return
+	}
+	sm.QueriesDuration.Observe(d.Seconds(), nodeID, "node")
+}
+
+// ObserveMergeLatency records the latency of the merge step
+func (sm *SearchMetrics) ObserveMergeLatency(d time.Duration) {
+	if sm == nil || sm.MergingTime == nil {
+		return
+	}
+	sm.MergingTime.Observe(d.Seconds(), "search")
+}
+
+// ObserveMergeResultCount records the number of results produced by the merger
+func (sm *SearchMetrics) ObserveMergeResultCount(count int) {
+	if sm == nil || sm.ResultsTotal == nil {
+		return
+	}
+	sm.ResultsTotal.Add(float64(count), "search", "merge")
+}
+
 // Timer provides a simple way to measure operation duration
 type Timer struct {
-	start    time.Time
+	start     time.Time
 	histogram *Histogram
-	labels   []string
+	labels    []string
 }
 
 // NewTimer creates a new timer
 func NewTimer(histogram *Histogram, labels ...string) *Timer {
 	return &Timer{
-		start:    time.Now(),
+		start:     time.Now(),
 		histogram: histogram,
-		labels:   labels,
+		labels:    labels,
 	}
 }
 
