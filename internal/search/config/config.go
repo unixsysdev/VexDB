@@ -313,7 +313,7 @@ func (c *SearchServiceConfig) Validate() error {
 }
 
 // GetSearchConfig returns the search configuration from the generic config
-func GetSearchConfig(cfg *types.Config) *SearchServiceConfig {
+func GetSearchConfig(cfg interface{}) *SearchServiceConfig {
 	// For now, return default config
 	// In a real implementation, this would extract search-specific config from the generic config
 	return DefaultSearchServiceConfig()
