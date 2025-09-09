@@ -8,8 +8,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/vexdb/vexdb/internal/config"
-	"github.com/vexdb/vexdb/internal/logging"
+	"vexdb/internal/config"
+	"vexdb/internal/logging"
 )
 
 var (

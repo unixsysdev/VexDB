@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vexdb/vexdb/internal/errors"
+	"vexdb/internal/errors"
 )
 
 // Validator defines the interface for configuration validation

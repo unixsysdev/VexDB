@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vexdb/vexdb/internal/errors"
+	"vexdb/internal/errors"
 )
 
 // Context keys for VexDB context values

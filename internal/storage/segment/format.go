@@ -9,7 +9,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/vexdb/vexdb/internal/types"
+	"vexdb/internal/types"
 )
 
 const (

@@ -1509,7 +1509,7 @@ const file_proto_vexdb_proto_rawDesc = "" +
 	"\n" +
 	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
 	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponseB\x1eZ\x1cgithub.com/vexdb/vexdb/protob\x06proto3"
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponseB\x1eZ\x1cvexdb/protob\x06proto3"
 
 var (
 	file_proto_vexdb_proto_rawDescOnce sync.Once

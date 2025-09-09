@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/vexdb/vexdb/internal/types"
-	pb "github.com/vexdb/vexdb/proto"
+	"vexdb/internal/types"
+	pb "vexdb/proto"
 )
 
 // StorageService defines the interface for vector storage operations

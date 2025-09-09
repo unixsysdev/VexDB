@@ -8,7 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/vexdb/vexdb/internal/config"
+	"vexdb/internal/config"
 )
 
 // Metrics represents the metrics collection system

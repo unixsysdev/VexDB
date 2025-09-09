@@ -61,10 +61,10 @@ Enterprise: Custom pricing (unlimited scale + support)
 
 Value-Based Pricing Triggers
 
-Query volume: $0.10 per 1M queries above base tier
-Storage: $50/TB/month above base tier
-Nodes: $100/node/month above base tier
-Premium features: Multi-region (+50%), enterprise security (+30%)
+Query volume: $0.x per 1M queries above base tier
+Storage: $xx/TB/month above base tier
+Nodes: $xxx/node/month above base tier
+Premium features: Multi-region (+xx%), enterprise security (+xx%)
 
 Enterprise Feature Gates
 Features requiring commercial license:

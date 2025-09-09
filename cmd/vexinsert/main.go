@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/vexdb/vexdb/internal/config"
-	"github.com/vexdb/vexdb/internal/logging"
+	"vexdb/internal/config"
+	"vexdb/internal/logging"
 	"go.uber.org/zap"
 )
 

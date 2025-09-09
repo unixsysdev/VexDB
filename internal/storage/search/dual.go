@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vexdb/vexdb/internal/config"
-	"github.com/vexdb/vexdb/internal/logging"
-	"github.com/vexdb/vexdb/internal/metrics"
-	"github.com/vexdb/vexdb/internal/storage/buffer"
-	"github.com/vexdb/vexdb/internal/storage/segment"
-	"github.com/vexdb/vexdb/internal/types"
+	"vexdb/internal/config"
+	"vexdb/internal/logging"
+	"vexdb/internal/metrics"
+	"vexdb/internal/storage/buffer"
+	"vexdb/internal/storage/segment"
+	"vexdb/internal/types"
 )
 
 var (
