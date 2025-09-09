@@ -2,12 +2,15 @@ package error
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"strings"
+
+	"go.uber.org/zap"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -25,32 +28,32 @@ var (
 
 // ErrorConfig represents the error handler configuration
 type ErrorConfig struct {
-	Enabled           bool                   `yaml:"enabled" json:"enabled"`
-	EnableMetrics     bool                   `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableLogging     bool                   `yaml:"enable_logging" json:"enable_logging"`
-	EnableTracing     bool                   `yaml:"enable_tracing" json:"enable_tracing"`
-	EnableRecovery    bool                   `yaml:"enable_recovery" json:"enable_recovery"`
-	EnableNotifications bool                 `yaml:"enable_notifications" json:"enable_notifications"`
-	EnableDebug       bool                   `yaml:"enable_debug" json:"enable_debug"`
-	MaxErrorSize      int                    `yaml:"max_error_size" json:"max_error_size"`
-	ErrorHistorySize  int                    `yaml:"error_history_size" json:"error_history_size"`
-	ErrorTTL          time.Duration          `yaml:"error_ttl" json:"error_ttl"`
-	RecoveryStrategies []RecoveryStrategy    `yaml:"recovery_strategies" json:"recovery_strategies"`
-	NotificationChannels []NotificationChannel `yaml:"notification_channels" json:"notification_channels"`
-	ErrorMappings     map[string]ErrorMapping `yaml:"error_mappings" json:"error_mappings"`
-	HTTPErrorCodes    map[int]string         `yaml:"http_error_codes" json:"http_error_codes"`
-	GRPCErrorCodes    map[string]string      `yaml:"grpc_error_codes" json:"grpc_error_codes"`
+	Enabled              bool                    `yaml:"enabled" json:"enabled"`
+	EnableMetrics        bool                    `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableLogging        bool                    `yaml:"enable_logging" json:"enable_logging"`
+	EnableTracing        bool                    `yaml:"enable_tracing" json:"enable_tracing"`
+	EnableRecovery       bool                    `yaml:"enable_recovery" json:"enable_recovery"`
+	EnableNotifications  bool                    `yaml:"enable_notifications" json:"enable_notifications"`
+	EnableDebug          bool                    `yaml:"enable_debug" json:"enable_debug"`
+	MaxErrorSize         int                     `yaml:"max_error_size" json:"max_error_size"`
+	ErrorHistorySize     int                     `yaml:"error_history_size" json:"error_history_size"`
+	ErrorTTL             time.Duration           `yaml:"error_ttl" json:"error_ttl"`
+	RecoveryStrategies   []RecoveryStrategy      `yaml:"recovery_strategies" json:"recovery_strategies"`
+	NotificationChannels []NotificationChannel   `yaml:"notification_channels" json:"notification_channels"`
+	ErrorMappings        map[string]ErrorMapping `yaml:"error_mappings" json:"error_mappings"`
+	HTTPErrorCodes       map[int]string          `yaml:"http_error_codes" json:"http_error_codes"`
+	GRPCErrorCodes       map[string]string       `yaml:"grpc_error_codes" json:"grpc_error_codes"`
 }
 
 // RecoveryStrategy represents a recovery strategy
 type RecoveryStrategy struct {
-	Name        string        `yaml:"name" json:"name"`
-	Type        string        `yaml:"type" json:"type"`
-	MaxAttempts int           `yaml:"max_attempts" json:"max_attempts"`
-	Backoff     time.Duration `yaml:"backoff" json:"backoff"`
+	Name        string                 `yaml:"name" json:"name"`
+	Type        string                 `yaml:"type" json:"type"`
+	MaxAttempts int                    `yaml:"max_attempts" json:"max_attempts"`
+	Backoff     time.Duration          `yaml:"backoff" json:"backoff"`
 	Conditions  map[string]interface{} `yaml:"conditions" json:"conditions"`
-	Actions     []string      `yaml:"actions" json:"actions"`
-	Enabled     bool          `yaml:"enabled" json:"enabled"`
+	Actions     []string               `yaml:"actions" json:"actions"`
+	Enabled     bool                   `yaml:"enabled" json:"enabled"`
 }
 
 // NotificationChannel represents a notification channel
@@ -76,21 +79,21 @@ type ErrorMapping struct {
 // DefaultErrorConfig returns the default error handler configuration
 func DefaultErrorConfig() *ErrorConfig {
 	return &ErrorConfig{
-		Enabled:            true,
-		EnableMetrics:      true,
-		EnableLogging:      true,
-		EnableTracing:      false,
-		EnableRecovery:     true,
-		EnableNotifications: false,
-		EnableDebug:        false,
-		MaxErrorSize:       1024 * 1024, // 1MB
-		ErrorHistorySize:   1000,
-		ErrorTTL:           24 * time.Hour,
-		RecoveryStrategies: getDefaultRecoveryStrategies(),
+		Enabled:              true,
+		EnableMetrics:        true,
+		EnableLogging:        true,
+		EnableTracing:        false,
+		EnableRecovery:       true,
+		EnableNotifications:  false,
+		EnableDebug:          false,
+		MaxErrorSize:         1024 * 1024, // 1MB
+		ErrorHistorySize:     1000,
+		ErrorTTL:             24 * time.Hour,
+		RecoveryStrategies:   getDefaultRecoveryStrategies(),
 		NotificationChannels: []NotificationChannel{},
-		ErrorMappings:      getDefaultErrorMappings(),
-		HTTPErrorCodes:     getDefaultHTTPErrorCodes(),
-		GRPCErrorCodes:     getDefaultGRPCErrorCodes(),
+		ErrorMappings:        getDefaultErrorMappings(),
+		HTTPErrorCodes:       getDefaultHTTPErrorCodes(),
+		GRPCErrorCodes:       getDefaultGRPCErrorCodes(),
 	}
 }
 
@@ -210,7 +213,7 @@ func getDefaultGRPCErrorCodes() map[string]string {
 		"permission_denied":   "Permission Denied",
 		"resource_exhausted":  "Resource Exhausted",
 		"failed_precondition": "Failed Precondition",
-		"aborted":            "Aborted",
+		"aborted":             "Aborted",
 		"out_of_range":        "Out of Range",
 		"unimplemented":       "Unimplemented",
 		"internal":            "Internal",
@@ -222,70 +225,70 @@ func getDefaultGRPCErrorCodes() map[string]string {
 
 // ErrorEntry represents an error entry
 type ErrorEntry struct {
-	ID          string                 `json:"id"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Error       error                  `json:"error"`
-	Stack       string                 `json:"stack"`
-	Context     map[string]interface{} `json:"context"`
-	Request     *adapter.Request       `json:"request,omitempty"`
-	Response    *adapter.Response      `json:"response,omitempty"`
-	Severity    string                 `json:"severity"`
-	Category    string                 `json:"category"`
-	Recovered   bool                   `json:"recovered"`
-	Retryable   bool                   `json:"retryable"`
-	Actions     []string               `json:"actions"`
-	Notifications []NotificationResult `json:"notifications,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	ID            string                 `json:"id"`
+	Timestamp     time.Time              `json:"timestamp"`
+	Error         error                  `json:"error"`
+	Stack         string                 `json:"stack"`
+	Context       map[string]interface{} `json:"context"`
+	Request       *adapter.Request       `json:"request,omitempty"`
+	Response      *adapter.Response      `json:"response,omitempty"`
+	Severity      string                 `json:"severity"`
+	Category      string                 `json:"category"`
+	Recovered     bool                   `json:"recovered"`
+	Retryable     bool                   `json:"retryable"`
+	Actions       []string               `json:"actions"`
+	Notifications []NotificationResult   `json:"notifications,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata"`
 }
 
 // NotificationResult represents a notification result
 type NotificationResult struct {
-	Channel    string                 `json:"channel"`
-	Success    bool                   `json:"success"`
-	Error      error                  `json:"error,omitempty"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	Channel   string                 `json:"channel"`
+	Success   bool                   `json:"success"`
+	Error     error                  `json:"error,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	Metadata  map[string]interface{} `json:"metadata"`
 }
 
 // ErrorHandler represents an error handler
 type ErrorHandler struct {
-	config     *ErrorConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	
+	config  *ErrorConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+
 	// Error history
 	errors     []ErrorEntry
 	errorIndex map[string]int
 	mu         sync.RWMutex
-	
+
 	// Recovery
-	recovery   *RecoveryManager
-	
+	recovery *RecoveryManager
+
 	// Notifications
 	notifications *NotificationManager
-	
+
 	// Lifecycle
-	started    bool
-	stopped    bool
-	startTime  time.Time
-	
+	started   bool
+	stopped   bool
+	startTime time.Time
+
 	// Statistics
-	stats      *ErrorHandlerStats
+	stats *ErrorHandlerStats
 }
 
 // ErrorHandlerStats represents error handler statistics
 type ErrorHandlerStats struct {
-	TotalErrors      int64         `json:"total_errors"`
-	RecoveredErrors  int64         `json:"recovered_errors"`
-	FailedRecoveries int64        `json:"failed_recoveries"`
-	Notifications    int64         `json:"notifications"`
-	FailedNotifications int64      `json:"failed_notifications"`
-	ErrorByCategory  map[string]int64 `json:"error_by_category"`
-	ErrorBySeverity  map[string]int64 `json:"error_by_severity"`
-	AvgRecoveryTime time.Duration `json:"avg_recovery_time"`
-	MaxRecoveryTime time.Duration `json:"max_recovery_time"`
-	StartTime        time.Time     `json:"start_time"`
-	Uptime           time.Duration `json:"uptime"`
+	TotalErrors         int64            `json:"total_errors"`
+	RecoveredErrors     int64            `json:"recovered_errors"`
+	FailedRecoveries    int64            `json:"failed_recoveries"`
+	Notifications       int64            `json:"notifications"`
+	FailedNotifications int64            `json:"failed_notifications"`
+	ErrorByCategory     map[string]int64 `json:"error_by_category"`
+	ErrorBySeverity     map[string]int64 `json:"error_by_severity"`
+	AvgRecoveryTime     time.Duration    `json:"avg_recovery_time"`
+	MaxRecoveryTime     time.Duration    `json:"max_recovery_time"`
+	StartTime           time.Time        `json:"start_time"`
+	Uptime              time.Duration    `json:"uptime"`
 }
 
 // RecoveryManager manages recovery strategies
@@ -301,9 +304,9 @@ type NotificationManager struct {
 }
 
 // NewErrorHandler creates a new error handler
-func NewErrorHandler(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*ErrorHandler, error) {
+func NewErrorHandler(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*ErrorHandler, error) {
 	handlerConfig := DefaultErrorConfig()
-	
+
 	if cfg != nil {
 		if errorCfg, ok := cfg.Get("error_handler"); ok {
 			if cfgMap, ok := errorCfg.(map[string]interface{}); ok {
@@ -342,12 +345,12 @@ func NewErrorHandler(cfg *config.Config, logger logging.Logger, metrics *metrics
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateErrorConfig(handlerConfig); err != nil {
 		return nil, fmt.Errorf("invalid error handler configuration: %w", err)
 	}
-	
+
 	handler := &ErrorHandler{
 		config:     handlerConfig,
 		logger:     logger,
@@ -358,25 +361,22 @@ func NewErrorHandler(cfg *config.Config, logger logging.Logger, metrics *metrics
 		stats: &ErrorHandlerStats{
 			ErrorByCategory: make(map[string]int64),
 			ErrorBySeverity: make(map[string]int64),
-			StartTime:      time.Now(),
+			StartTime:       time.Now(),
 		},
 	}
-	
+
 	// Initialize recovery manager
 	handler.recovery = &RecoveryManager{
 		strategies: handlerConfig.RecoveryStrategies,
 	}
-	
+
 	// Initialize notification manager
 	handler.notifications = &NotificationManager{
 		channels: handlerConfig.NotificationChannels,
 	}
-	
-	handler.logger.Info("Created error handler",
-		"enabled", handlerConfig.Enabled,
-		"enable_recovery", handlerConfig.EnableRecovery,
-		"enable_notifications", handlerConfig.EnableNotifications)
-	
+
+	handler.logger.Info("Created error handler")
+
 	return handler, nil
 }
 
@@ -385,19 +385,19 @@ func validateErrorConfig(config *ErrorConfig) error {
 	if config == nil {
 		return errors.New("error handler configuration cannot be nil")
 	}
-	
+
 	if config.MaxErrorSize <= 0 {
 		return errors.New("max error size must be positive")
 	}
-	
+
 	if config.ErrorHistorySize <= 0 {
 		return errors.New("error history size must be positive")
 	}
-	
+
 	if config.ErrorTTL <= 0 {
 		return errors.New("error TTL must be positive")
 	}
-	
+
 	for _, strategy := range config.RecoveryStrategies {
 		if strategy.Name == "" {
 			return errors.New("recovery strategy name cannot be empty")
@@ -412,7 +412,7 @@ func validateErrorConfig(config *ErrorConfig) error {
 			return errors.New("recovery strategy backoff cannot be negative")
 		}
 	}
-	
+
 	for _, channel := range config.NotificationChannels {
 		if channel.Name == "" {
 			return errors.New("notification channel name cannot be empty")
@@ -421,7 +421,7 @@ func validateErrorConfig(config *ErrorConfig) error {
 			return errors.New("notification channel type cannot be empty")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -429,21 +429,21 @@ func validateErrorConfig(config *ErrorConfig) error {
 func (h *ErrorHandler) Start() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.started {
 		return ErrHandlerAlreadyRunning
 	}
-	
+
 	if !h.config.Enabled {
 		h.logger.Info("Error handler is disabled")
 		return nil
 	}
-	
+
 	h.started = true
 	h.stopped = false
-	
+
 	h.logger.Info("Started error handler")
-	
+
 	return nil
 }
 
@@ -451,20 +451,20 @@ func (h *ErrorHandler) Start() error {
 func (h *ErrorHandler) Stop() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.stopped {
 		return nil
 	}
-	
+
 	if !h.started {
 		return ErrHandlerNotRunning
 	}
-	
+
 	h.stopped = true
 	h.started = false
-	
+
 	h.logger.Info("Stopped error handler")
-	
+
 	return nil
 }
 
@@ -472,7 +472,7 @@ func (h *ErrorHandler) Stop() error {
 func (h *ErrorHandler) IsRunning() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return h.started && !h.stopped
 }
 
@@ -481,38 +481,38 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, req *adapter.
 	if !h.config.Enabled {
 		return nil, nil
 	}
-	
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if !h.started {
 		return nil, ErrHandlerNotRunning
 	}
-	
+
 	startTime := time.Now()
-	
+
 	// Create error entry
 	entry := h.createErrorEntry(err, req, resp)
-	
+
 	// Add to error history
 	h.addErrorEntry(entry)
-	
+
 	// Update statistics
 	h.updateStats(entry)
-	
+
 	// Log error
 	if h.config.EnableLogging {
 		h.logError(entry)
 	}
-	
+
 	// Update metrics if enabled
 	if h.config.EnableMetrics && h.metrics != nil {
 		h.updateErrorMetrics(entry)
 	}
-	
+
 	// Attempt recovery if enabled
 	if h.config.EnableRecovery {
-		if recovered, recoveryErr := h.attemptRecovery(ctx, entry); recovered {
+		if recovered, recoveryErr := h.attemptRecovery(ctx, &entry); recovered {
 			entry.Recovered = true
 			entry.Actions = append(entry.Actions, "recovered")
 			if recoveryErr != nil {
@@ -520,18 +520,18 @@ func (h *ErrorHandler) HandleError(ctx context.Context, err error, req *adapter.
 			}
 		}
 	}
-	
+
 	// Send notifications if enabled
 	if h.config.EnableNotifications {
-		if notificationResults, err := h.sendNotifications(entry); err == nil {
+		if notificationResults, err := h.sendNotifications(&entry); err == nil {
 			entry.Notifications = notificationResults
 		}
 	}
-	
+
 	// Update duration
 	entry.Metadata["handling_duration"] = time.Since(startTime)
-	
-	return entry, nil
+
+	return &entry, nil
 }
 
 // createErrorEntry creates an error entry
@@ -546,12 +546,12 @@ func (h *ErrorHandler) createErrorEntry(err error, req *adapter.Request, resp *a
 		Actions:   make([]string, 0),
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	// Get stack trace if debug is enabled
 	if h.config.EnableDebug {
 		entry.Stack = string(debug.Stack())
 	}
-	
+
 	// Map error
 	if mapping, exists := h.config.ErrorMappings[getErrorType(err)]; exists {
 		entry.Severity = mapping.Severity
@@ -566,7 +566,7 @@ func (h *ErrorHandler) createErrorEntry(err error, req *adapter.Request, resp *a
 		entry.Retryable = false
 		entry.Actions = append(entry.Actions, "log")
 	}
-	
+
 	// Add context information
 	if req != nil {
 		entry.Context["request_id"] = req.ID
@@ -575,12 +575,12 @@ func (h *ErrorHandler) createErrorEntry(err error, req *adapter.Request, resp *a
 		entry.Context["protocol"] = req.Protocol
 		entry.Context["client_ip"] = req.ClientIP
 	}
-	
+
 	if resp != nil {
-		entry.Context["response_code"] = resp.StatusCode
+		entry.Context["response_code"] = resp.Status
 		entry.Context["response_size"] = len(resp.Body)
 	}
-	
+
 	return entry
 }
 
@@ -588,20 +588,20 @@ func (h *ErrorHandler) createErrorEntry(err error, req *adapter.Request, resp *a
 func (h *ErrorHandler) addErrorEntry(entry ErrorEntry) {
 	h.errors = append(h.errors, entry)
 	h.errorIndex[entry.ID] = len(h.errors) - 1
-	
+
 	// Clean up old errors
 	if len(h.errors) > h.config.ErrorHistorySize {
 		// Remove oldest errors
 		removed := len(h.errors) - h.config.ErrorHistorySize
 		h.errors = h.errors[removed:]
-		
+
 		// Rebuild index
 		h.errorIndex = make(map[string]int)
 		for i, err := range h.errors {
 			h.errorIndex[err.ID] = i
 		}
 	}
-	
+
 	// Clean up expired errors
 	now := time.Now()
 	validErrors := make([]ErrorEntry, 0)
@@ -610,7 +610,7 @@ func (h *ErrorHandler) addErrorEntry(entry ErrorEntry) {
 			validErrors = append(validErrors, err)
 		}
 	}
-	
+
 	if len(validErrors) != len(h.errors) {
 		h.errors = validErrors
 		h.errorIndex = make(map[string]int)
@@ -623,24 +623,24 @@ func (h *ErrorHandler) addErrorEntry(entry ErrorEntry) {
 // updateStats updates error handler statistics
 func (h *ErrorHandler) updateStats(entry ErrorEntry) {
 	h.stats.TotalErrors++
-	
+
 	if entry.Recovered {
 		h.stats.RecoveredErrors++
 	}
-	
+
 	h.stats.ErrorByCategory[entry.Category]++
 	h.stats.ErrorBySeverity[entry.Severity]++
-	
+
 	// Update recovery time stats
 	if entry.Recovered {
 		if handlingDuration, ok := entry.Metadata["handling_duration"].(time.Duration); ok {
 			if h.stats.MaxRecoveryTime == 0 || handlingDuration > h.stats.MaxRecoveryTime {
 				h.stats.MaxRecoveryTime = handlingDuration
 			}
-			
+
 			h.stats.AvgRecoveryTime = time.Duration(
 				(int64(h.stats.AvgRecoveryTime)*(h.stats.RecoveredErrors-1) + int64(handlingDuration)) /
-				h.stats.RecoveredErrors,
+					h.stats.RecoveredErrors,
 			)
 		}
 	}
@@ -648,19 +648,19 @@ func (h *ErrorHandler) updateStats(entry ErrorEntry) {
 
 // logError logs an error
 func (h *ErrorHandler) logError(entry ErrorEntry) {
-	fields := []interface{}{
-		"error_id", entry.ID,
-		"error", entry.Error.Error(),
-		"severity", entry.Severity,
-		"category", entry.Category,
-		"recovered", entry.Recovered,
-		"retryable", entry.Retryable,
+	fields := []zap.Field{
+		zap.String("error_id", entry.ID),
+		zap.String("error", entry.Error.Error()),
+		zap.String("severity", entry.Severity),
+		zap.String("category", entry.Category),
+		zap.Bool("recovered", entry.Recovered),
+		zap.Bool("retryable", entry.Retryable),
 	}
-	
+
 	for key, value := range entry.Context {
-		fields = append(fields, key, value)
+		fields = append(fields, zap.Any(key, value))
 	}
-	
+
 	switch entry.Severity {
 	case "critical":
 		h.logger.Error("Critical error occurred", fields...)
@@ -680,21 +680,20 @@ func (h *ErrorHandler) updateErrorMetrics(entry ErrorEntry) {
 	if h.metrics == nil {
 		return
 	}
-	
-	h.metrics.ServiceCounter.WithLabelValues("error", "total").Inc()
-	h.metrics.ServiceCounter.WithLabelValues("error", "category", entry.Category).Inc()
-	h.metrics.ServiceCounter.WithLabelValues("error", "severity", entry.Severity).Inc()
-	
+
+	h.metrics.ErrorsTotal.Add(1, "error_handler", "handle", entry.Category)
+	h.metrics.ServiceErrors.Add(1, "error_handler", entry.Severity)
+
 	if entry.Recovered {
-		h.metrics.ServiceCounter.WithLabelValues("error", "recovered").Inc()
+		h.metrics.ServiceErrors.Add(1, "error_handler", "recovered")
 	}
-	
+
 	if entry.Retryable {
-		h.metrics.ServiceCounter.WithLabelValues("error", "retryable").Inc()
+		h.metrics.ServiceErrors.Add(1, "error_handler", "retryable")
 	}
-	
+
 	for _, action := range entry.Actions {
-		h.metrics.ServiceCounter.WithLabelValues("error", "action", action).Inc()
+		h.metrics.ServiceErrors.Add(1, "error_handler", action)
 	}
 }
 
@@ -702,17 +701,17 @@ func (h *ErrorHandler) updateErrorMetrics(entry ErrorEntry) {
 func (h *ErrorHandler) attemptRecovery(ctx context.Context, entry *ErrorEntry) (bool, error) {
 	h.recovery.mu.RLock()
 	defer h.recovery.mu.RUnlock()
-	
+
 	for _, strategy := range h.recovery.strategies {
 		if !strategy.Enabled {
 			continue
 		}
-		
+
 		if h.matchesRecoveryConditions(strategy, entry) {
 			return h.executeRecoveryStrategy(ctx, strategy, entry)
 		}
 	}
-	
+
 	return false, nil
 }
 
@@ -723,39 +722,41 @@ func (h *ErrorHandler) matchesRecoveryConditions(strategy RecoveryStrategy, entr
 			return false
 		}
 	}
-	
+
 	if severity, ok := strategy.Conditions["severity"].(string); ok {
 		if severity != entry.Severity {
 			return false
 		}
 	}
-	
+
 	if retryable, ok := strategy.Conditions["retryable"].(bool); ok {
 		if retryable != entry.Retryable {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
 // executeRecoveryStrategy executes a recovery strategy
 func (h *ErrorHandler) executeRecoveryStrategy(ctx context.Context, strategy RecoveryStrategy, entry *ErrorEntry) (bool, error) {
 	startTime := time.Now()
-	
+
 	for attempt := 1; attempt <= strategy.MaxAttempts; attempt++ {
 		select {
 		case <-ctx.Done():
 			return false, ctx.Err()
 		default:
 		}
-		
+
 		// Execute recovery actions
 		for _, action := range strategy.Actions {
 			switch action {
 			case "reconnect":
 				// Placeholder for reconnection logic
-				h.logger.Debug("Attempting reconnection", "error_id", entry.ID, "attempt", attempt)
+				h.logger.Debug("Attempting reconnection",
+					zap.String("error_id", entry.ID),
+					zap.Int("attempt", attempt))
 			case "backoff":
 				// Apply backoff
 				if attempt > 1 {
@@ -768,36 +769,38 @@ func (h *ErrorHandler) executeRecoveryStrategy(ctx context.Context, strategy Rec
 				}
 			case "retry":
 				// Placeholder for retry logic
-				h.logger.Debug("Attempting retry", "error_id", entry.ID, "attempt", attempt)
+				h.logger.Debug("Attempting retry",
+					zap.String("error_id", entry.ID),
+					zap.Int("attempt", attempt))
 			case "reduce_timeout":
 				// Placeholder for timeout reduction logic
-				h.logger.Debug("Reducing timeout", "error_id", entry.ID, "attempt", attempt)
+				h.logger.Debug("Reducing timeout",
+					zap.String("error_id", entry.ID),
+					zap.Int("attempt", attempt))
 			case "open_circuit":
 				// Placeholder for circuit breaker logic
-				h.logger.Debug("Opening circuit breaker", "error_id", entry.ID)
+				h.logger.Debug("Opening circuit breaker",
+					zap.String("error_id", entry.ID))
 			case "fallback":
 				// Placeholder for fallback logic
-				h.logger.Debug("Executing fallback", "error_id", entry.ID)
+				h.logger.Debug("Executing fallback",
+					zap.String("error_id", entry.ID))
 			}
 		}
-		
+
 		// Check if recovery was successful
 		if h.checkRecoverySuccess(strategy, entry) {
-			h.logger.Info("Recovery successful",
-				"error_id", entry.ID,
-				"strategy", strategy.Name,
-				"attempt", attempt,
-				"duration", time.Since(startTime))
+			h.logger.Info("Recovery successful")
 			return true, nil
 		}
 	}
-	
+
 	h.logger.Warn("Recovery failed",
-		"error_id", entry.ID,
-		"strategy", strategy.Name,
-		"max_attempts", strategy.MaxAttempts,
-		"duration", time.Since(startTime))
-	
+		zap.String("error_id", entry.ID),
+		zap.String("strategy", strategy.Name),
+		zap.Int("max_attempts", strategy.MaxAttempts),
+		zap.Duration("duration", time.Since(startTime)))
+
 	return false, ErrRecoveryFailed
 }
 
@@ -812,18 +815,18 @@ func (h *ErrorHandler) checkRecoverySuccess(strategy RecoveryStrategy, entry *Er
 func (h *ErrorHandler) sendNotifications(entry *ErrorEntry) ([]NotificationResult, error) {
 	h.notifications.mu.RLock()
 	defer h.notifications.mu.RUnlock()
-	
+
 	results := make([]NotificationResult, 0)
-	
+
 	for _, channel := range h.notifications.channels {
 		if !channel.Enabled {
 			continue
 		}
-		
+
 		if h.shouldNotify(channel, entry) {
 			result := h.sendNotification(channel, entry)
 			results = append(results, result)
-			
+
 			if result.Success {
 				h.stats.Notifications++
 			} else {
@@ -831,7 +834,7 @@ func (h *ErrorHandler) sendNotifications(entry *ErrorEntry) ([]NotificationResul
 			}
 		}
 	}
-	
+
 	return results, nil
 }
 
@@ -853,37 +856,34 @@ func (h *ErrorHandler) sendNotification(channel NotificationChannel, entry *Erro
 		Timestamp: time.Now(),
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	defer func() {
 		if !result.Success {
 			result.Error = fmt.Errorf("notification failed")
 		}
 	}()
-	
+
 	// This is a placeholder for notification sending logic
 	// In a real implementation, you would send notifications to various channels
 	// like email, Slack, PagerDuty, etc.
-	
+
 	switch channel.Type {
 	case "log":
-		h.logger.Info("Sending notification",
-			"channel", channel.Name,
-			"error_id", entry.ID,
-			"severity", entry.Severity)
+		h.logger.Info("Sending notification")
 		result.Success = true
 	case "webhook":
 		// Placeholder for webhook notification
 		h.logger.Debug("Sending webhook notification",
-			"channel", channel.Name,
-			"error_id", entry.ID)
+			zap.String("channel", channel.Name),
+			zap.String("error_id", entry.ID))
 		result.Success = true
 	default:
 		h.logger.Warn("Unknown notification channel type",
-			"channel", channel.Name,
-			"type", channel.Type)
+			zap.String("channel", channel.Name),
+			zap.String("type", channel.Type))
 		result.Error = fmt.Errorf("unknown channel type: %s", channel.Type)
 	}
-	
+
 	return result
 }
 
@@ -891,7 +891,7 @@ func (h *ErrorHandler) sendNotification(channel NotificationChannel, entry *Erro
 func (h *ErrorHandler) GetErrorHistory() []ErrorEntry {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	history := make([]ErrorEntry, len(h.errors))
 	copy(history, h.errors)
 	return history
@@ -901,12 +901,12 @@ func (h *ErrorHandler) GetErrorHistory() []ErrorEntry {
 func (h *ErrorHandler) GetError(id string) (*ErrorEntry, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	index, exists := h.errorIndex[id]
 	if !exists {
 		return nil, fmt.Errorf("error not found: %s", id)
 	}
-	
+
 	entry := h.errors[index]
 	return &entry, nil
 }
@@ -915,23 +915,23 @@ func (h *ErrorHandler) GetError(id string) (*ErrorEntry, error) {
 func (h *ErrorHandler) GetStats() *ErrorHandlerStats {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Update uptime
 	h.stats.Uptime = time.Since(h.stats.StartTime)
-	
+
 	// Return a copy of stats
 	stats := *h.stats
 	stats.ErrorByCategory = make(map[string]int64)
 	stats.ErrorBySeverity = make(map[string]int64)
-	
+
 	for k, v := range h.stats.ErrorByCategory {
 		stats.ErrorByCategory[k] = v
 	}
-	
+
 	for k, v := range h.stats.ErrorBySeverity {
 		stats.ErrorBySeverity[k] = v
 	}
-	
+
 	return &stats
 }
 
@@ -939,13 +939,13 @@ func (h *ErrorHandler) GetStats() *ErrorHandlerStats {
 func (h *ErrorHandler) ResetStats() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	h.stats = &ErrorHandlerStats{
 		ErrorByCategory: make(map[string]int64),
 		ErrorBySeverity: make(map[string]int64),
-		StartTime:      time.Now(),
+		StartTime:       time.Now(),
 	}
-	
+
 	h.logger.Info("Error handler statistics reset")
 }
 
@@ -953,7 +953,7 @@ func (h *ErrorHandler) ResetStats() {
 func (h *ErrorHandler) GetConfig() *ErrorConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *h.config
 	return &config
@@ -963,22 +963,22 @@ func (h *ErrorHandler) GetConfig() *ErrorConfig {
 func (h *ErrorHandler) UpdateConfig(config *ErrorConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateErrorConfig(config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	h.config = config
-	
+
 	// Update recovery manager
 	h.recovery.strategies = config.RecoveryStrategies
-	
+
 	// Update notification manager
 	h.notifications.channels = config.NotificationChannels
-	
-	h.logger.Info("Updated error handler configuration", "config", config)
-	
+
+	h.logger.Info("Updated error handler configuration")
+
 	return nil
 }
 
@@ -986,12 +986,12 @@ func (h *ErrorHandler) UpdateConfig(config *ErrorConfig) error {
 func (h *ErrorHandler) Validate() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateErrorConfig(h.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -1005,9 +1005,9 @@ func getErrorType(err error) string {
 	if err == nil {
 		return "unknown"
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
-	
+
 	switch {
 	case strings.Contains(errStr, "connection refused"):
 		return "connection_refused"

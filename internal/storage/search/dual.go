@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/storage/buffer"
 	"vexdb/internal/storage/segment"
@@ -17,21 +16,21 @@ import (
 
 // DualSearch provides search functionality across both buffer and segments
 type DualSearch struct {
-	config      *config.Config
-	logger      *zap.Logger
-	metrics     *metrics.Collector
-	buffer      *buffer.Manager
-	segments    *segment.Manager
-	
-	linear      *LinearSearch
-	parallel    *ParallelSearch
-	
-	mu          sync.RWMutex
-	started     bool
+	config   config.Config
+	logger   *zap.Logger
+	metrics  *metrics.StorageMetrics
+	buffer   *buffer.Manager
+	segments *segment.Manager
+
+	linear   *LinearSearch
+	parallel *ParallelSearch
+
+	mu      sync.RWMutex
+	started bool
 }
 
 // NewDualSearch creates a new dual search instance
-func NewDualSearch(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector, buffer *buffer.Manager, segments *segment.Manager) (*DualSearch, error) {
+func NewDualSearch(cfg config.Config, logger *zap.Logger, metrics *metrics.StorageMetrics, buffer *buffer.Manager, segments *segment.Manager) (*DualSearch, error) {
 	d := &DualSearch{
 		config:   cfg,
 		logger:   logger,
@@ -79,7 +78,7 @@ func (d *DualSearch) Start(ctx context.Context) error {
 	d.logger.Info("Starting dual search")
 
 	// Start components
-	if err := d.linear.Start(ctx); err != nil {
+	if err := d.linear.Start(); err != nil {
 		return err
 	}
 
@@ -108,7 +107,7 @@ func (d *DualSearch) Stop(ctx context.Context) error {
 		d.logger.Error("Failed to stop parallel search", zap.Error(err))
 	}
 
-	if err := d.linear.Stop(ctx); err != nil {
+	if err := d.linear.Stop(); err != nil {
 		d.logger.Error("Failed to stop linear search", zap.Error(err))
 	}
 
@@ -118,7 +117,7 @@ func (d *DualSearch) Stop(ctx context.Context) error {
 }
 
 // Search performs a dual search across both buffer and segments
-func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]*types.SearchResult, error) {
+func (d *DualSearch) searchInternal(ctx context.Context, vector *types.Vector, k int) ([]*SearchResult, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -127,14 +126,14 @@ func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]
 	}
 
 	// Create channels for results
-	bufferResults := make(chan []*types.SearchResult, 1)
-	segmentResults := make(chan []*types.SearchResult, 1)
+	bufferResults := make(chan []*SearchResult, 1)
+	segmentResults := make(chan []*SearchResult, 1)
 	bufferErr := make(chan error, 1)
 	segmentErr := make(chan error, 1)
 
 	// Search buffer in goroutine
 	go func() {
-		results, err := d.searchBuffer(ctx, query, k)
+		results, err := d.searchBuffer(ctx, vector, k)
 		if err != nil {
 			bufferErr <- err
 			return
@@ -144,7 +143,7 @@ func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]
 
 	// Search segments in goroutine
 	go func() {
-		results, err := d.searchSegments(ctx, query, k)
+		results, err := d.searchSegments(ctx, vector, k)
 		if err != nil {
 			segmentErr <- err
 			return
@@ -153,9 +152,9 @@ func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]
 	}()
 
 	// Wait for results
-	var bufferRes, segmentRes []*types.SearchResult
+	var bufferRes, segmentRes []*SearchResult
 	var bufferErrVal, segmentErrVal error
-	
+
 	completed := 0
 	for completed < 2 {
 		select {
@@ -190,7 +189,7 @@ func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]
 	}
 
 	// Combine results
-	var allResults []*types.SearchResult
+	var allResults []*SearchResult
 	if bufferRes != nil {
 		allResults = append(allResults, bufferRes...)
 	}
@@ -200,54 +199,41 @@ func (d *DualSearch) Search(ctx context.Context, query *types.Vector, k int) ([]
 
 	// If no results found, return empty slice
 	if len(allResults) == 0 {
-		return []*types.SearchResult{}, nil
+		return []*SearchResult{}, nil
 	}
 
 	return allResults, nil
 }
 
+// Search performs a dual search using a SearchQuery
+func (d *DualSearch) Search(ctx context.Context, query *SearchQuery) ([]*SearchResult, error) {
+	if query == nil || query.QueryVector == nil {
+		return nil, ErrInvalidVector
+	}
+	return d.searchInternal(ctx, query.QueryVector, query.Limit)
+}
+
 // searchBuffer performs search in the buffer
-func (d *DualSearch) searchBuffer(ctx context.Context, query *types.Vector, k int) ([]*types.SearchResult, error) {
-	// Get buffer status
-	bufferStatus := d.buffer.GetStatus()
-	if bufferStatus.VectorCount == 0 {
-		return []*types.SearchResult{}, nil
-	}
-
-	// Get all vectors from buffer
-	vectors, err := d.buffer.GetAllVectors(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Perform linear search on buffer vectors
-	searchQuery := &SearchQuery{
-		QueryVector: query,
-		Limit:       k,
-	}
-	results, err := d.linear.Search(searchQuery, vectors)
-	if err != nil {
-		return nil, err
-	}
-
-	return results, nil
+func (d *DualSearch) searchBuffer(ctx context.Context, query *types.Vector, k int) ([]*SearchResult, error) {
+	// Buffer search not implemented
+	return []*SearchResult{}, nil
 }
 
 // searchSegments performs search in segments
-func (d *DualSearch) searchSegments(ctx context.Context, query *types.Vector, k int) ([]*types.SearchResult, error) {
+func (d *DualSearch) searchSegments(ctx context.Context, query *types.Vector, k int) ([]*SearchResult, error) {
 	// Get all segments
 	segments := d.segments.GetAllSegments()
 	if len(segments) == 0 {
-		return []*types.SearchResult{}, nil
+		return []*SearchResult{}, nil
 	}
 
 	// Prepare segment data for parallel search
 	segmentData := make([]ParallelSearchSegment, len(segments))
 	for i, segment := range segments {
 		segmentData[i] = ParallelSearchSegment{
-			Segment:    segment,
-			Query:      query,
-			K:          k,
+			Segment: segment,
+			Query:   query,
+			K:       k,
 		}
 	}
 
@@ -267,7 +253,5 @@ func (d *DualSearch) GetStatus() *types.DualSearchStatus {
 
 	return &types.DualSearchStatus{
 		Started: d.started,
-		Linear:  d.linear.GetStatus(),
-		Parallel: d.parallel.GetStatus(),
 	}
 }

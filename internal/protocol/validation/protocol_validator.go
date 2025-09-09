@@ -1,10 +1,7 @@
-
 package validation
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"vexdb/internal/types"
@@ -21,58 +18,58 @@ type ProtocolValidator struct {
 
 // HTTPValidationRules contains HTTP-specific validation rules
 type HTTPValidationRules struct {
-	MaxHeaderSize      int
-	MaxURLLength       int
-	AllowedMethods     []string
+	MaxHeaderSize       int
+	MaxURLLength        int
+	AllowedMethods      []string
 	AllowedContentTypes []string
-	RequiredHeaders    []string
+	RequiredHeaders     []string
 }
 
 // WebSocketValidationRules contains WebSocket-specific validation rules
 type WebSocketValidationRules struct {
-	MaxMessageSize     int64
-	AllowedOrigins     []string
+	MaxMessageSize       int64
+	AllowedOrigins       []string
 	RequiredSubprotocols []string
 }
 
 // GRPCValidationRules contains gRPC-specific validation rules
 type GRPCValidationRules struct {
-	MaxMessageSize     int
-	MaxMetadataSize    int
-	AllowedMethods     []string
+	MaxMessageSize  int
+	MaxMetadataSize int
+	AllowedMethods  []string
 }
 
 // RedisValidationRules contains Redis-specific validation rules
 type RedisValidationRules struct {
-	MaxCommandLength   int
-	MaxArguments       int
-	AllowedCommands    []string
+	MaxCommandLength int
+	MaxArguments     int
+	AllowedCommands  []string
 }
 
 // NewProtocolValidator creates a new protocol validator
 func NewProtocolValidator() *ProtocolValidator {
 	return &ProtocolValidator{
 		httpRules: &HTTPValidationRules{
-			MaxHeaderSize:      8192,
-			MaxURLLength:       2048,
-			AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			MaxHeaderSize:       8192,
+			MaxURLLength:        2048,
+			AllowedMethods:      []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedContentTypes: []string{"application/json", "application/x-protobuf"},
-			RequiredHeaders:    []string{"content-type"},
+			RequiredHeaders:     []string{"content-type"},
 		},
 		websocketRules: &WebSocketValidationRules{
-			MaxMessageSize:     10 << 20, // 10MB
-			AllowedOrigins:     []string{"*"},
+			MaxMessageSize:       10 << 20, // 10MB
+			AllowedOrigins:       []string{"*"},
 			RequiredSubprotocols: []string{"vexdb-v1"},
 		},
 		grpcRules: &GRPCValidationRules{
-			MaxMessageSize:     4 << 20, // 4MB
-			MaxMetadataSize:    8192,
-			AllowedMethods:     []string{"InsertVector", "InsertBatch", "HealthCheck"},
+			MaxMessageSize:  4 << 20, // 4MB
+			MaxMetadataSize: 8192,
+			AllowedMethods:  []string{"InsertVector", "InsertBatch", "HealthCheck"},
 		},
 		redisRules: &RedisValidationRules{
-			MaxCommandLength:   1024,
-			MaxArguments:       100,
-			AllowedCommands:    []string{"PING", "VECTOR.ADD", "VECTOR.MADD", "HELLO", "COMMAND", "INFO"},
+			MaxCommandLength: 1024,
+			MaxArguments:     100,
+			AllowedCommands:  []string{"PING", "VECTOR.ADD", "VECTOR.MADD", "HELLO", "COMMAND", "INFO"},
 		},
 	}
 }
@@ -259,12 +256,9 @@ func (v *ProtocolValidator) ValidateVectorForProtocol(vector *types.Vector, prot
 		return fmt.Errorf("vector data cannot be empty")
 	}
 
-	if vector.Dimensions <= 0 {
+	dim := len(vector.Data)
+	if dim <= 0 {
 		return fmt.Errorf("vector dimensions must be positive")
-	}
-
-	if len(vector.Data) != vector.Dimensions {
-		return fmt.Errorf("vector data length (%d) does not match dimensions (%d)", len(vector.Data), vector.Dimensions)
 	}
 
 	// Protocol-specific validation
@@ -304,8 +298,8 @@ func (v *ProtocolValidator) validateVectorForWebSocket(vector *types.Vector) err
 	}
 
 	// Check vector size for WebSocket transmission
-	if vector.Dimensions > 10000 {
-		return fmt.Errorf("vector dimensions too large for WebSocket: %d > 10000", vector.Dimensions)
+	if len(vector.Data) > 10000 {
+		return fmt.Errorf("vector dimensions too large for WebSocket: %d > 10000", len(vector.Data))
 	}
 
 	return nil
@@ -320,8 +314,8 @@ func (v *ProtocolValidator) validateVectorForGRPC(vector *types.Vector) error {
 
 	// Check
 	// Check vector size for gRPC transmission
-	if vector.Dimensions > 50000 {
-		return fmt.Errorf("vector dimensions too large for gRPC: %d > 50000", vector.Dimensions)
+	if len(vector.Data) > 50000 {
+		return fmt.Errorf("vector dimensions too large for gRPC: %d > 50000", len(vector.Data))
 	}
 
 	return nil
@@ -335,8 +329,8 @@ func (v *ProtocolValidator) validateVectorForRedis(vector *types.Vector) error {
 	}
 
 	// Check vector size for Redis transmission
-	if vector.Dimensions > 1000 {
-		return fmt.Errorf("vector dimensions too large for Redis: %d > 1000", vector.Dimensions)
+	if len(vector.Data) > 1000 {
+		return fmt.Errorf("vector dimensions too large for Redis: %d > 1000", len(vector.Data))
 	}
 
 	return nil

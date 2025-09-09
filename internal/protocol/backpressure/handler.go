@@ -2,10 +2,13 @@ package backpressure
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -23,29 +26,29 @@ var (
 
 // BackpressureConfig represents the backpressure configuration
 type BackpressureConfig struct {
-	Enabled           bool                         `yaml:"enabled" json:"enabled"`
-	Thresholds        adapter.BackpressureThresholds `yaml:"thresholds" json:"thresholds"`
-	EnableMetrics     bool                         `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableLogging     bool                         `yaml:"enable_logging" json:"enable_logging"`
-	EnableAdaptive    bool                         `yaml:"enable_adaptive" json:"enable_adaptive"`
-	AdaptiveWindow    time.Duration                `yaml:"adaptive_window" json:"adaptive_window"`
-	AdaptiveFactor    float64                      `yaml:"adaptive_factor" json:"adaptive_factor"`
-	EnablePredictive  bool                         `yaml:"enable_predictive" json:"enable_predictive"`
-	PredictionWindow  time.Duration                `yaml:"prediction_window" json:"prediction_window"`
-	PredictionFactor  float64                      `yaml:"prediction_factor" json:"prediction_factor"`
-	EnableGraceful    bool                         `yaml:"enable_graceful" json:"enable_graceful"`
-	GracefulPeriod    time.Duration                `yaml:"graceful_period" json:"graceful_period"`
-	EnableCircuit     bool                         `yaml:"enable_circuit" json:"enable_circuit"`
-	CircuitThreshold  float64                      `yaml:"circuit_threshold" json:"circuit_threshold"`
-	CircuitRecovery   float64                      `yaml:"circuit_recovery" json:"circuit_recovery"`
-	SamplingInterval  time.Duration                `yaml:"sampling_interval" json:"sampling_interval"`
-	MaxSamples        int                          `yaml:"max_samples" json:"max_samples"`
+	Enabled          bool                           `yaml:"enabled" json:"enabled"`
+	Thresholds       adapter.BackpressureThresholds `yaml:"thresholds" json:"thresholds"`
+	EnableMetrics    bool                           `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableLogging    bool                           `yaml:"enable_logging" json:"enable_logging"`
+	EnableAdaptive   bool                           `yaml:"enable_adaptive" json:"enable_adaptive"`
+	AdaptiveWindow   time.Duration                  `yaml:"adaptive_window" json:"adaptive_window"`
+	AdaptiveFactor   float64                        `yaml:"adaptive_factor" json:"adaptive_factor"`
+	EnablePredictive bool                           `yaml:"enable_predictive" json:"enable_predictive"`
+	PredictionWindow time.Duration                  `yaml:"prediction_window" json:"prediction_window"`
+	PredictionFactor float64                        `yaml:"prediction_factor" json:"prediction_factor"`
+	EnableGraceful   bool                           `yaml:"enable_graceful" json:"enable_graceful"`
+	GracefulPeriod   time.Duration                  `yaml:"graceful_period" json:"graceful_period"`
+	EnableCircuit    bool                           `yaml:"enable_circuit" json:"enable_circuit"`
+	CircuitThreshold float64                        `yaml:"circuit_threshold" json:"circuit_threshold"`
+	CircuitRecovery  float64                        `yaml:"circuit_recovery" json:"circuit_recovery"`
+	SamplingInterval time.Duration                  `yaml:"sampling_interval" json:"sampling_interval"`
+	MaxSamples       int                            `yaml:"max_samples" json:"max_samples"`
 }
 
 // DefaultBackpressureConfig returns the default backpressure configuration
 func DefaultBackpressureConfig() *BackpressureConfig {
 	return &BackpressureConfig{
-		Enabled:          true,
+		Enabled: true,
 		Thresholds: adapter.BackpressureThresholds{
 			Warning:   0.7,  // 70%
 			Critical:  0.85, // 85%
@@ -72,77 +75,77 @@ func DefaultBackpressureConfig() *BackpressureConfig {
 
 // LoadSample represents a load sample
 type LoadSample struct {
-	Timestamp time.Time `json:"timestamp"`
-	Load      float64   `json:"load"`
-	Source    string    `json:"source"`
+	Timestamp time.Time              `json:"timestamp"`
+	Load      float64                `json:"load"`
+	Source    string                 `json:"source"`
 	Metadata  map[string]interface{} `json:"metadata"`
 }
 
 // BackpressureHandler represents a backpressure handler
 type BackpressureHandler struct {
-	config     *BackpressureConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	
+	config  *BackpressureConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+
 	// Load samples
-	samples    []LoadSample
-	mu         sync.RWMutex
-	
+	samples []LoadSample
+	mu      sync.RWMutex
+
 	// Adaptive thresholds
 	adaptiveThresholds adapter.BackpressureThresholds
-	adaptiveMu        sync.RWMutex
-	
+	adaptiveMu         sync.RWMutex
+
 	// Predictive load
-	predictedLoad     float64
-	predictionMu      sync.RWMutex
-	
+	predictedLoad float64
+	predictionMu  sync.RWMutex
+
 	// Circuit breaker
-	circuitOpen       bool
-	circuitMu         sync.RWMutex
-	circuitLastTrip   time.Time
-	
+	circuitOpen     bool
+	circuitMu       sync.RWMutex
+	circuitLastTrip time.Time
+
 	// Graceful mode
 	gracefulMode      bool
 	gracefulMu        sync.RWMutex
 	gracefulStartTime time.Time
-	
+
 	// Sampling
-	samplingTicker    *time.Ticker
-	samplingDone      chan struct{}
-	
+	samplingTicker *time.Ticker
+	samplingDone   chan struct{}
+
 	// Lifecycle
-	started    bool
-	stopped    bool
-	startTime  time.Time
-	
+	started   bool
+	stopped   bool
+	startTime time.Time
+
 	// Statistics
-	stats      *BackpressureStats
+	stats *BackpressureStats
 }
 
 // BackpressureStats represents backpressure statistics
 type BackpressureStats struct {
-	CurrentLoad      float64                     `json:"current_load"`
-	AverageLoad      float64                     `json:"average_load"`
-	MaxLoad          float64                     `json:"max_load"`
-	MinLoad          float64                     `json:"min_load"`
-	PressureEvents   int64                       `json:"pressure_events"`
-	ActionsTaken     map[string]int64            `json:"actions_taken"`
-	LastPressureTime time.Time                   `json:"last_pressure_time"`
-	Thresholds       adapter.BackpressureThresholds `json:"thresholds"`
+	CurrentLoad        float64                        `json:"current_load"`
+	AverageLoad        float64                        `json:"average_load"`
+	MaxLoad            float64                        `json:"max_load"`
+	MinLoad            float64                        `json:"min_load"`
+	PressureEvents     int64                          `json:"pressure_events"`
+	ActionsTaken       map[string]int64               `json:"actions_taken"`
+	LastPressureTime   time.Time                      `json:"last_pressure_time"`
+	Thresholds         adapter.BackpressureThresholds `json:"thresholds"`
 	AdaptiveThresholds adapter.BackpressureThresholds `json:"adaptive_thresholds"`
-	PredictedLoad    float64                     `json:"predicted_load"`
-	CircuitOpen      bool                        `json:"circuit_open"`
-	CircuitTrips     int64                       `json:"circuit_trips"`
-	GracefulMode     bool                        `json:"graceful_mode"`
-	GracefulEvents   int64                       `json:"graceful_events"`
-	StartTime        time.Time                   `json:"start_time"`
-	Uptime           time.Duration               `json:"uptime"`
+	PredictedLoad      float64                        `json:"predicted_load"`
+	CircuitOpen        bool                           `json:"circuit_open"`
+	CircuitTrips       int64                          `json:"circuit_trips"`
+	GracefulMode       bool                           `json:"graceful_mode"`
+	GracefulEvents     int64                          `json:"graceful_events"`
+	StartTime          time.Time                      `json:"start_time"`
+	Uptime             time.Duration                  `json:"uptime"`
 }
 
 // NewBackpressureHandler creates a new backpressure handler
-func NewBackpressureHandler(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*BackpressureHandler, error) {
+func NewBackpressureHandler(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*BackpressureHandler, error) {
 	handlerConfig := DefaultBackpressureConfig()
-	
+
 	if cfg != nil {
 		if backpressureCfg, ok := cfg.Get("backpressure"); ok {
 			if cfgMap, ok := backpressureCfg.(map[string]interface{}); ok {
@@ -187,7 +190,7 @@ func NewBackpressureHandler(cfg *config.Config, logger logging.Logger, metrics *
 				}
 				if predictionWindow, ok := cfgMap["prediction_window"].(string); ok {
 					if duration, err := time.ParseDuration(predictionWindow); err == nil {
-						handlerConfig.PredictionWindow = predictionWindow
+						handlerConfig.PredictionWindow = duration
 					}
 				}
 				if predictionFactor, ok := cfgMap["prediction_factor"].(float64); ok {
@@ -221,19 +224,19 @@ func NewBackpressureHandler(cfg *config.Config, logger logging.Logger, metrics *
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateBackpressureConfig(handlerConfig); err != nil {
 		return nil, fmt.Errorf("invalid backpressure configuration: %w", err)
 	}
-	
+
 	handler := &BackpressureHandler{
-		config:            handlerConfig,
-		logger:            logger,
-		metrics:           metrics,
-		samples:           make([]LoadSample, 0),
+		config:             handlerConfig,
+		logger:             logger,
+		metrics:            metrics,
+		samples:            make([]LoadSample, 0),
 		adaptiveThresholds: handlerConfig.Thresholds,
-		predictedLoad:     0.0,
+		predictedLoad:      0.0,
 		circuitOpen:        false,
 		circuitLastTrip:    time.Time{},
 		gracefulMode:       false,
@@ -241,19 +244,15 @@ func NewBackpressureHandler(cfg *config.Config, logger logging.Logger, metrics *
 		samplingDone:       make(chan struct{}),
 		startTime:          time.Now(),
 		stats: &BackpressureStats{
-			ActionsTaken: make(map[string]int64),
-			Thresholds:   handlerConfig.Thresholds,
+			ActionsTaken:       make(map[string]int64),
+			Thresholds:         handlerConfig.Thresholds,
 			AdaptiveThresholds: handlerConfig.Thresholds,
-			StartTime:    time.Now(),
+			StartTime:          time.Now(),
 		},
 	}
-	
-	handler.logger.Info("Created backpressure handler",
-		"enabled", handlerConfig.Enabled,
-		"warning_threshold", handlerConfig.Thresholds.Warning,
-		"critical_threshold", handlerConfig.Thresholds.Critical,
-		"emergency_threshold", handlerConfig.Thresholds.Emergency)
-	
+
+	handler.logger.Info("Created backpressure handler")
+
 	return handler, nil
 }
 
@@ -262,71 +261,71 @@ func validateBackpressureConfig(config *BackpressureConfig) error {
 	if config == nil {
 		return errors.New("backpressure configuration cannot be nil")
 	}
-	
+
 	if config.Thresholds.Warning <= 0 || config.Thresholds.Warning > 1.0 {
 		return errors.New("warning threshold must be between 0 and 1")
 	}
-	
+
 	if config.Thresholds.Critical <= 0 || config.Thresholds.Critical > 1.0 {
 		return errors.New("critical threshold must be between 0 and 1")
 	}
-	
+
 	if config.Thresholds.Emergency <= 0 || config.Thresholds.Emergency > 1.0 {
 		return errors.New("emergency threshold must be between 0 and 1")
 	}
-	
+
 	if config.Thresholds.Warning >= config.Thresholds.Critical {
 		return errors.New("warning threshold must be less than critical threshold")
 	}
-	
+
 	if config.Thresholds.Critical >= config.Thresholds.Emergency {
 		return errors.New("critical threshold must be less than emergency threshold")
 	}
-	
+
 	if config.Thresholds.Window <= 0 {
 		return errors.New("threshold window must be positive")
 	}
-	
+
 	if config.AdaptiveWindow <= 0 {
 		return errors.New("adaptive window must be positive")
 	}
-	
+
 	if config.AdaptiveFactor < 0 || config.AdaptiveFactor > 1.0 {
 		return errors.New("adaptive factor must be between 0 and 1")
 	}
-	
+
 	if config.PredictionWindow <= 0 {
 		return errors.New("prediction window must be positive")
 	}
-	
+
 	if config.PredictionFactor < 0 || config.PredictionFactor > 1.0 {
 		return errors.New("prediction factor must be between 0 and 1")
 	}
-	
+
 	if config.GracefulPeriod <= 0 {
 		return errors.New("graceful period must be positive")
 	}
-	
+
 	if config.CircuitThreshold <= 0 || config.CircuitThreshold > 1.0 {
 		return errors.New("circuit threshold must be between 0 and 1")
 	}
-	
+
 	if config.CircuitRecovery <= 0 || config.CircuitRecovery > 1.0 {
 		return errors.New("circuit recovery must be between 0 and 1")
 	}
-	
+
 	if config.CircuitRecovery >= config.CircuitThreshold {
 		return errors.New("circuit recovery must be less than circuit threshold")
 	}
-	
+
 	if config.SamplingInterval <= 0 {
 		return errors.New("sampling interval must be positive")
 	}
-	
+
 	if config.MaxSamples <= 0 {
 		return errors.New("max samples must be positive")
 	}
-	
+
 	return nil
 }
 
@@ -334,25 +333,25 @@ func validateBackpressureConfig(config *BackpressureConfig) error {
 func (h *BackpressureHandler) Start() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.started {
 		return ErrHandlerAlreadyRunning
 	}
-	
+
 	if !h.config.Enabled {
 		h.logger.Info("Backpressure handler is disabled")
 		return nil
 	}
-	
+
 	// Start sampling ticker
 	h.samplingTicker = time.NewTicker(h.config.SamplingInterval)
 	go h.sampleLoad()
-	
+
 	h.started = true
 	h.stopped = false
-	
+
 	h.logger.Info("Started backpressure handler")
-	
+
 	return nil
 }
 
@@ -360,28 +359,28 @@ func (h *BackpressureHandler) Start() error {
 func (h *BackpressureHandler) Stop() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.stopped {
 		return nil
 	}
-	
+
 	if !h.started {
 		return ErrHandlerNotRunning
 	}
-	
+
 	// Stop sampling ticker
 	if h.samplingTicker != nil {
 		h.samplingTicker.Stop()
 	}
-	
+
 	// Stop sampling routine
 	close(h.samplingDone)
-	
+
 	h.stopped = true
 	h.started = false
-	
+
 	h.logger.Info("Stopped backpressure handler")
-	
+
 	return nil
 }
 
@@ -389,7 +388,7 @@ func (h *BackpressureHandler) Stop() error {
 func (h *BackpressureHandler) IsRunning() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return h.started && !h.stopped
 }
 
@@ -405,56 +404,56 @@ func (h *BackpressureHandler) HandlePressure(ctx context.Context, currentLoad fl
 			Message:  "Backpressure handling disabled",
 		}, nil
 	}
-	
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if !h.started {
 		return adapter.BackpressureAction{}, ErrHandlerNotRunning
 	}
-	
+
 	// Add load sample
 	h.addLoadSample(currentLoad)
-	
+
 	// Update statistics
 	h.updateStats(currentLoad)
-	
+
 	// Check circuit breaker
 	if h.config.EnableCircuit {
 		if action, err := h.checkCircuitBreaker(currentLoad); err != nil {
 			return action, err
 		}
 	}
-	
+
 	// Check adaptive thresholds
 	if h.config.EnableAdaptive {
 		h.updateAdaptiveThresholds()
 	}
-	
+
 	// Check predictive load
 	if h.config.EnablePredictive {
 		h.updatePredictiveLoad()
 	}
-	
+
 	// Determine backpressure action
 	action := h.determineAction(currentLoad)
-	
+
 	// Log backpressure events
 	if h.config.EnableLogging && action.Severity != "none" {
 		h.logger.Warn("Backpressure action triggered",
-			"current_load", currentLoad,
-			"action", action.Action,
-			"severity", action.Severity,
-			"delay", action.Delay,
-			"reject", action.Reject,
-			"limit", action.Limit)
+			zap.Float64("current_load", currentLoad),
+			zap.String("action", action.Action),
+			zap.String("severity", action.Severity),
+			zap.Duration("delay", action.Delay),
+			zap.Bool("reject", action.Reject),
+			zap.Int("limit", action.Limit))
 	}
-	
+
 	// Update metrics if enabled
 	if h.config.EnableMetrics && h.metrics != nil {
 		h.updateBackpressureMetrics(action)
 	}
-	
+
 	return action, nil
 }
 
@@ -462,29 +461,20 @@ func (h *BackpressureHandler) HandlePressure(ctx context.Context, currentLoad fl
 func (h *BackpressureHandler) GetBackpressureStats() adapter.BackpressureStats {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Update uptime
 	h.stats.Uptime = time.Since(h.stats.StartTime)
-	
+
 	// Return a copy of stats
 	stats := *h.stats
 	return adapter.BackpressureStats{
 		CurrentLoad:      stats.CurrentLoad,
 		AverageLoad:      stats.AverageLoad,
 		MaxLoad:          stats.MaxLoad,
-		MinLoad:          stats.MinLoad,
 		PressureEvents:   stats.PressureEvents,
 		ActionsTaken:     stats.ActionsTaken,
 		LastPressureTime: stats.LastPressureTime,
 		Thresholds:       stats.Thresholds,
-		AdaptiveThresholds: stats.AdaptiveThresholds,
-		PredictedLoad:    stats.PredictedLoad,
-		CircuitOpen:      stats.CircuitOpen,
-		CircuitTrips:     stats.CircuitTrips,
-		GracefulMode:     stats.GracefulMode,
-		GracefulEvents:   stats.GracefulEvents,
-		StartTime:        stats.StartTime,
-		Uptime:           stats.Uptime,
 	}
 }
 
@@ -492,7 +482,7 @@ func (h *BackpressureHandler) GetBackpressureStats() adapter.BackpressureStats {
 func (h *BackpressureHandler) SetThresholds(thresholds adapter.BackpressureThresholds) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate thresholds
 	if thresholds.Warning <= 0 || thresholds.Warning > 1.0 {
 		return ErrInvalidThreshold
@@ -512,17 +502,18 @@ func (h *BackpressureHandler) SetThresholds(thresholds adapter.BackpressureThres
 	if thresholds.Window <= 0 {
 		return ErrInvalidThreshold
 	}
-	
+
 	h.config.Thresholds = thresholds
 	h.stats.Thresholds = thresholds
-	
+
 	if h.config.EnableLogging {
 		h.logger.Info("Backpressure thresholds updated",
-			"warning", thresholds.Warning,
-			"critical", thresholds.Critical,
-			"emergency", thresholds.Emergency)
+			zap.Float64("warning", thresholds.Warning),
+			zap.Float64("critical", thresholds.Critical),
+			zap.Float64("emergency", thresholds.Emergency),
+		)
 	}
-	
+
 	return nil
 }
 
@@ -530,7 +521,7 @@ func (h *BackpressureHandler) SetThresholds(thresholds adapter.BackpressureThres
 func (h *BackpressureHandler) GetConfig() *BackpressureConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *h.config
 	return &config
@@ -540,16 +531,16 @@ func (h *BackpressureHandler) GetConfig() *BackpressureConfig {
 func (h *BackpressureHandler) UpdateConfig(config *BackpressureConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateBackpressureConfig(config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	h.config = config
-	
-	h.logger.Info("Updated backpressure configuration", "config", config)
-	
+
+	h.logger.Info("Updated backpressure configuration", zap.Any("config", config))
+
 	return nil
 }
 
@@ -557,12 +548,12 @@ func (h *BackpressureHandler) UpdateConfig(config *BackpressureConfig) error {
 func (h *BackpressureHandler) Validate() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateBackpressureConfig(h.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -574,9 +565,9 @@ func (h *BackpressureHandler) addLoadSample(load float64) {
 		Source:    "system",
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	h.samples = append(h.samples, sample)
-	
+
 	// Keep only the most recent samples
 	if len(h.samples) > h.config.MaxSamples {
 		h.samples = h.samples[len(h.samples)-h.config.MaxSamples:]
@@ -586,7 +577,7 @@ func (h *BackpressureHandler) addLoadSample(load float64) {
 // updateStats updates backpressure statistics
 func (h *BackpressureHandler) updateStats(currentLoad float64) {
 	h.stats.CurrentLoad = currentLoad
-	
+
 	// Update min/max load
 	if h.stats.MaxLoad == 0 || currentLoad > h.stats.MaxLoad {
 		h.stats.MaxLoad = currentLoad
@@ -594,7 +585,7 @@ func (h *BackpressureHandler) updateStats(currentLoad float64) {
 	if h.stats.MinLoad == 0 || currentLoad < h.stats.MinLoad {
 		h.stats.MinLoad = currentLoad
 	}
-	
+
 	// Update average load
 	if len(h.samples) > 0 {
 		totalLoad := 0.0
@@ -603,13 +594,13 @@ func (h *BackpressureHandler) updateStats(currentLoad float64) {
 		}
 		h.stats.AverageLoad = totalLoad / float64(len(h.samples))
 	}
-	
+
 	// Update predicted load
 	h.stats.PredictedLoad = h.predictedLoad
-	
+
 	// Update circuit status
 	h.stats.CircuitOpen = h.circuitOpen
-	
+
 	// Update graceful mode status
 	h.stats.GracefulMode = h.gracefulMode
 }
@@ -618,12 +609,12 @@ func (h *BackpressureHandler) updateStats(currentLoad float64) {
 func (h *BackpressureHandler) checkCircuitBreaker(currentLoad float64) (adapter.BackpressureAction, error) {
 	h.circuitMu.Lock()
 	defer h.circuitMu.Unlock()
-	
+
 	if h.circuitOpen {
 		// Check if we should recover
 		if currentLoad <= h.config.CircuitRecovery {
 			h.circuitOpen = false
-			h.logger.Info("Circuit breaker recovered", "load", currentLoad)
+			h.logger.Info("Circuit breaker recovered", zap.Float64("load", currentLoad))
 		} else {
 			return adapter.BackpressureAction{
 				Action:   "reject",
@@ -640,10 +631,10 @@ func (h *BackpressureHandler) checkCircuitBreaker(currentLoad float64) (adapter.
 			h.circuitOpen = true
 			h.circuitLastTrip = time.Now()
 			h.stats.CircuitTrips++
-			h.logger.Warn("Circuit breaker tripped", "load", currentLoad)
+			h.logger.Warn("Circuit breaker tripped", zap.Float64("load", currentLoad))
 		}
 	}
-	
+
 	return adapter.BackpressureAction{}, nil
 }
 
@@ -651,11 +642,11 @@ func (h *BackpressureHandler) checkCircuitBreaker(currentLoad float64) (adapter.
 func (h *BackpressureHandler) updateAdaptiveThresholds() {
 	h.adaptiveMu.Lock()
 	defer h.adaptiveMu.Unlock()
-	
+
 	if len(h.samples) < 10 {
 		return
 	}
-	
+
 	// Calculate load trend
 	recentSamples := h.samples[len(h.samples)-10:]
 	trend := 0.0
@@ -663,18 +654,18 @@ func (h *BackpressureHandler) updateAdaptiveThresholds() {
 		trend += recentSamples[i].Load - recentSamples[i-1].Load
 	}
 	trend /= float64(len(recentSamples) - 1)
-	
+
 	// Adjust thresholds based on trend
 	adjustment := trend * h.config.AdaptiveFactor
-	
+
 	h.adaptiveThresholds.Warning = math.Max(0.1, math.Min(0.9, h.config.Thresholds.Warning+adjustment))
 	h.adaptiveThresholds.Critical = math.Max(0.1, math.Min(0.9, h.config.Thresholds.Critical+adjustment))
 	h.adaptiveThresholds.Emergency = math.Max(0.1, math.Min(0.9, h.config.Thresholds.Emergency+adjustment))
-	
+
 	// Ensure threshold ordering
 	h.adaptiveThresholds.Warning = math.Min(h.adaptiveThresholds.Warning, h.adaptiveThresholds.Critical-0.01)
 	h.adaptiveThresholds.Critical = math.Min(h.adaptiveThresholds.Critical, h.adaptiveThresholds.Emergency-0.01)
-	
+
 	h.stats.AdaptiveThresholds = h.adaptiveThresholds
 }
 
@@ -682,21 +673,21 @@ func (h *BackpressureHandler) updateAdaptiveThresholds() {
 func (h *BackpressureHandler) updatePredictiveLoad() {
 	h.predictionMu.Lock()
 	defer h.predictionMu.Unlock()
-	
+
 	if len(h.samples) < 2 {
 		return
 	}
-	
+
 	// Simple linear prediction based on recent trend
 	recentSamples := h.samples[len(h.samples)-min(10, len(h.samples)):]
-	
+
 	// Calculate trend
 	trend := 0.0
 	for i := 1; i < len(recentSamples); i++ {
 		trend += recentSamples[i].Load - recentSamples[i-1].Load
 	}
 	trend /= float64(len(recentSamples) - 1)
-	
+
 	// Predict future load
 	h.predictedLoad = recentSamples[len(recentSamples)-1].Load + trend*h.config.PredictionFactor
 }
@@ -709,7 +700,7 @@ func (h *BackpressureHandler) determineAction(currentLoad float64) adapter.Backp
 		thresholds = h.adaptiveThresholds
 		h.adaptiveMu.RUnlock()
 	}
-	
+
 	action := adapter.BackpressureAction{
 		Action:   "allow",
 		Severity: "none",
@@ -718,7 +709,7 @@ func (h *BackpressureHandler) determineAction(currentLoad float64) adapter.Backp
 		Limit:    0,
 		Message:  "Request allowed",
 	}
-	
+
 	// Check thresholds
 	if currentLoad >= thresholds.Emergency {
 		action.Action = "reject"
@@ -746,7 +737,7 @@ func (h *BackpressureHandler) determineAction(currentLoad float64) adapter.Backp
 		h.stats.LastPressureTime = time.Now()
 		h.stats.ActionsTaken["warning_limit"]++
 	}
-	
+
 	// Check graceful mode
 	if h.config.EnableGraceful && action.Severity != "none" {
 		h.gracefulMu.Lock()
@@ -763,7 +754,7 @@ func (h *BackpressureHandler) determineAction(currentLoad float64) adapter.Backp
 		}
 		h.gracefulMu.Unlock()
 	}
-	
+
 	return action
 }
 
@@ -779,7 +770,7 @@ func (h *BackpressureHandler) sampleLoad() {
 				h.updateStats(currentLoad)
 			}
 			h.mu.Unlock()
-			
+
 		case <-h.samplingDone:
 			return
 		}
@@ -791,29 +782,8 @@ func (h *BackpressureHandler) updateBackpressureMetrics(action adapter.Backpress
 	if h.metrics == nil {
 		return
 	}
-	
-	// Update load metrics
-	h.metrics.ServiceGauge.WithLabelValues("backpressure", "current_load").Set(h.stats.CurrentLoad)
-	h.metrics.ServiceGauge.WithLabelValues("backpressure", "average_load").Set(h.stats.AverageLoad)
-	h.metrics.ServiceGauge.WithLabelValues("backpressure", "predicted_load").Set(h.stats.PredictedLoad)
-	
-	// Update action metrics
-	h.metrics.ServiceCounter.WithLabelValues("backpressure", "actions", action.Action).Inc()
-	h.metrics.ServiceCounter.WithLabelValues("backpressure", "severity", action.Severity).Inc()
-	
-	// Update circuit breaker metrics
-	if h.stats.CircuitOpen {
-		h.metrics.ServiceGauge.WithLabelValues("backpressure", "circuit_open").Set(1)
-	} else {
-		h.metrics.ServiceGauge.WithLabelValues("backpressure", "circuit_open").Set(0)
-	}
-	
-	// Update graceful mode metrics
-	if h.stats.GracefulMode {
-		h.metrics.ServiceGauge.WithLabelValues("backpressure", "graceful_mode").Set(1)
-	} else {
-		h.metrics.ServiceGauge.WithLabelValues("backpressure", "graceful_mode").Set(0)
-	}
+
+	// TODO: implement backpressure metrics using ServiceMetrics once gauge and counter helpers are available.
 }
 
 // min returns the minimum of two integers

@@ -3,9 +3,13 @@ package monitoring
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -13,6 +17,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // Tracer manages distributed tracing for the VexDB system
@@ -106,7 +111,7 @@ func (t *Tracer) initializeTracing() error {
 
 	t.provider = tp
 	t.tracer = tp.Tracer(t.config.ServiceName)
-	t.shutdownFunc = tp.Shutdown
+	t.shutdownFunc = func() error { return tp.Shutdown(context.Background()) }
 
 	t.logger.Info("Tracing initialized",
 		zap.String("service", t.config.ServiceName),
@@ -119,7 +124,7 @@ func (t *Tracer) initializeTracing() error {
 // StartSpan starts a new span
 func (t *Tracer) StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	if !t.config.Enabled {
-		return ctx, trace.NoopSpan{}
+		return ctx, trace.SpanFromContext(ctx)
 	}
 
 	return t.tracer.Start(ctx, name, opts...)
@@ -142,7 +147,7 @@ func (t *Tracer) WithSpan(ctx context.Context, name string, fn func(context.Cont
 	err := fn(ctx)
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(trace.StatusError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	}
 
 	return err
@@ -161,7 +166,7 @@ func (t *Tracer) RecordError(ctx context.Context, err error) {
 }
 
 // SetAttributes sets attributes on the current span
-func (t *Tracer) SetAttributes(ctx context.Context, attrs ...trace.Attribute) {
+func (t *Tracer) SetAttributes(ctx context.Context, attrs ...attribute.KeyValue) {
 	if !t.config.Enabled {
 		return
 	}
@@ -173,7 +178,7 @@ func (t *Tracer) SetAttributes(ctx context.Context, attrs ...trace.Attribute) {
 }
 
 // AddEvent adds an event to the current span
-func (t *Tracer) AddEvent(ctx context.Context, name string, attrs ...trace.Attribute) {
+func (t *Tracer) AddEvent(ctx context.Context, name string, attrs ...attribute.KeyValue) {
 	if !t.config.Enabled {
 		return
 	}
@@ -185,7 +190,7 @@ func (t *Tracer) AddEvent(ctx context.Context, name string, attrs ...trace.Attri
 }
 
 // SetStatus sets the status on the current span
-func (t *Tracer) SetStatus(ctx context.Context, code trace.StatusCode, description string) {
+func (t *Tracer) SetStatus(ctx context.Context, code codes.Code, description string) {
 	if !t.config.Enabled {
 		return
 	}
@@ -217,10 +222,10 @@ func (t *Tracer) Shutdown() error {
 
 // TraceContextCarrier carries tracing information across process boundaries
 type TraceContextCarrier struct {
-	TraceID  string
-	SpanID   string
-	Sampled  bool
-	Baggage  map[string]string
+	TraceID string
+	SpanID  string
+	Sampled bool
+	Baggage map[string]string
 }
 
 // NewTraceContextCarrier creates a new trace context carrier
@@ -289,14 +294,14 @@ func (t *Tracer) Extract(ctx context.Context, carrier *TraceContextCarrier) cont
 
 	// Add baggage
 	if len(carrier.Baggage) > 0 {
-		bag := baggage.New()
+		bag, _ := baggage.New()
 		for key, value := range carrier.Baggage {
 			member, err := baggage.NewMember(key, value)
 			if err != nil {
 				t.logger.Error("Failed to create baggage member", zap.String("key", key), zap.Error(err))
 				continue
 			}
-			bag = bag.SetMember(member)
+			bag, _ = bag.SetMember(member)
 		}
 		ctx = baggage.ContextWithBaggage(ctx, bag)
 	}
@@ -339,9 +344,9 @@ func (tm *TraceMiddleware) Wrap(handlerName string, handler http.Handler) http.H
 		// Set span status based on response
 		if ww, ok := w.(*responseWriterWrapper); ok {
 			if ww.status >= 400 {
-				span.SetStatus(trace.StatusError, fmt.Sprintf("HTTP %d", ww.status))
+				span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", ww.status))
 			} else {
-				span.SetStatus(trace.StatusOK, "OK")
+				span.SetStatus(codes.Ok, "OK")
 			}
 
 			span.SetAttributes(
@@ -376,19 +381,11 @@ func (t *Tracer) GRPCInterceptor() grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		if err != nil {
 			span.RecordError(err)
-			span.SetStatus(trace.StatusError, err.Error())
+			span.SetStatus(codes.Error, err.Error())
 		} else {
-			span.SetStatus(trace.StatusOK, "OK")
+			span.SetStatus(codes.Ok, "OK")
 		}
 
 		return resp, err
 	}
 }
-
-// Import required packages
-import (
-	"net/http"
-
-	"go.opentelemetry.io/otel/baggage"
-	"google.golang.org/grpc"
-)

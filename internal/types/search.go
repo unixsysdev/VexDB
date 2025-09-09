@@ -1,8 +1,8 @@
 package types
 
 import (
-    "time"
-    "fmt"
+	"fmt"
+	"time"
 )
 
 // Timestamp represents a timestamp in the system
@@ -25,8 +25,12 @@ func (t Timestamp) String() string {
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Vector   *Vector `json:"vector" yaml:"vector"`
-	Distance float64 `json:"distance" yaml:"distance"`
+	Vector   *Vector                `json:"vector" yaml:"vector"`
+	Distance float64                `json:"distance" yaml:"distance"`
+	Score    float32                `json:"score,omitempty" yaml:"score,omitempty"`
+	Rank     int                    `json:"rank,omitempty" yaml:"rank,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	NodeID   string                 `json:"node_id,omitempty" yaml:"node_id,omitempty"`
 }
 
 // SearchResults represents a collection of search results
@@ -51,45 +55,45 @@ func SortSearchResults(results []*SearchResult) {
 
 // SearchStatus represents the status of a search operation
 type SearchStatus struct {
-	TotalSearches int64     `json:"total_searches" yaml:"total_searches"`
-	FailedSearches int64    `json:"failed_searches" yaml:"failed_searches"`
-	AvgLatency    float64   `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
-	LastSearch    time.Time `json:"last_search" yaml:"last_search"`
+	TotalSearches  int64     `json:"total_searches" yaml:"total_searches"`
+	FailedSearches int64     `json:"failed_searches" yaml:"failed_searches"`
+	AvgLatency     float64   `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
+	LastSearch     time.Time `json:"last_search" yaml:"last_search"`
 }
 
 // LinearSearchStatus represents the status of linear search
 type LinearSearchStatus struct {
-	Started       bool      `json:"started" yaml:"started"`
-	TotalVectors  int64     `json:"total_vectors" yaml:"total_vectors"`
-	Searches      int64     `json:"searches" yaml:"searches"`
-	AvgLatency    float64   `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
-	LastSearch    time.Time `json:"last_search" yaml:"last_search"`
+	Started      bool      `json:"started" yaml:"started"`
+	TotalVectors int64     `json:"total_vectors" yaml:"total_vectors"`
+	Searches     int64     `json:"searches" yaml:"searches"`
+	AvgLatency   float64   `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
+	LastSearch   time.Time `json:"last_search" yaml:"last_search"`
 }
 
 // ParallelSearchStatus represents the status of parallel search
 type ParallelSearchStatus struct {
-	Started    bool               `json:"started" yaml:"started"`
+	Started    bool                `json:"started" yaml:"started"`
 	Linear     *LinearSearchStatus `json:"linear" yaml:"linear"`
-	Workers    int                `json:"workers" yaml:"workers"`
-	MaxWorkers int                `json:"max_workers" yaml:"max_workers"`
+	Workers    int                 `json:"workers" yaml:"workers"`
+	MaxWorkers int                 `json:"max_workers" yaml:"max_workers"`
 }
 
 // DualSearchStatus represents the status of dual search
 type DualSearchStatus struct {
-	Started  bool                `json:"started" yaml:"started"`
-	Linear   *LinearSearchStatus `json:"linear" yaml:"linear"`
+	Started  bool                  `json:"started" yaml:"started"`
+	Linear   *LinearSearchStatus   `json:"linear" yaml:"linear"`
 	Parallel *ParallelSearchStatus `json:"parallel" yaml:"parallel"`
 }
 
 // EngineStatus represents the status of the search engine
 type EngineStatus struct {
-	Started       bool      `json:"started" yaml:"started"`
+	Started       bool              `json:"started" yaml:"started"`
 	Dual          *DualSearchStatus `json:"dual" yaml:"dual"`
-	TotalVectors  int64     `json:"total_vectors" yaml:"total_vectors"`
-	TotalSegments int64     `json:"total_segments" yaml:"total_segments"`
-	Searches      int64     `json:"searches" yaml:"searches"`
-	AvgLatency    float64   `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
-	LastSearch    time.Time `json:"last_search" yaml:"last_search"`
+	TotalVectors  int64             `json:"total_vectors" yaml:"total_vectors"`
+	TotalSegments int64             `json:"total_segments" yaml:"total_segments"`
+	Searches      int64             `json:"searches" yaml:"searches"`
+	AvgLatency    float64           `json:"avg_latency" yaml:"avg_latency"` // in milliseconds
+	LastSearch    time.Time         `json:"last_search" yaml:"last_search"`
 }
 
 // SegmentStatus represents the status of a segment
@@ -104,13 +108,13 @@ type SegmentStatus struct {
 
 // SegmentManagerStatus represents the status of the segment manager
 type SegmentManagerStatus struct {
-    TotalSegments int                         `json:"total_segments" yaml:"total_segments"`
-    Segments      map[string]*SegmentStatus   `json:"segments" yaml:"segments"`
+	TotalSegments int                       `json:"total_segments" yaml:"total_segments"`
+	Segments      map[string]*SegmentStatus `json:"segments" yaml:"segments"`
 }
 
 // GenerateSegmentID creates a simple segment ID from cluster and timestamp
 func GenerateSegmentID(clusterID uint32) string {
-    return fmt.Sprintf("%d-%d", clusterID, time.Now().UnixNano())
+	return fmt.Sprintf("%d-%d", clusterID, time.Now().UnixNano())
 }
 
 // SegmentInfo represents information about a segment

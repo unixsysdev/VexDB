@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/types"
-	"go.uber.org/zap"
 )
 
 // ResultMerger handles merging search results from multiple nodes
@@ -201,7 +201,7 @@ func (m *ResultMerger) applyRankingAndScoring(results []*types.SearchResult) []*
 	// Apply scoring if enabled
 	if DefaultMergeConfig().EnableScoring {
 		for i, result := range results {
-			result.Score = m.calculateScore(result, i)
+			result.Score = float32(m.calculateScore(result, i))
 		}
 	}
 
@@ -230,8 +230,8 @@ func (m *ResultMerger) getSourceNodes(target *types.SearchResult, allResults []*
 	threshold := DefaultMergeConfig().DistanceThreshold
 
 	for _, result := range allResults {
-		if result.Vector.ID == target.Vector.ID && 
-		   math.Abs(result.Distance-target.Distance) < threshold {
+		if result.Vector.ID == target.Vector.ID &&
+			math.Abs(result.Distance-target.Distance) < threshold {
 			if result.NodeID != "" {
 				nodes = append(nodes, result.NodeID)
 			}

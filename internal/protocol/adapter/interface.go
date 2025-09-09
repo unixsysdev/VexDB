@@ -1,59 +1,60 @@
 package adapter
 
 import (
-    "context"
-    "errors"
-    "fmt"
-    "math/rand"
-    "time"
+	"context"
+	"errors"
+	"fmt"
+	"math/rand"
+	"time"
 
-    "vexdb/internal/logging"
-    "vexdb/internal/metrics"
+	"vexdb/internal/logging"
+	"vexdb/internal/metrics"
+	"vexdb/internal/types"
 )
 
 var (
-	ErrAdapterNotRunning      = errors.New("adapter not running")
-	ErrAdapterAlreadyRunning  = errors.New("adapter already running")
-	ErrInvalidProtocolConfig  = errors.New("invalid protocol configuration")
+	ErrAdapterNotRunning       = errors.New("adapter not running")
+	ErrAdapterAlreadyRunning   = errors.New("adapter already running")
+	ErrInvalidProtocolConfig   = errors.New("invalid protocol configuration")
 	ErrConnectionLimitExceeded = errors.New("connection limit exceeded")
-	ErrRateLimitExceeded      = errors.New("rate limit exceeded")
+	ErrRateLimitExceeded       = errors.New("rate limit exceeded")
 	ErrRequestValidationFailed = errors.New("request validation failed")
-	ErrUnsupportedProtocol    = errors.New("unsupported protocol")
-	ErrAdapterShutdownFailed  = errors.New("adapter shutdown failed")
+	ErrUnsupportedProtocol     = errors.New("unsupported protocol")
+	ErrAdapterShutdownFailed   = errors.New("adapter shutdown failed")
 )
 
 // Protocol represents the supported protocol types
 type Protocol string
 
 const (
-	ProtocolHTTP     Protocol = "http"
-	ProtocolHTTPS    Protocol = "https"
+	ProtocolHTTP      Protocol = "http"
+	ProtocolHTTPS     Protocol = "https"
 	ProtocolWebSocket Protocol = "websocket"
-	ProtocolWSS      Protocol = "wss"
-	ProtocolGRPC     Protocol = "grpc"
-	ProtocolGRPCS    Protocol = "grpcs"
-	ProtocolRedis    Protocol = "redis"
-	ProtocolRediss   Protocol = "rediss"
+	ProtocolWSS       Protocol = "wss"
+	ProtocolGRPC      Protocol = "grpc"
+	ProtocolGRPCS     Protocol = "grpcs"
+	ProtocolRedis     Protocol = "redis"
+	ProtocolRediss    Protocol = "rediss"
 )
 
 // ProtocolConfig represents the base configuration for all protocol adapters
 type ProtocolConfig struct {
-	Enabled           bool          `yaml:"enabled" json:"enabled"`
-	Protocol          Protocol      `yaml:"protocol" json:"protocol"`
-	Host              string        `yaml:"host" json:"host"`
-	Port              int           `yaml:"port" json:"port"`
-	ReadTimeout       time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout      time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout       time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	MaxConnections    int           `yaml:"max_connections" json:"max_connections"`
-	EnableTLS         bool          `yaml:"enable_tls" json:"enable_tls"`
-	TLSCertFile       string        `yaml:"tls_cert_file" json:"tls_cert_file"`
-	TLSKeyFile        string        `yaml:"tls_key_file" json:"tls_key_file"`
-	EnableMetrics     bool          `yaml:"enable_metrics" json:"enable_metrics"`
-	EnableLogging     bool          `yaml:"enable_logging" json:"enable_logging"`
-	EnableTracing     bool          `yaml:"enable_tracing" json:"enable_tracing"`
-	BufferSize        int           `yaml:"buffer_size" json:"buffer_size"`
-	Compression       bool          `yaml:"compression" json:"compression"`
+	Enabled        bool          `yaml:"enabled" json:"enabled"`
+	Protocol       Protocol      `yaml:"protocol" json:"protocol"`
+	Host           string        `yaml:"host" json:"host"`
+	Port           int           `yaml:"port" json:"port"`
+	ReadTimeout    time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout   time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	IdleTimeout    time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	MaxConnections int           `yaml:"max_connections" json:"max_connections"`
+	EnableTLS      bool          `yaml:"enable_tls" json:"enable_tls"`
+	TLSCertFile    string        `yaml:"tls_cert_file" json:"tls_cert_file"`
+	TLSKeyFile     string        `yaml:"tls_key_file" json:"tls_key_file"`
+	EnableMetrics  bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	EnableLogging  bool          `yaml:"enable_logging" json:"enable_logging"`
+	EnableTracing  bool          `yaml:"enable_tracing" json:"enable_tracing"`
+	BufferSize     int           `yaml:"buffer_size" json:"buffer_size"`
+	Compression    bool          `yaml:"compression" json:"compression"`
 }
 
 // Request represents a protocol-agnostic request
@@ -85,43 +86,43 @@ type Response struct {
 
 // Connection represents a client connection
 type Connection struct {
-	ID           string        `json:"id"`
-	RemoteAddr   string        `json:"remote_addr"`
-	LocalAddr    string        `json:"local_addr"`
-	Protocol     Protocol      `json:"protocol"`
-	Established  time.Time     `json:"established"`
-	LastActivity time.Time     `json:"last_activity"`
-	BytesRead    int64         `json:"bytes_read"`
-	BytesWritten int64         `json:"bytes_written"`
-	Requests     int64         `json:"requests"`
-	Active       bool          `json:"active"`
+	ID           string                 `json:"id"`
+	RemoteAddr   string                 `json:"remote_addr"`
+	LocalAddr    string                 `json:"local_addr"`
+	Protocol     Protocol               `json:"protocol"`
+	Established  time.Time              `json:"established"`
+	LastActivity time.Time              `json:"last_activity"`
+	BytesRead    int64                  `json:"bytes_read"`
+	BytesWritten int64                  `json:"bytes_written"`
+	Requests     int64                  `json:"requests"`
+	Active       bool                   `json:"active"`
 	Metadata     map[string]interface{} `json:"metadata"`
 }
 
 // ConnectionStats represents connection statistics
 type ConnectionStats struct {
-	TotalConnections   int64         `json:"total_connections"`
-	ActiveConnections  int64         `json:"active_connections"`
-	ClosedConnections  int64         `json:"closed_connections"`
-	RejectedConnections int64        `json:"rejected_connections"`
-	TotalBytesRead     int64         `json:"total_bytes_read"`
-	TotalBytesWritten  int64         `json:"total_bytes_written"`
-	TotalRequests      int64         `json:"total_requests"`
-	AvgConnectionTime  time.Duration `json:"avg_connection_time"`
-	MaxConnectionTime  time.Duration `json:"max_connection_time"`
-	MinConnectionTime  time.Duration `json:"min_connection_time"`
+	TotalConnections    int64         `json:"total_connections"`
+	ActiveConnections   int64         `json:"active_connections"`
+	ClosedConnections   int64         `json:"closed_connections"`
+	RejectedConnections int64         `json:"rejected_connections"`
+	TotalBytesRead      int64         `json:"total_bytes_read"`
+	TotalBytesWritten   int64         `json:"total_bytes_written"`
+	TotalRequests       int64         `json:"total_requests"`
+	AvgConnectionTime   time.Duration `json:"avg_connection_time"`
+	MaxConnectionTime   time.Duration `json:"max_connection_time"`
+	MinConnectionTime   time.Duration `json:"min_connection_time"`
 }
 
 // RequestStats represents request statistics
 type RequestStats struct {
-	TotalRequests    int64         `json:"total_requests"`
-	SuccessfulRequests int64       `json:"successful_requests"`
-	FailedRequests   int64         `json:"failed_requests"`
-	AvgRequestTime   time.Duration `json:"avg_request_time"`
-	MaxRequestTime   time.Duration `json:"max_request_time"`
-	MinRequestTime   time.Duration `json:"min_request_time"`
-	TotalBytesRead   int64         `json:"total_bytes_read"`
-	TotalBytesWritten int64        `json:"total_bytes_written"`
+	TotalRequests      int64         `json:"total_requests"`
+	SuccessfulRequests int64         `json:"successful_requests"`
+	FailedRequests     int64         `json:"failed_requests"`
+	AvgRequestTime     time.Duration `json:"avg_request_time"`
+	MaxRequestTime     time.Duration `json:"max_request_time"`
+	MinRequestTime     time.Duration `json:"min_request_time"`
+	TotalBytesRead     int64         `json:"total_bytes_read"`
+	TotalBytesWritten  int64         `json:"total_bytes_written"`
 }
 
 // AdapterStats represents adapter statistics
@@ -153,35 +154,35 @@ type ProtocolAdapter interface {
 	Start() error
 	Stop() error
 	IsRunning() bool
-	
+
 	// Configuration methods
 	GetConfig() *ProtocolConfig
 	UpdateConfig(config *ProtocolConfig) error
 	Validate() error
-	
+
 	// Connection management
 	GetConnection(id string) (*Connection, bool)
 	GetAllConnections() []*Connection
 	GetConnectionStats() *ConnectionStats
 	CloseConnection(id string) error
 	CloseAllConnections() error
-	
+
 	// Request handling
 	SetRequestHandler(handler RequestHandler)
 	SetConnectionHandler(handler ConnectionHandler)
 	SetErrorHandler(handler ErrorHandler)
 	AddMiddleware(middleware Middleware)
-	
+
 	// Statistics
 	GetRequestStats() *RequestStats
 	GetAdapterStats() *AdapterStats
 	ResetStats()
-	
+
 	// Health checks
 	HealthCheck(ctx context.Context) error
 	ReadinessCheck(ctx context.Context) error
 	LivenessCheck(ctx context.Context) error
-	
+
 	// Protocol-specific methods
 	GetProtocol() Protocol
 	GetAddress() string
@@ -211,16 +212,36 @@ type RequestValidator interface {
 	RemoveRule(name string) error
 }
 
+// Validator represents vector validation used by adapters
+type Validator interface {
+	ValidateVector(vector *types.Vector) error
+}
+
+// Handler represents vector handling used by adapters
+type Handler interface {
+	HandleVector(ctx context.Context, vector *types.Vector) error
+}
+
+// BatchHandler processes multiple vectors in a single request.
+type BatchHandler interface {
+	HandleVectors(ctx context.Context, vectors []*types.Vector) error
+}
+
+// VectorLister retrieves vectors for administrative or debugging purposes.
+type VectorLister interface {
+	ListVectors(ctx context.Context, limit, offset int) ([]*types.Vector, error)
+}
+
 // ValidationRule represents a validation rule
 type ValidationRule struct {
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"`
-	Conditions  map[string]interface{} `json:"conditions"`
-	Message     string                 `json:"message"`
-	Severity    string                 `json:"severity"`
-	Enabled     bool                   `json:"enabled"`
-	Priority    int                    `json:"priority"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"`
+	Conditions map[string]interface{} `json:"conditions"`
+	Message    string                 `json:"message"`
+	Severity   string                 `json:"severity"`
+	Enabled    bool                   `json:"enabled"`
+	Priority   int                    `json:"priority"`
+	Metadata   map[string]interface{} `json:"metadata"`
 }
 
 // RateLimiter represents a rate limiter interface
@@ -233,14 +254,14 @@ type RateLimiter interface {
 
 // RateLimitStats represents rate limit statistics
 type RateLimitStats struct {
-	Key           string        `json:"key"`
-	Limit         int           `json:"limit"`
-	Window        time.Duration `json:"window"`
-	CurrentCount  int           `json:"current_count"`
-	ResetTime     time.Time     `json:"reset_time"`
-	TotalRequests int64         `json:"total_requests"`
-	RejectedRequests int64      `json:"rejected_requests"`
-	AllowedRequests int64       `json:"allowed_requests"`
+	Key              string        `json:"key"`
+	Limit            int           `json:"limit"`
+	Window           time.Duration `json:"window"`
+	CurrentCount     int           `json:"current_count"`
+	ResetTime        time.Time     `json:"reset_time"`
+	TotalRequests    int64         `json:"total_requests"`
+	RejectedRequests int64         `json:"rejected_requests"`
+	AllowedRequests  int64         `json:"allowed_requests"`
 }
 
 // BackpressureHandler represents a backpressure handler interface
@@ -252,32 +273,32 @@ type BackpressureHandler interface {
 
 // BackpressureAction represents the action to take under backpressure
 type BackpressureAction struct {
-	Action    string                 `json:"action"`
-	Severity  string                 `json:"severity"`
-	Delay     time.Duration          `json:"delay"`
-	Reject    bool                   `json:"reject"`
-	Limit     int                    `json:"limit"`
-	Message   string                 `json:"message"`
-	Metadata  map[string]interface{} `json:"metadata"`
+	Action   string                 `json:"action"`
+	Severity string                 `json:"severity"`
+	Delay    time.Duration          `json:"delay"`
+	Reject   bool                   `json:"reject"`
+	Limit    int                    `json:"limit"`
+	Message  string                 `json:"message"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // BackpressureStats represents backpressure statistics
 type BackpressureStats struct {
-	CurrentLoad      float64            `json:"current_load"`
-	AverageLoad      float64            `json:"average_load"`
-	MaxLoad          float64            `json:"max_load"`
-	PressureEvents   int64              `json:"pressure_events"`
-	ActionsTaken     map[string]int64   `json:"actions_taken"`
-	LastPressureTime time.Time          `json:"last_pressure_time"`
+	CurrentLoad      float64                `json:"current_load"`
+	AverageLoad      float64                `json:"average_load"`
+	MaxLoad          float64                `json:"max_load"`
+	PressureEvents   int64                  `json:"pressure_events"`
+	ActionsTaken     map[string]int64       `json:"actions_taken"`
+	LastPressureTime time.Time              `json:"last_pressure_time"`
 	Thresholds       BackpressureThresholds `json:"thresholds"`
 }
 
 // BackpressureThresholds represents backpressure thresholds
 type BackpressureThresholds struct {
-	Warning    float64 `json:"warning"`
-	Critical   float64 `json:"critical"`
-	Emergency  float64 `json:"emergency"`
-	Window     time.Duration `json:"window"`
+	Warning   float64       `json:"warning"`
+	Critical  float64       `json:"critical"`
+	Emergency float64       `json:"emergency"`
+	Window    time.Duration `json:"window"`
 }
 
 // AdapterMetrics represents adapter-specific metrics
@@ -358,35 +379,35 @@ func ValidateProtocolConfig(config *ProtocolConfig) error {
 	if config == nil {
 		return ErrInvalidProtocolConfig
 	}
-	
+
 	if config.Protocol == "" {
 		return errors.New("protocol cannot be empty")
 	}
-	
+
 	if config.Host == "" {
 		return errors.New("host cannot be empty")
 	}
-	
+
 	if config.Port <= 0 || config.Port > 65535 {
 		return errors.New("port must be between 1 and 65535")
 	}
-	
+
 	if config.ReadTimeout <= 0 {
 		return errors.New("read timeout must be positive")
 	}
-	
+
 	if config.WriteTimeout <= 0 {
 		return errors.New("write timeout must be positive")
 	}
-	
+
 	if config.IdleTimeout <= 0 {
 		return errors.New("idle timeout must be positive")
 	}
-	
+
 	if config.MaxConnections <= 0 {
 		return errors.New("max connections must be positive")
 	}
-	
+
 	if config.EnableTLS {
 		if config.TLSCertFile == "" {
 			return errors.New("TLS cert file cannot be empty when TLS is enabled")
@@ -395,11 +416,11 @@ func ValidateProtocolConfig(config *ProtocolConfig) error {
 			return errors.New("TLS key file cannot be empty when TLS is enabled")
 		}
 	}
-	
+
 	if config.BufferSize <= 0 {
 		return errors.New("buffer size must be positive")
 	}
-	
+
 	return nil
 }
 

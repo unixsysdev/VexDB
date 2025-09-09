@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"vexdb/internal/config"
 	logging2 "vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	searchconfig "vexdb/internal/search/config"
@@ -17,12 +16,14 @@ import (
 	"vexdb/internal/search/service"
 	"vexdb/internal/storage/search"
 
+	"gopkg.in/yaml.v2"
+
 	"go.uber.org/zap"
 )
 
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "config/vexsearch.yaml", "Path to configuration file")
+	flag.StringVar(&configPath, "config", "configs/vexsearch-production.yaml", "Path to configuration file")
 	flag.Parse()
 
 	// Initialize logger
@@ -55,9 +56,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// TODO: Initialize storage engine and search components
-	// For now, we'll create mock components
-	searchEngine, err := createMockSearchEngine(logger, metricsCollector)
+	searchEngine, err := createSearchEngine(logger, metricsCollector)
 	if err != nil {
 		logger.Fatal("Failed to create search engine", zap.Error(err))
 	}
@@ -100,35 +99,27 @@ func main() {
 	logger.Info("VexDB Search Service stopped")
 }
 
-// loadConfig loads the search service configuration
+// loadConfig loads the search service configuration from a YAML file
 func loadConfig(configPath string) (*searchconfig.SearchServiceConfig, error) {
-	// Try to load from file
-	cfg, err := config.LoadConfig("search", configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
-		// If file doesn't exist, use default configuration
-		logger, _ := logging2.NewLogger()
-		logger.Warn("Failed to load configuration file, using default configuration", zap.Error(err))
-		return searchconfig.DefaultSearchServiceConfig(), nil
+		return nil, fmt.Errorf("read config: %w", err)
 	}
-
-	// Convert to search service configuration
-	searchCfg, ok := cfg.(*searchconfig.SearchServiceConfig)
-	if !ok {
-		return nil, fmt.Errorf("invalid configuration type")
+	cfg := searchconfig.DefaultSearchServiceConfig()
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
-
-	return searchCfg, nil
+	return cfg, nil
 }
 
-// createMockSearchEngine creates a mock search engine for testing
-func createMockSearchEngine(logger *zap.Logger, metrics *metrics.Collector) (*search.Engine, error) {
-	// For now, return a mock engine
-	// In a real implementation, this would create the actual search engine
-	return &search.Engine{}, nil
+// createSearchEngine creates the actual search engine
+func createSearchEngine(logger *zap.Logger, m *metrics.Collector) (*search.Engine, error) {
+	storageMetrics := metrics.NewStorageMetrics(m, "search")
+	return search.NewSearchEngine(nil, logger, storageMetrics)
 }
 
 // startServices starts all services
-func startServices(ctx context.Context, searchService service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
+func startServices(ctx context.Context, searchService *service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
 	// Start search service
 	if err := searchService.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start search service: %w", err)
@@ -148,7 +139,7 @@ func startServices(ctx context.Context, searchService service.SearchService, htt
 }
 
 // stopServices stops all services
-func stopServices(ctx context.Context, searchService service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
+func stopServices(ctx context.Context, searchService *service.SearchService, httpServer *server.HTTPServer, grpcServer *server.GRPCServer) error {
 	var firstErr error
 
 	// Stop gRPC server

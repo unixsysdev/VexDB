@@ -2,55 +2,93 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
-	"os"
+	"fmt"
+	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
+	"vexdb/internal/metrics"
+	"vexdb/internal/storage"
+	"vexdb/internal/types"
+
 	"go.uber.org/zap"
 )
 
+type insertServer struct {
+	store  *storage.Storage
+	logger *zap.Logger
+}
+
+func (s *insertServer) handleInsert(w http.ResponseWriter, r *http.Request) {
+	var v types.Vector
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := v.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := s.store.StoreVector(r.Context(), &v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "config/vexinsert.yaml", "Path to configuration file")
+	flag.StringVar(&configPath, "config", "configs/vexinsert-production.yaml", "Path to configuration file")
 	flag.Parse()
 
-	// Initialize logger
 	logger, err := logging.NewLogger()
 	if err != nil {
 		panic(err)
 	}
 	defer logger.Sync()
 
-	logger.Info("Starting VexDB Insert Service", zap.String("config", configPath))
-
-	// Load configuration
-	_, err = config.LoadInsertConfig(configPath)
+	cfg, err := config.LoadInsertConfig(configPath)
 	if err != nil {
-		logger.Fatal("Failed to load configuration", zap.Error(err))
+		logger.Fatal("load config", zap.Error(err))
 	}
 
-	// Create context for graceful shutdown
-	var cancel context.CancelFunc
-	_, cancel = context.WithCancel(context.Background())
+	metricsCollector, err := metrics.NewMetrics(cfg)
+	if err != nil {
+		logger.Fatal("init metrics", zap.Error(err))
+	}
+	storageMetrics := metrics.NewStorageMetrics(metricsCollector, "insert")
+
+	store, err := storage.NewStorage(nil, logger, storageMetrics)
+	if err != nil {
+		logger.Fatal("init storage", zap.Error(err))
+	}
+	if err := store.Start(context.Background()); err != nil {
+		logger.Fatal("start storage", zap.Error(err))
+	}
+
+	srv := &insertServer{store: store, logger: logger}
+	server := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
+		Handler: http.HandlerFunc(srv.handleInsert),
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("http server", zap.Error(err))
+		}
+	}()
+
+	<-ctx.Done()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	// Set up signal handling
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// TODO: Initialize and start vexinsert service
-	// This will be implemented in subsequent phases
-
-	logger.Info("VexDB Insert Service started successfully")
-
-	// Wait for shutdown signal
-	<-sigChan
-	logger.Info("Shutting down VexDB Insert Service...")
-
-	// TODO: Graceful shutdown implementation
-
-	logger.Info("VexDB Insert Service stopped")
+	server.Shutdown(shutdownCtx)
+	store.Stop(shutdownCtx)
 }

@@ -18,94 +18,94 @@ type Collector struct {
 	config *Config
 
 	// Service metrics
-	serviceUp *prometheus.GaugeVec
+	serviceUp   *prometheus.GaugeVec
 	serviceInfo *prometheus.GaugeVec
 
 	// Request metrics
-	requestCount *prometheus.CounterVec
+	requestCount    *prometheus.CounterVec
 	requestDuration *prometheus.HistogramVec
-	requestSize *prometheus.HistogramVec
-	responseSize *prometheus.HistogramVec
+	requestSize     *prometheus.HistogramVec
+	responseSize    *prometheus.HistogramVec
 
 	// Search metrics
-	searchCount *prometheus.CounterVec
+	searchCount    *prometheus.CounterVec
 	searchDuration *prometheus.HistogramVec
-	searchResults *prometheus.HistogramVec
-	searchErrors *prometheus.CounterVec
+	searchResults  *prometheus.HistogramVec
+	searchErrors   *prometheus.CounterVec
 
 	// Storage metrics
-	storageVectors *prometheus.GaugeVec
-	storageSegments *prometheus.GaugeVec
-	storageSize *prometheus.GaugeVec
+	storageVectors    *prometheus.GaugeVec
+	storageSegments   *prometheus.GaugeVec
+	storageSize       *prometheus.GaugeVec
 	storageOperations *prometheus.CounterVec
-	storageDuration *prometheus.HistogramVec
+	storageDuration   *prometheus.HistogramVec
 
 	// Cluster metrics
-	clusterNodes *prometheus.GaugeVec
+	clusterNodes    *prometheus.GaugeVec
 	clusterReplicas *prometheus.GaugeVec
-	clusterHealth *prometheus.GaugeVec
-	clusterLatency *prometheus.HistogramVec
+	clusterHealth   *prometheus.GaugeVec
+	clusterLatency  *prometheus.HistogramVec
 
 	// System metrics
-	systemMemory *prometheus.GaugeVec
-	systemCPU *prometheus.GaugeVec
+	systemMemory     *prometheus.GaugeVec
+	systemCPU        *prometheus.GaugeVec
 	systemGoroutines *prometheus.GaugeVec
-	systemGC *prometheus.CounterVec
+	systemGC         *prometheus.GaugeVec
 
 	// Protocol metrics
 	protocolConnections *prometheus.GaugeVec
-	protocolMessages *prometheus.CounterVec
-	protocolErrors *prometheus.CounterVec
+	protocolMessages    *prometheus.CounterVec
+	protocolErrors      *prometheus.CounterVec
 
 	// Replication metrics
-	replicationLag *prometheus.GaugeVec
+	replicationLag        *prometheus.GaugeVec
 	replicationThroughput *prometheus.CounterVec
-	replicationErrors *prometheus.CounterVec
+	replicationErrors     *prometheus.CounterVec
 
 	// Cache metrics
-	cacheSize *prometheus.GaugeVec
-	cacheHits *prometheus.CounterVec
-	cacheMisses *prometheus.CounterVec
+	cacheSize      *prometheus.GaugeVec
+	cacheHits      *prometheus.CounterVec
+	cacheMisses    *prometheus.CounterVec
 	cacheEvictions *prometheus.CounterVec
 
 	// Custom metrics registry
-	customMetrics map[string]prometheus.Metric
+	customMetrics      map[string]prometheus.Metric
 	customMetricsMutex sync.RWMutex
 
 	// Health checks
-	healthChecks map[string]HealthCheck
+	healthChecks      map[string]HealthCheck
 	healthChecksMutex sync.RWMutex
 
 	// Alerting
-	alerts map[string]*Alert
+	alerts      map[string]*Alert
 	alertsMutex sync.RWMutex
 }
 
 // Config represents monitoring configuration
 type Config struct {
-	Enabled           bool          `yaml:"enabled" json:"enabled"`
-	Namespace         string        `yaml:"namespace" json:"namespace"`
-	Subsystem         string        `yaml:"subsystem" json:"subsystem"`
-	CollectInterval   time.Duration `yaml:"collect_interval" json:"collect_interval"`
+	Enabled             bool          `yaml:"enabled" json:"enabled"`
+	Namespace           string        `yaml:"namespace" json:"namespace"`
+	Subsystem           string        `yaml:"subsystem" json:"subsystem"`
+	CollectInterval     time.Duration `yaml:"collect_interval" json:"collect_interval"`
 	HealthCheckInterval time.Duration `yaml:"health_check_interval" json:"health_check_interval"`
-	EnableProfiling   bool          `yaml:"enable_profiling" json:"enable_profiling"`
-	ProfilingPort     int           `yaml:"profiling_port" json:"profiling_port"`
-	EnableTracing     bool          `yaml:"enable_tracing" json:"enable_tracing"`
-	TracingEndpoint   string        `yaml:"tracing_endpoint" json:"tracing_endpoint"`
-	ServiceName       string        `yaml:"service_name" json:"service_name"`
-	ServiceVersion    string        `yaml:"service_version" json:"service_version"`
-	ServiceInstance   string        `yaml:"service_instance" json:"service_instance"`
+	EnableProfiling     bool          `yaml:"enable_profiling" json:"enable_profiling"`
+	ProfilingPort       int           `yaml:"profiling_port" json:"profiling_port"`
+	EnableTracing       bool          `yaml:"enable_tracing" json:"enable_tracing"`
+	TracingEndpoint     string        `yaml:"tracing_endpoint" json:"tracing_endpoint"`
+	ServiceName         string        `yaml:"service_name" json:"service_name"`
+	ServiceVersion      string        `yaml:"service_version" json:"service_version"`
+	ServiceInstance     string        `yaml:"service_instance" json:"service_instance"`
 }
 
 // HealthCheck represents a health check function
 type HealthCheck struct {
-	Name        string
-	Check       func(ctx context.Context) error
-	Interval    time.Duration
-	Timeout     time.Duration
-	LastCheck   time.Time
-	LastStatus  bool
-	LastError   error
+	Name       string
+	Check      func(ctx context.Context) error
+	Interval   time.Duration
+	Timeout    time.Duration
+	LastCheck  time.Time
+	LastStatus bool
+	LastError  error
 }
 
 // Alert represents an alert condition
@@ -127,15 +127,15 @@ func NewCollector(logger *zap.Logger, config *Config) *Collector {
 	}
 
 	c := &Collector{
-		logger:         logger,
-		config:         config,
-		customMetrics:  make(map[string]prometheus.Metric),
-		healthChecks:   make(map[string]HealthCheck),
-		alerts:         make(map[string]*Alert),
+		logger:        logger,
+		config:        config,
+		customMetrics: make(map[string]prometheus.Metric),
+		healthChecks:  make(map[string]HealthCheck),
+		alerts:        make(map[string]*Alert),
 	}
 
 	c.initializeMetrics()
-	
+
 	if config.Enabled {
 		go c.startCollection()
 		go c.startHealthChecks()
@@ -147,18 +147,18 @@ func NewCollector(logger *zap.Logger, config *Config) *Collector {
 // DefaultConfig returns default monitoring configuration
 func DefaultConfig() *Config {
 	return &Config{
-		Enabled:           true,
-		Namespace:         "vexdb",
-		Subsystem:         "",
-		CollectInterval:   15 * time.Second,
+		Enabled:             true,
+		Namespace:           "vexdb",
+		Subsystem:           "",
+		CollectInterval:     15 * time.Second,
 		HealthCheckInterval: 30 * time.Second,
-		EnableProfiling:   false,
-		ProfilingPort:     6060,
-		EnableTracing:     false,
-		TracingEndpoint:   "",
-		ServiceName:       "vexdb",
-		ServiceVersion:    "1.0.0",
-		ServiceInstance:   "default",
+		EnableProfiling:     false,
+		ProfilingPort:       6060,
+		EnableTracing:       false,
+		TracingEndpoint:     "",
+		ServiceName:         "vexdb",
+		ServiceVersion:      "1.0.0",
+		ServiceInstance:     "default",
 	}
 }
 
@@ -334,7 +334,7 @@ func (c *Collector) initializeMetrics() {
 		Help:      "Total number of goroutines",
 	}, []string{"service", "instance"})
 
-	c.systemGC = promauto.NewCounterVec(prometheus.CounterOpts{
+	c.systemGC = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Subsystem: subsystem,
 		Name:      "system_gc_total",
@@ -469,11 +469,11 @@ func (c *Collector) RecordRequest(service, method, endpoint, status, protocol st
 
 	c.requestCount.WithLabelValues(service, method, endpoint, status, protocol).Inc()
 	c.requestDuration.WithLabelValues(service, method, endpoint, protocol).Observe(duration.Seconds())
-	
+
 	if requestSize > 0 {
 		c.requestSize.WithLabelValues(service, method, endpoint).Observe(float64(requestSize))
 	}
-	
+
 	if responseSize > 0 {
 		c.responseSize.WithLabelValues(service, method, endpoint).Observe(float64(responseSize))
 	}
@@ -508,11 +508,7 @@ func (c *Collector) RecordStorage(service, operation, cluster, node string, dura
 	c.storageDuration.WithLabelValues(service, operation, cluster, node).Observe(duration.Seconds())
 
 	if err != nil {
-		errorType := "unknown"
-		if err != nil {
-			errorType = fmt.Sprintf("%T", err)
-		}
-		// This would need a separate error counter for storage operations
+		// storage error tracking not implemented
 	}
 }
 
@@ -672,7 +668,7 @@ func (c *Collector) runHealthCheck(hc HealthCheck) {
 	defer cancel()
 
 	err := hc.Check(ctx)
-	
+
 	c.healthChecksMutex.Lock()
 	defer c.healthChecksMutex.Unlock()
 
@@ -684,7 +680,7 @@ func (c *Collector) runHealthCheck(hc HealthCheck) {
 	}
 
 	if err != nil {
-		c.logger.Error("Health check failed", 
+		c.logger.Error("Health check failed",
 			zap.String("check", hc.Name),
 			zap.Error(err),
 			zap.Duration("timeout", hc.Timeout))
