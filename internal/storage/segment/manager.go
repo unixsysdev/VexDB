@@ -2,21 +2,20 @@
 package segment
 
 import (
-	"context"
-	"sync"
+    "context"
+    "sync"
 
-	"vexdb/internal/config"
-    "vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/storage/compression"
-	"vexdb/internal/types"
+    "vexdb/internal/config"
+    "vexdb/internal/metrics"
+    "vexdb/internal/storage/compression"
+    "vexdb/internal/types"
 
 	"go.uber.org/zap"
 )
 
 // Manager manages all segments in the storage system
 type Manager struct {
-    config      config.Config
+    config      *config.Config
 	logger      *zap.Logger
 	metrics     *metrics.Collector
 	compressor  *compression.Compressor
@@ -29,7 +28,7 @@ type Manager struct {
 }
 
 // NewManager creates a new segment manager
-func NewManager(cfg config.Config, logger *zap.Logger, metrics *metrics.Collector, compressor *compression.Compressor) (*Manager, error) {
+func NewManager(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector, compressor *compression.Compressor) (*Manager, error) {
 	m := &Manager{
 		config:     cfg,
 		logger:     logger,

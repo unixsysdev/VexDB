@@ -15,14 +15,15 @@ import (
 )
 
 var (
-	ErrInvalidSearchInterface = errors.New("invalid search interface")
-	ErrSearchNotImplemented   = errors.New("search not implemented")
-	ErrIndexNotReady          = errors.New("index not ready")
-	ErrInvalidIndexType       = errors.New("invalid index type")
-	ErrIndexCreationFailed    = errors.New("index creation failed")
-	ErrIndexUpdateFailed      = errors.New("index update failed")
-	ErrIndexQueryFailed       = errors.New("index query failed")
-	ErrInvalidSearchQuery     = errors.New("invalid search query")
+    ErrInvalidSearchInterface = errors.New("invalid search interface")
+    ErrSearchNotImplemented   = errors.New("search not implemented")
+    ErrIndexNotReady          = errors.New("index not ready")
+    ErrInvalidIndexType       = errors.New("invalid index type")
+    ErrIndexCreationFailed    = errors.New("index creation failed")
+    ErrIndexUpdateFailed      = errors.New("index update failed")
+    ErrIndexQueryFailed       = errors.New("index query failed")
+    ErrInvalidSearchQuery     = errors.New("invalid search query")
+    ErrInvalidVector          = errors.New("invalid vector")
 )
 
 // DistanceMetric represents a distance metric

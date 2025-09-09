@@ -4,7 +4,6 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
-    "io"
     "hash/crc32"
     "math"
     "os"
@@ -12,10 +11,11 @@ import (
     "sync"
     "time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+    "vexdb/internal/config"
+    "vexdb/internal/metrics"
+    "vexdb/internal/storage/compression"
+    "vexdb/internal/types"
+    "go.uber.org/zap"
 )
 
 var (
@@ -63,48 +63,16 @@ type Writer struct {
 	mu          sync.RWMutex
 	closed      bool
 	flushTimer  *time.Timer
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
+    logger      *zap.Logger
+    metrics     *metrics.Collector
 	writeBuffer []byte
 	bufferPos   int
 }
 
 // NewWriter creates a new segment writer
-func NewWriter(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Writer, error) {
-	writerConfig := DefaultWriterConfig()
-	
-	if cfg != nil {
-		if writerCfg, ok := cfg.Get("writer"); ok {
-			if cfgMap, ok := writerCfg.(map[string]interface{}); ok {
-				if maxVectors, ok := cfgMap["max_vectors_per_segment"].(int); ok {
-					writerConfig.MaxVectorsPerSegment = maxVectors
-				}
-				if flushInterval, ok := cfgMap["flush_interval"].(string); ok {
-					if dur, err := time.ParseDuration(flushInterval); err == nil {
-						writerConfig.FlushInterval = dur
-					}
-				}
-				if syncOnWrite, ok := cfgMap["sync_on_write"].(bool); ok {
-					writerConfig.SyncOnWrite = syncOnWrite
-				}
-				if compressionLevel, ok := cfgMap["compression_level"].(int); ok {
-					writerConfig.CompressionLevel = compressionLevel
-				}
-				if bufferSize, ok := cfgMap["buffer_size"].(int); ok {
-					writerConfig.BufferSize = bufferSize
-				}
-				if dataDir, ok := cfgMap["data_dir"].(string); ok {
-					writerConfig.DataDir = dataDir
-				}
-				if enableCompression, ok := cfgMap["enable_compression"].(bool); ok {
-					writerConfig.EnableCompression = enableCompression
-				}
-				if enableChecksum, ok := cfgMap["enable_checksum"].(bool); ok {
-					writerConfig.EnableChecksum = enableChecksum
-				}
-			}
-		}
-	}
+func NewWriter(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector, _ *compression.Compressor, _ *os.File) (*Writer, error) {
+    writerConfig := DefaultWriterConfig()
+    // ignore cfg overrides for now
 	
 	// Ensure data directory exists
 	if err := os.MkdirAll(writerConfig.DataDir, 0755); err != nil {
@@ -113,10 +81,10 @@ func NewWriter(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 	
 	return &Writer{
 		config:      writerConfig,
-		logger:      logger,
-		metrics:     metrics,
-		writeBuffer: make([]byte, writerConfig.BufferSize),
-	}, nil
+            logger:      logger,
+            metrics:     metrics,
+            writeBuffer: make([]byte, writerConfig.BufferSize),
+        }, nil
 }
 
 // CreateSegment creates a new segment for writing
@@ -151,11 +119,11 @@ func (w *Writer) CreateSegment(clusterID uint32, vectorDim uint32) error {
 	// Start flush timer
 	w.startFlushTimer()
 	
-	w.logger.Info("Created new segment",
-		"path", path,
-		"cluster_id", clusterID,
-		"vector_dim", vectorDim,
-		"max_vectors", w.config.MaxVectorsPerSegment)
+    w.logger.Info("Created new segment",
+        zap.String("path", path),
+        zap.Uint32("cluster_id", clusterID),
+        zap.Uint32("vector_dim", vectorDim),
+        zap.Int("max_vectors", w.config.MaxVectorsPerSegment))
 	
 	return nil
 }
@@ -174,7 +142,7 @@ func (w *Writer) OpenSegment(path string) error {
 	}
 	
 	// Load segment
-	segment, err := LoadSegment(path)
+    segment, err := LoadFileSegment(path)
 	if err != nil {
 		return fmt.Errorf("failed to load segment: %w", err)
 	}
@@ -192,11 +160,11 @@ func (w *Writer) OpenSegment(path string) error {
 	// Start flush timer
 	w.startFlushTimer()
 	
-	w.logger.Info("Opened existing segment",
-		"path", path,
-		"cluster_id", segment.GetClusterID(),
-		"vector_dim", segment.GetVectorDim(),
-		"vector_count", segment.GetVectorCount())
+    w.logger.Info("Opened existing segment",
+        zap.String("path", path),
+        zap.Uint32("cluster_id", segment.GetClusterID()),
+        zap.Uint32("vector_dim", segment.GetVectorDim()),
+        zap.Int("vector_count", segment.GetVectorCount()))
 	
 	return nil
 }
@@ -238,9 +206,11 @@ func (w *Writer) WriteVector(vector *types.Vector) error {
 		return fmt.Errorf("failed to write vector to buffer: %w", err)
 	}
 	
-	// Update metrics
-	w.metrics.WriteOperations.Inc("storage", "write_vector")
-	w.metrics.VectorsTotal.Inc("storage", fmt.Sprintf("cluster_%d", w.segment.GetClusterID()))
+        // Update metrics
+        if w.metrics != nil {
+            w.metrics.RecordCounter("storage_write_operations_total", 1, map[string]string{"component":"segment_writer"})
+            w.metrics.RecordCounter("storage_vectors_total", 1, map[string]string{"cluster": fmt.Sprintf("%d", w.segment.GetClusterID())})
+        }
 	
 	// Check if buffer needs to be flushed
 	if w.bufferPos >= len(w.writeBuffer) {
@@ -251,10 +221,10 @@ func (w *Writer) WriteVector(vector *types.Vector) error {
 	
 	// Sync if configured
 	if w.config.SyncOnWrite {
-		if err := w.file.Sync(); err != nil {
-			w.metrics.Errors.Inc("storage", "sync_failed")
-			return fmt.Errorf("%w: %v", ErrSyncFailed, err)
-		}
+            if err := w.file.Sync(); err != nil {
+                if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"sync_failed"}) }
+                return fmt.Errorf("%w: %v", ErrSyncFailed, err)
+            }
 	}
 	
 	return nil
@@ -282,15 +252,15 @@ func (w *Writer) writeVectorToBuffer(vector *types.Vector) error {
 	vectorSize := len(vector.Data) * 4
 	totalSize := headerSize + metadataSize + vectorSize
 	
-	if w.bufferPos+totalSize > len(w.writeBuffer) {
+    if w.bufferPos+totalSize > len(w.writeBuffer) {
 		if err := w.flushBuffer(); err != nil {
 			return err
 		}
 		
 		// If still not enough space, write directly
-		if totalSize > len(w.writeBuffer) {
-    return w.writeVectorDirectly(vector, vectorHeader, metadata)
-		}
+            if totalSize > len(w.writeBuffer) {
+                return w.writeVectorDirectly(vector, vectorHeader, metadata)
+            }
 	}
 	
 	// Write header to buffer
@@ -350,10 +320,10 @@ func (w *Writer) writeVectorDirectly(vector *types.Vector, vectorHeader *FileVec
 	}
 	
 	// Write to file
-	if _, err := w.file.Write(buf); err != nil {
-		w.metrics.Errors.Inc("storage", "write_failed")
-		return fmt.Errorf("%w: %v", ErrWriteFailed, err)
-	}
+    if _, err := w.file.Write(buf); err != nil {
+        if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"write_failed"}) }
+        return fmt.Errorf("%w: %v", ErrWriteFailed, err)
+    }
 	
 	return nil
 }
@@ -377,10 +347,10 @@ func (w *Writer) flushBuffer() error {
 	}
 	
 	// Write buffer to file
-	if _, err := w.file.Write(w.writeBuffer[:w.bufferPos]); err != nil {
-		w.metrics.Errors.Inc("storage", "flush_failed")
-		return fmt.Errorf("%w: %v", ErrFlushFailed, err)
-	}
+    if _, err := w.file.Write(w.writeBuffer[:w.bufferPos]); err != nil {
+        if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"flush_failed"}) }
+        return fmt.Errorf("%w: %v", ErrFlushFailed, err)
+    }
 	
 	// Reset buffer position
 	w.bufferPos = 0
@@ -401,10 +371,10 @@ func (w *Writer) Sync() error {
 		return nil
 	}
 	
-	if err := w.file.Sync(); err != nil {
-		w.metrics.Errors.Inc("storage", "sync_failed")
-		return fmt.Errorf("%w: %v", ErrSyncFailed, err)
-	}
+    if err := w.file.Sync(); err != nil {
+        if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"sync_failed"}) }
+        return fmt.Errorf("%w: %v", ErrSyncFailed, err)
+    }
 	
 	return nil
 }
@@ -424,18 +394,18 @@ func (w *Writer) Close() error {
 	}
 	
 	// Flush remaining data
-	if err := w.flushBuffer(); err != nil {
-		w.logger.Error("Failed to flush buffer on close", "error", err)
-	}
+    if err := w.flushBuffer(); err != nil {
+        w.logger.Error("Failed to flush buffer on close", zap.Error(err))
+    }
 	
 	// Close file
-	if w.file != nil {
-		if err := w.file.Close(); err != nil {
-			w.metrics.Errors.Inc("storage", "close_failed")
-			w.logger.Error("Failed to close segment file", "error", err)
-			return fmt.Errorf("%w: %v", ErrCloseFailed, err)
-		}
-	}
+    if w.file != nil {
+        if err := w.file.Close(); err != nil {
+            if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"close_failed"}) }
+            w.logger.Error("Failed to close segment file", zap.Error(err))
+            return fmt.Errorf("%w: %v", ErrCloseFailed, err)
+        }
+    }
 	
 	// Mark segment as read-only
 	if w.segment != nil {
@@ -444,7 +414,7 @@ func (w *Writer) Close() error {
 	
 	w.closed = true
 	
-	w.logger.Info("Closed segment writer", "path", w.path)
+    w.logger.Info("Closed segment writer", zap.String("path", w.path))
 	
 	return nil
 }
@@ -456,9 +426,9 @@ func (w *Writer) startFlushTimer() {
 	}
 	
 	w.flushTimer = time.AfterFunc(w.config.FlushInterval, func() {
-		if err := w.Flush(); err != nil {
-			w.logger.Error("Failed to auto-flush segment", "error", err)
-		}
+        if err := w.Flush(); err != nil {
+            w.logger.Error("Failed to auto-flush segment", zap.Error(err))
+        }
 		
 		// Restart timer
 		w.startFlushTimer()
@@ -466,7 +436,7 @@ func (w *Writer) startFlushTimer() {
 }
 
 // GetSegment returns the current segment
-func (w *Writer) GetSegment() *Segment {
+func (w *Writer) GetSegment() *FileSegment {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	
@@ -544,7 +514,7 @@ func (w *Writer) UpdateConfig(config *WriterConfig) error {
 	// Restart flush timer with new interval
 	w.startFlushTimer()
 	
-	w.logger.Info("Updated writer configuration", "config", config)
+    w.logger.Info("Updated writer configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -564,10 +534,10 @@ func (w *Writer) Rotate(clusterID uint32, vectorDim uint32) error {
 			return err
 		}
 		
-		if err := w.file.Close(); err != nil {
-			w.metrics.Errors.Inc("storage", "close_failed")
-			return fmt.Errorf("%w: %v", ErrCloseFailed, err)
-		}
+            if err := w.file.Close(); err != nil {
+                if w.metrics != nil { w.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_writer","type":"close_failed"}) }
+                return fmt.Errorf("%w: %v", ErrCloseFailed, err)
+            }
 		
 		w.segment.SetReadOnly()
 	}

@@ -1,16 +1,15 @@
 package segment
 
 import (
-	"encoding/binary"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"sort"
-	"sync"
-	"time"
+    "encoding/binary"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "os"
+    "path/filepath"
+    "sort"
+    "sync"
+    "time"
 
     "vexdb/internal/config"
     "vexdb/internal/logging"

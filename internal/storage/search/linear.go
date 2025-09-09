@@ -15,51 +15,15 @@ import (
 )
 
 var (
-	ErrInvalidQuery      = errors.New("invalid query")
-	ErrInvalidVector     = errors.New("invalid vector")
-	ErrInvalidDistance   = errors.New("invalid distance metric")
-	ErrInvalidLimit      = errors.New("invalid limit")
-	ErrSearchFailed      = errors.New("search failed")
-	ErrNoResults         = errors.New("no results found")
-	ErrInvalidThreshold  = errors.New("invalid threshold")
+    ErrInvalidQuery      = errors.New("invalid query")
+    ErrInvalidDistance   = errors.New("invalid distance metric")
+    ErrInvalidLimit      = errors.New("invalid limit")
+    ErrSearchFailed      = errors.New("search failed")
+    ErrNoResults         = errors.New("no results found")
+    ErrInvalidThreshold  = errors.New("invalid threshold")
 )
 
-// DistanceMetric represents a distance metric
-type DistanceMetric string
-
-const (
-	DistanceEuclidean    DistanceMetric = "euclidean"
-	DistanceCosine       DistanceMetric = "cosine"
-	DistanceManhattan    DistanceMetric = "manhattan"
-	DistanceDotProduct   DistanceMetric = "dotproduct"
-	DistanceHamming      DistanceMetric = "hamming"
-	DistanceJaccard      DistanceMetric = "jaccard"
-)
-
-// SearchResult represents a single search result
-type SearchResult struct {
-	Vector     *types.Vector `json:"vector"`
-	Distance   float32       `json:"distance"`
-	Score      float32       `json:"score"`
-	Rank       int           `json:"rank"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// SearchQuery represents a search query
-type SearchQuery struct {
-	QueryVector   *types.Vector   `json:"query_vector"`
-	DistanceMetric DistanceMetric  `json:"distance_metric"`
-	Limit         int             `json:"limit"`
-	Threshold     float32         `json:"threshold"`
-	Filter        *MetadataFilter `json:"filter,omitempty"`
-	IncludeVector bool            `json:"include_vector"`
-}
-
-// MetadataFilter represents metadata filtering criteria
-type MetadataFilter struct {
-	Filters map[string]interface{} `json:"filters"`
-	Operator string                 `json:"operator"` // AND, OR
-}
+// types DistanceMetric, SearchResult, SearchQuery, MetadataFilter are defined in interface.go/filter.go
 
 // LinearSearchConfig represents the linear search configuration
 type LinearSearchConfig struct {

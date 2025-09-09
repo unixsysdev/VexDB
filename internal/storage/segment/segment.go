@@ -2,17 +2,17 @@
 package segment
 
 import (
-	"context"
-	"encoding/binary"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"sync"
+    "context"
+    "encoding/binary"
+    "fmt"
+    "io"
+    "os"
+    "path/filepath"
+    "sync"
+    "time"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
+    "vexdb/internal/metrics"
 	"vexdb/internal/storage/compression"
 	"vexdb/internal/types"
 
@@ -62,7 +62,7 @@ func NewSegment(info *SegmentInfo, cfg *config.Config, logger *zap.Logger, metri
 // initializeFile initializes the segment file
 func (s *Segment) initializeFile() error {
 	// Create segment directory if it doesn't exist
-	segmentDir := filepath.Join(s.config.Storage.DataDir, "segments", s.info.ClusterIDString())
+    segmentDir := filepath.Join("./data", "segments", s.info.ClusterIDString())
 	if err := os.MkdirAll(segmentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create segment directory: %w", err)
 	}
@@ -97,13 +97,13 @@ func (s *Segment) initializeComponents() error {
 	var err error
 
 	// Initialize writer
-	s.writer, err = NewWriter(s.config, s.logger, s.metrics, s.compressor, s.file)
+    s.writer, err = NewWriter(s.config, s.logger, s.metrics, s.compressor, s.file)
 	if err != nil {
 		return err
 	}
 
 	// Initialize reader
-	s.reader, err = NewReader(s.config, s.logger, s.metrics, s.compressor, s.file)
+    s.reader, err = NewReader(s.config, s.logger, s.metrics, s.compressor, s.file)
 	if err != nil {
 		return err
 	}
@@ -113,16 +113,16 @@ func (s *Segment) initializeComponents() error {
 
 // writeHeader writes the segment header to the file
 func (s *Segment) writeHeader() error {
-	header := &SegmentHeader{
-		Magic:      SegmentMagic,
-		Version:    SegmentVersion,
-		ClusterID:  s.info.ClusterID,
-		SegmentID:  s.info.ID,
-		Status:     s.info.Status,
-		VectorSize: s.config.Storage.VectorSize,
-		CreatedAt:  s.info.CreatedAt,
-		UpdatedAt:  s.info.UpdatedAt,
-	}
+    header := &SegmentHeader{
+        Magic:      SegmentMagic,
+        Version:    SegmentVersion,
+        ClusterID:  s.info.ClusterID,
+        SegmentID:  s.info.ID,
+        Status:     string(s.info.Status),
+        VectorSize: 0,
+        CreatedAt:  s.info.CreatedAt,
+        UpdatedAt:  s.info.UpdatedAt,
+    }
 
 	// Write header at the beginning of the file
 	if _, err := s.file.Seek(0, io.SeekStart); err != nil {
@@ -156,7 +156,7 @@ func (s *Segment) readHeader() error {
 
 	// Update segment info from header
 	s.info.ClusterID = header.ClusterID
-	s.info.Status = header.Status
+    s.info.Status = SegmentStatus(header.Status)
 	s.info.CreatedAt = header.CreatedAt
 	s.info.UpdatedAt = header.UpdatedAt
 
@@ -212,15 +212,16 @@ func (s *Segment) SearchVectors(ctx context.Context, query *types.Vector, k int)
 		return nil, err
 	}
 
-	// Perform linear search
-	results := make([]*types.SearchResult, 0, len(vectors))
-	for _, vector := range vectors {
-		distance := query.Distance(vector)
-		results = append(results, &types.SearchResult{
-			Vector:   vector,
-			Distance: distance,
-		})
-	}
+    // Perform linear search (euclidean by default)
+    results := make([]*types.SearchResult, 0, len(vectors))
+    for _, vector := range vectors {
+        distance, err := query.Distance(vector, "euclidean")
+        if err != nil { continue }
+        results = append(results, &types.SearchResult{
+            Vector:   vector,
+            Distance: distance,
+        })
+    }
 
 	// Sort by distance (ascending)
 	types.SortSearchResults(results)
@@ -291,14 +292,14 @@ func (s *Segment) GetStatus() *types.SegmentStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return &types.SegmentStatus{
-		ID:          s.info.ID,
-		ClusterID:   s.info.ClusterID,
-		Status:      s.info.Status,
-		VectorCount: s.info.VectorCount,
-		CreatedAt:   s.info.CreatedAt,
-		UpdatedAt:   s.info.UpdatedAt,
-	}
+    return &types.SegmentStatus{
+        ID:          s.info.ID,
+        ClusterID:   s.info.ClusterID,
+        Status:      string(s.info.Status),
+        VectorCount: s.info.VectorCount,
+        CreatedAt:   time.Unix(int64(s.info.CreatedAt), 0),
+        UpdatedAt:   time.Unix(int64(s.info.UpdatedAt), 0),
+    }
 }
 
 // Flush flushes any pending data to disk

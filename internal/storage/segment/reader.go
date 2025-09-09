@@ -2,6 +2,7 @@ package segment
 
 import (
     "encoding/binary"
+    "encoding/json"
     "errors"
     "fmt"
     "io"
@@ -9,11 +10,10 @@ import (
     "math"
     "os"
     "sync"
-    "time"
 
     "vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
+    "vexdb/internal/metrics"
+    "vexdb/internal/storage/compression"
     "vexdb/internal/types"
     "go.uber.org/zap"
 )
@@ -70,53 +70,17 @@ type Reader struct {
 	cache       map[uint64]*types.Vector
 	mu          sync.RWMutex
 	closed      bool
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
+    logger      *zap.Logger
+    metrics     *metrics.Collector
 	readBuffer  []byte
 	openFiles   map[string]*os.File
 	fileCount   int
 }
 
 // NewReader creates a new segment reader
-func NewReader(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Reader, error) {
-	readerConfig := DefaultReaderConfig()
-	
-    if cfg != nil {
-        if readerCfg, ok := cfg.Get("reader"); ok {
-			if cfgMap, ok := readerCfg.(map[string]interface{}); ok {
-				if maxOpenFiles, ok := cfgMap["max_open_files"].(int); ok {
-					readerConfig.MaxOpenFiles = maxOpenFiles
-				}
-				if readBufferSize, ok := cfgMap["read_buffer_size"].(int); ok {
-					readerConfig.ReadBufferSize = readBufferSize
-				}
-				if enableMMap, ok := cfgMap["enable_mmap"].(bool); ok {
-					readerConfig.EnableMMap = enableMMap
-				}
-				if enablePrefetch, ok := cfgMap["enable_prefetch"].(bool); ok {
-					readerConfig.EnablePrefetch = enablePrefetch
-				}
-				if prefetchDistance, ok := cfgMap["prefetch_distance"].(int); ok {
-					readerConfig.PrefetchDistance = prefetchDistance
-				}
-				if cacheSize, ok := cfgMap["cache_size"].(int); ok {
-					readerConfig.CacheSize = cacheSize
-				}
-				if enableReadAhead, ok := cfgMap["enable_read_ahead"].(bool); ok {
-					readerConfig.EnableReadAhead = enableReadAhead
-				}
-				if readAheadSize, ok := cfgMap["read_ahead_size"].(int); ok {
-					readerConfig.ReadAheadSize = readAheadSize
-				}
-				if dataDir, ok := cfgMap["data_dir"].(string); ok {
-					readerConfig.DataDir = dataDir
-				}
-				if enableChecksum, ok := cfgMap["enable_checksum"].(bool); ok {
-					readerConfig.EnableChecksum = enableChecksum
-				}
-			}
-		}
-	}
+func NewReader(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector, _ *compression.Compressor, _ *os.File) (*Reader, error) {
+    readerConfig := DefaultReaderConfig()
+    // ignore cfg overrides for now
 	
 	return &Reader{
 		config:     readerConfig,
@@ -222,12 +186,12 @@ func (r *Reader) ReadVector(vectorID uint64) (*types.Vector, error) {
 	}
 	
 	// Check cache first
-	if vector, exists := r.cache[vectorID]; exists {
-		r.metrics.CacheHits.Inc("storage", "vector_cache")
-		return vector, nil
-	}
+    if vector, exists := r.cache[vectorID]; exists {
+        if r.metrics != nil { r.metrics.RecordCounter("storage_cache_hits_total", 1, map[string]string{"component":"segment_reader"}) }
+        return vector, nil
+    }
 	
-	r.metrics.CacheMisses.Inc("storage", "vector_cache")
+    if r.metrics != nil { r.metrics.RecordCounter("storage_cache_misses_total", 1, map[string]string{"component":"segment_reader"}) }
 	
 	// Find index entry
 	entry, exists := r.index[vectorID]
@@ -246,16 +210,15 @@ func (r *Reader) ReadVector(vectorID uint64) (*types.Vector, error) {
 		r.cache[vectorID] = vector
 	}
 	
-	// Update metrics
-	r.metrics.ReadOperations.Inc("storage", "read_vector")
+    // Update metrics
+    if r.metrics != nil { r.metrics.RecordCounter("storage_read_operations_total", 1, map[string]string{"component":"segment_reader"}) }
 	
 	return vector, nil
 }
 
 // readVectorFromEntry reads a vector from an index entry
 func (r *Reader) readVectorFromEntry(entry *FileIndexEntry) (*types.Vector, error) {
-	var data []byte
-	var err error
+    var data []byte
 	
 	if r.mmapData != nil {
 		// Read from memory-mapped data
@@ -265,20 +228,20 @@ func (r *Reader) readVectorFromEntry(entry *FileIndexEntry) (*types.Vector, erro
 		data = r.mmapData[entry.Offset : entry.Offset+uint64(entry.Size)]
 	} else {
 		// Read from file
-		if _, err := r.file.Seek(int64(entry.Offset), io.SeekStart); err != nil {
-			r.metrics.Errors.Inc("storage", "seek_failed")
-			return nil, fmt.Errorf("%w: %v", ErrSeekFailed, err)
-		}
+            if _, err := r.file.Seek(int64(entry.Offset), io.SeekStart); err != nil {
+                if r.metrics != nil { r.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_reader","type":"seek_failed"}) }
+                return nil, fmt.Errorf("%w: %v", ErrSeekFailed, err)
+            }
 		
 		data = make([]byte, entry.Size)
-		if _, err := io.ReadFull(r.file, data); err != nil {
-			r.metrics.Errors.Inc("storage", "read_failed")
-			return nil, fmt.Errorf("%w: %v", ErrReadFailed, err)
-		}
+            if _, err := io.ReadFull(r.file, data); err != nil {
+                if r.metrics != nil { r.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_reader","type":"read_failed"}) }
+                return nil, fmt.Errorf("%w: %v", ErrReadFailed, err)
+            }
 	}
 	
-	// Parse vector data
-	return r.parseVectorData(data, entry)
+    // Parse vector data
+    return r.parseVectorData(data, entry)
 }
 
 // parseVectorData parses vector data from bytes
@@ -334,20 +297,20 @@ func (r *Reader) parseVectorData(data []byte, entry *FileIndexEntry) (*types.Vec
 		vectorValues[i] = math.Float32frombits(binary.LittleEndian.Uint32(vectorData[i*4 : (i+1)*4]))
 	}
 	
-	// Create vector
-	vector := &types.Vector{
-		ID:        vectorHeader.VectorID,
-		Data:      vectorValues,
-		Timestamp: vectorHeader.Timestamp,
-	}
+    // Create vector
+    vector := &types.Vector{
+        ID:        fmt.Sprintf("%d", vectorHeader.VectorID),
+        Data:      vectorValues,
+        Timestamp: vectorHeader.Timestamp,
+    }
 	
 	// Parse metadata if present
-	if len(metadata) > 0 {
-		md := &types.Metadata{}
-		if err := md.Deserialize(metadata); err == nil {
-			vector.Metadata = md
-		}
-	}
+    if len(metadata) > 0 {
+        var md map[string]interface{}
+        if err := json.Unmarshal(metadata, &md); err == nil {
+            vector.Metadata = md
+        }
+    }
 	
 	return vector, nil
 }
@@ -452,36 +415,34 @@ func (r *Reader) Prefetch(vectorID uint64) error {
 	}
 	
 	// Find the position of the vector in the index
-	var targetIndex int
-	var targetEntry *IndexEntry
+    var targetIndex int
 	found := false
 	
-	for i, entry := range r.segment.index {
-		if entry.VectorID == vectorID {
-			targetIndex = i
-			targetEntry = entry
-			found = true
-			break
-		}
-	}
+    for i, entry := range r.segment.index {
+        if entry.VectorID == vectorID {
+            targetIndex = i
+            found = true
+            break
+        }
+    }
 	
 	if !found {
 		return nil
 	}
 	
-	// Prefetch vectors around the target
-	startIndex := max(0, targetIndex-r.config.PrefetchDistance)
-	endIndex := min(len(r.segment.index), targetIndex+r.config.PrefetchDistance+1)
+    // Prefetch vectors around the target
+    startIndex := max(0, targetIndex-r.config.PrefetchDistance)
+    endIndex := min(len(r.segment.index), targetIndex+r.config.PrefetchDistance+1)
 	
 	for i := startIndex; i < endIndex; i++ {
 		entry := r.segment.index[i]
-		if _, exists := r.cache[entry.VectorID]; !exists {
-			if _, err := r.readVectorFromEntry(entry); err == nil {
-				if len(r.cache) < r.config.CacheSize {
-					r.cache[entry.VectorID] = r.segment.vectors[entry.VectorID]
-				}
-			}
-		}
+            if _, exists := r.cache[entry.VectorID]; !exists {
+            if _, err := r.readVectorFromEntry(entry); err == nil {
+                if len(r.cache) < r.config.CacheSize {
+                    r.cache[entry.VectorID] = r.segment.vectors[entry.VectorID]
+                }
+            }
+            }
 	}
 	
 	return nil
@@ -497,18 +458,18 @@ func (r *Reader) Close() error {
 	}
 	
 	// Close file
-	if r.file != nil {
-		if err := r.file.Close(); err != nil {
-			r.metrics.Errors.Inc("storage", "close_failed")
-			r.logger.Error("Failed to close segment file", "error", err)
-		}
-	}
+        if r.file != nil {
+            if err := r.file.Close(); err != nil {
+                if r.metrics != nil { r.metrics.RecordCounter("storage_errors_total", 1, map[string]string{"component":"segment_reader","type":"close_failed"}) }
+                r.logger.Error("Failed to close segment file", zap.Error(err))
+            }
+        }
 	
 	// Close all open files
 	for path, file := range r.openFiles {
-		if err := file.Close(); err != nil {
-			r.logger.Error("Failed to close file", "path", path, "error", err)
-		}
+            if err := file.Close(); err != nil {
+                r.logger.Error("Failed to close file", zap.String("path", path), zap.Error(err))
+            }
 	}
 	
 	// Clear memory mapping
@@ -519,13 +480,13 @@ func (r *Reader) Close() error {
 	
 	r.closed = true
 	
-	r.logger.Info("Closed segment reader", "path", r.path)
+    r.logger.Info("Closed segment reader", zap.String("path", r.path))
 	
 	return nil
 }
 
 // GetSegment returns the current segment
-func (r *Reader) GetSegment() *Segment {
+func (r *Reader) GetSegment() *FileSegment {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	
@@ -579,7 +540,7 @@ func (r *Reader) UpdateConfig(config *ReaderConfig) error {
 		r.cache = make(map[uint64]*types.Vector)
 	}
 	
-	r.logger.Info("Updated reader configuration", "config", config)
+    r.logger.Info("Updated reader configuration", zap.Any("config", config))
 	
 	return nil
 }
