@@ -274,35 +274,35 @@ func (d *Dashboard) handleOverview(w http.ResponseWriter, r *http.Request) {
     </div>
     <script>
         fetch('/api/v1/metrics')
-            .then(response => response.json())
-            .then(data => {
-                const metricsDiv = document.getElementById('metrics');
-                metricsDiv.innerHTML = \`
-                    <div class="metric">
-                        <h3>Service</h3>
-                        <p>Status: <span class="status ${data.service_up ? 'healthy' : 'unhealthy'}">${data.service_up ? 'UP' : 'DOWN'}</span></p>
-                        <p>Version: ${data.service_version}</p>
-                        <p>Instance: ${data.service_instance}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>System</h3>
-                        <p>Goroutines: ${data.system_goroutines}</p>
-                        <p>Memory: ${formatBytes(data.system_memory_allocated)}</p>
-                        <p>GC Count: ${data.system_gc_count}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Storage</h3>
-                        <p>Vectors: ${data.storage_vectors_total}</p>
-                        <p>Segments: ${data.storage_segments_total}</p>
-                        <p>Size: ${formatBytes(data.storage_size_bytes)}</p>
-                    </div>
-                    <div class="metric">
-                        <h3>Cluster</h3>
-                        <p>Nodes: ${data.cluster_nodes_total}</p>
-                        <p>Replicas: ${data.cluster_replicas_total}</p>
-                        <p>Health Score: ${(data.cluster_health_score * 100).toFixed(1)}%</p>
-                    </div>
-                \`;
+            .then(function(response){ return response.json(); })
+            .then(function(data){
+                var metricsDiv = document.getElementById('metrics');
+                var html = ''+
+                  '<div class="metric">'+
+                    '<h3>Service</h3>'+
+                    '<p>Status: <span class="status ' + ((data.service_up)? 'healthy' : 'unhealthy') + '">' + ((data.service_up)? 'UP' : 'DOWN') + '</span></p>'+
+                    '<p>Version: ' + (data.service_version || '') + '</p>'+
+                    '<p>Instance: ' + (data.service_instance || '') + '</p>'+
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<h3>System</h3>'+
+                    '<p>Goroutines: ' + (data.system_goroutines || 0) + '</p>'+
+                    '<p>Memory: ' + formatBytes(data.system_memory_allocated || 0) + '</p>'+
+                    '<p>GC Count: ' + (data.system_gc_count || 0) + '</p>'+
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<h3>Storage</h3>'+
+                    '<p>Vectors: ' + (data.storage_vectors_total || 0) + '</p>'+
+                    '<p>Segments: ' + (data.storage_segments_total || 0) + '</p>'+
+                    '<p>Size: ' + formatBytes(data.storage_size_bytes || 0) + '</p>'+
+                  '</div>'+
+                  '<div class="metric">'+
+                    '<h3>Cluster</h3>'+
+                    '<p>Nodes: ' + (data.cluster_nodes_total || 0) + '</p>'+
+                    '<p>Replicas: ' + (data.cluster_replicas_total || 0) + '</p>'+
+                    '<p>Health Score: ' + (((data.cluster_health_score || 0) * 100).toFixed(1)) + '%</p>'+
+                  '</div>';
+                metricsDiv.innerHTML = html;
             })
             .catch(error => {
                 document.getElementById('metrics').innerHTML = '<div class="metric">Error loading metrics</div>';

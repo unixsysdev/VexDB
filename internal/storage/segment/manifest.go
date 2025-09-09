@@ -1,5 +1,3 @@
-//go:build ignore
-
 package segment
 
 import (
@@ -14,10 +12,11 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+    "vexdb/internal/config"
+    "vexdb/internal/logging"
+    "vexdb/internal/metrics"
+    "vexdb/internal/types"
+    "go.uber.org/zap"
 )
 
 var (
@@ -67,6 +66,93 @@ type Manifest struct {
 	metrics      *metrics.StorageMetrics
 }
 
+// Load loads manifest from its path
+func (m *Manifest) Load() error {
+    data, err := os.ReadFile(m.path)
+    if err != nil {
+        return err
+    }
+    return m.Deserialize(data)
+}
+
+// Create creates a new manifest file at its path
+func (m *Manifest) Create() error {
+    return m.Save()
+}
+
+// GetAllSegments returns all segments as SegmentInfo list
+func (m *Manifest) GetAllSegments() []*SegmentInfo {
+    m.mu.RLock()
+    defer m.mu.RUnlock()
+    out := make([]*SegmentInfo, 0, len(m.entries))
+    for _, e := range m.entries {
+        out = append(out, &SegmentInfo{
+            ID:          fmt.Sprintf("%d", e.SegmentID),
+            ClusterID:   e.ClusterID,
+            Status:      SegmentStatusFromString(e.Status),
+            VectorCount: uint64(e.VectorCount),
+            CreatedAt:   types.Timestamp(e.CreatedAt),
+            UpdatedAt:   types.Timestamp(e.ModifiedAt),
+        })
+    }
+    return out
+}
+
+// RemoveSegment removes by string ID (compat shim)
+func (m *Manifest) RemoveSegment(id string) error {
+    // try parse numeric id
+    var sid uint64
+    _, err := fmt.Sscan(id, &sid)
+    if err != nil {
+        // fallback: attempt hash mapping if needed
+        // default to not found
+        return ErrSegmentNotFound
+    }
+    return m.RemoveSegmentByUint(sid)
+}
+
+// RemoveSegmentByUint removes by uint64 ID
+func (m *Manifest) RemoveSegmentByUint(sid uint64) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    if _, ok := m.entries[sid]; !ok {
+        return ErrSegmentNotFound
+    }
+    delete(m.entries, sid)
+    m.modifiedAt = time.Now().Unix()
+    m.dirty = true
+    return nil
+}
+
+// AddSegment adds from SegmentInfo (compat shim)
+func (m *Manifest) AddSegment(info *SegmentInfo) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    var sid uint64
+    _, err := fmt.Sscan(info.ID, &sid)
+    if err != nil {
+        return ErrInvalidManifest
+    }
+    if _, exists := m.entries[sid]; exists {
+        return ErrSegmentAlreadyAdded
+    }
+    entry := &ManifestEntry{
+        SegmentID:   sid,
+        ClusterID:   info.ClusterID,
+        VectorDim:   0,
+        VectorCount: uint32(info.VectorCount),
+        CreatedAt:   time.Now().Unix(),
+        ModifiedAt:  time.Now().Unix(),
+        Path:        "",
+        Status:      string(info.Status),
+        Metadata:    map[string]string{},
+    }
+    m.entries[sid] = entry
+    m.modifiedAt = time.Now().Unix()
+    m.dirty = true
+    return nil
+}
+
 // NewManifest creates a new manifest
 func NewManifest(path string, clusterID uint32, vectorDim uint32, logger logging.Logger, metrics *metrics.StorageMetrics) *Manifest {
 	now := time.Now().Unix()
@@ -110,7 +196,7 @@ func LoadManifest(path string, logger logging.Logger, metrics *metrics.StorageMe
 }
 
 // AddSegment adds a segment to the manifest
-func (m *Manifest) AddSegment(entry *ManifestEntry) error {
+func (m *Manifest) AddEntry(entry *ManifestEntry) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -130,17 +216,13 @@ func (m *Manifest) AddSegment(entry *ManifestEntry) error {
 	m.modifiedAt = time.Now().Unix()
 	m.dirty = true
 	
-	m.logger.Info("Added segment to manifest",
-		"segment_id", entry.SegmentID,
-		"cluster_id", entry.ClusterID,
-		"path", entry.Path,
-		"vector_count", entry.VectorCount)
+    m.logger.Info("Added segment to manifest")
 	
 	return nil
 }
 
 // RemoveSegment removes a segment from the manifest
-func (m *Manifest) RemoveSegment(segmentID uint64) error {
+func (m *Manifest) RemoveSegmentUint(segmentID uint64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -152,7 +234,7 @@ func (m *Manifest) RemoveSegment(segmentID uint64) error {
 	m.modifiedAt = time.Now().Unix()
 	m.dirty = true
 	
-	m.logger.Info("Removed segment from manifest", "segment_id", segmentID)
+    m.logger.Info("Removed segment from manifest")
 	
 	return nil
 }
@@ -243,9 +325,7 @@ func (m *Manifest) UpdateSegmentStatus(segmentID uint64, status string) error {
 	m.modifiedAt = time.Now().Unix()
 	m.dirty = true
 	
-	m.logger.Info("Updated segment status",
-		"segment_id", segmentID,
-		"status", status)
+    m.logger.Info("Updated segment status", zap.Uint64("segment_id", segmentID), zap.String("status", status))
 	
 	return nil
 }
@@ -405,7 +485,7 @@ func (m *Manifest) Save() error {
 	
 	m.dirty = false
 	
-	m.logger.Info("Saved manifest", "path", m.path, "segments", len(m.entries))
+    m.logger.Info("Saved manifest", zap.String("path", m.path), zap.Int("segments", len(m.entries)))
 	
 	return nil
 }
@@ -554,7 +634,7 @@ func (m *Manifest) Backup(backupPath string) error {
 		return fmt.Errorf("failed to write backup: %w", err)
 	}
 	
-	m.logger.Info("Created manifest backup", "path", backupPath)
+    m.logger.Info("Created manifest backup", zap.String("path", backupPath))
 	
 	return nil
 }
@@ -590,14 +670,14 @@ func (m *Manifest) Restore(backupPath string) error {
 	m.entries = backupManifest.entries
 	m.dirty = true
 	
-	m.logger.Info("Restored manifest from backup", "path", backupPath)
+    m.logger.Info("Restored manifest from backup", zap.String("path", backupPath))
 	
 	return nil
 }
 
 // Manager represents a manifest manager
-type Manager struct {
-	config      *config.Config
+type ManifestManager struct {
+    config      config.Config
 	manifests   map[uint32]*Manifest // cluster_id -> manifest
 	mu          sync.RWMutex
 	logger      logging.Logger
@@ -609,10 +689,10 @@ type Manager struct {
 }
 
 // NewManager creates a new manifest manager
-func NewManager(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Manager, error) {
+func NewManifestManager(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*ManifestManager, error) {
 	dataDir := "./data"
-	if cfg != nil {
-		if dataDirCfg, ok := cfg.Get("data_dir"); ok {
+    if cfg != nil {
+        if dataDirCfg, ok := cfg.Get("data_dir"); ok {
 			if dir, ok := dataDirCfg.(string); ok {
 				dataDir = dir
 			}
@@ -624,7 +704,7 @@ func NewManager(cfg *config.Config, logger logging.Logger, metrics *metrics.Stor
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 	
-	manager := &Manager{
+    manager := &ManifestManager{
 		config:    cfg,
 		manifests: make(map[uint32]*Manifest),
 		logger:    logger,
@@ -635,8 +715,8 @@ func NewManager(cfg *config.Config, logger logging.Logger, metrics *metrics.Stor
 	}
 	
 	// Load existing manifests
-	if err := manager.loadManifests(); err != nil {
-		logger.Error("Failed to load manifests", "error", err)
+    if err := manager.loadManifests(); err != nil {
+        logger.Error("Failed to load manifests", zap.Error(err))
 	}
 	
 	// Start auto-save timer
@@ -646,7 +726,7 @@ func NewManager(cfg *config.Config, logger logging.Logger, metrics *metrics.Stor
 }
 
 // loadManifests loads all manifests from the data directory
-func (m *Manager) loadManifests() error {
+func (m *ManifestManager) loadManifests() error {
 	entries, err := os.ReadDir(m.dataDir)
 	if err != nil {
 		return err
@@ -658,7 +738,7 @@ func (m *Manager) loadManifests() error {
 			if _, err := os.Stat(manifestPath); err == nil {
 				manifest, err := LoadManifest(manifestPath, m.logger, m.metrics)
 				if err != nil {
-					m.logger.Error("Failed to load manifest", "path", manifestPath, "error", err)
+                    m.logger.Error("Failed to load manifest", zap.String("path", manifestPath), zap.Error(err))
 					continue
 				}
 				
@@ -666,7 +746,7 @@ func (m *Manager) loadManifests() error {
 				m.manifests[manifest.GetClusterID()] = manifest
 				m.mu.Unlock()
 				
-				m.logger.Info("Loaded manifest", "cluster_id", manifest.GetClusterID(), "path", manifestPath)
+        m.logger.Info("Loaded manifest", zap.Uint32("cluster_id", manifest.GetClusterID()), zap.String("path", manifestPath))
 			}
 		}
 	}
@@ -675,51 +755,51 @@ func (m *Manager) loadManifests() error {
 }
 
 // GetManifest returns a manifest for the given cluster ID
-func (m *Manager) GetManifest(clusterID uint32) (*Manifest, error) {
+func (m *ManifestManager) GetManifest(clusterID uint32) (*Manifest, error) {
 	m.mu.RLock()
 	manifest, exists := m.manifests[clusterID]
 	m.mu.RUnlock()
 	
 	if !exists {
 		// Create new manifest
-		manifestPath := filepath.Join(m.dataDir, fmt.Sprintf("cluster_%d", clusterID), ManifestFileName)
-		manifest = NewManifest(manifestPath, clusterID, 0, m.logger, m.metrics) // vector_dim will be set when first segment is added
+        manifestPath := filepath.Join(m.dataDir, fmt.Sprintf("cluster_%d", clusterID), ManifestFileName)
+        manifest = NewManifest(manifestPath, clusterID, 0, m.logger, m.metrics) // vector_dim will be set when first segment is added
 		
 		m.mu.Lock()
 		m.manifests[clusterID] = manifest
 		m.mu.Unlock()
 		
-		m.logger.Info("Created new manifest", "cluster_id", clusterID, "path", manifestPath)
+        m.logger.Info("Created new manifest", zap.Uint32("cluster_id", clusterID), zap.String("path", manifestPath))
 	}
 	
 	return manifest, nil
 }
 
 // SaveAll saves all manifests
-func (m *Manager) SaveAll() error {
+func (m *ManifestManager) SaveAll() error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
 	for _, manifest := range m.manifests {
-		if err := manifest.Save(); err != nil {
-			m.logger.Error("Failed to save manifest", "cluster_id", manifest.GetClusterID(), "error", err)
-			return err
-		}
+        if err := manifest.Save(); err != nil {
+            m.logger.Error("Failed to save manifest", zap.Uint32("cluster_id", manifest.GetClusterID()), zap.Error(err))
+            return err
+        }
 	}
 	
 	return nil
 }
 
 // startAutoSave starts the auto-save timer
-func (m *Manager) startAutoSave() {
+func (m *ManifestManager) startAutoSave() {
 	if m.saveTimer != nil {
 		m.saveTimer.Stop()
 	}
 	
 	m.saveTimer = time.AfterFunc(m.saveInterval, func() {
-		if err := m.SaveAll(); err != nil {
-			m.logger.Error("Failed to auto-save manifests", "error", err)
-		}
+            if err := m.SaveAll(); err != nil {
+                m.logger.Error("Failed to auto-save manifests", zap.Error(err))
+            }
 		
 		// Restart timer
 		m.startAutoSave()
@@ -727,7 +807,7 @@ func (m *Manager) startAutoSave() {
 }
 
 // Close closes the manifest manager
-func (m *Manager) Close() error {
+func (m *ManifestManager) Close() error {
 	if m.saveTimer != nil {
 		m.saveTimer.Stop()
 	}
@@ -743,7 +823,7 @@ func (m *Manager) Close() error {
 }
 
 // GetStats returns manager statistics
-func (m *Manager) GetStats() map[string]interface{} {
+func (m *ManifestManager) GetStats() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	

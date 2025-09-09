@@ -1,7 +1,8 @@
 package types
 
 import (
-	"time"
+    "time"
+    "fmt"
 )
 
 // Timestamp represents a timestamp in the system
@@ -101,6 +102,17 @@ type SegmentStatus struct {
 	UpdatedAt   time.Time `json:"updated_at" yaml:"updated_at"`
 }
 
+// SegmentManagerStatus represents the status of the segment manager
+type SegmentManagerStatus struct {
+    TotalSegments int                         `json:"total_segments" yaml:"total_segments"`
+    Segments      map[string]*SegmentStatus   `json:"segments" yaml:"segments"`
+}
+
+// GenerateSegmentID creates a simple segment ID from cluster and timestamp
+func GenerateSegmentID(clusterID uint32) string {
+    return fmt.Sprintf("%d-%d", clusterID, time.Now().UnixNano())
+}
+
 // SegmentInfo represents information about a segment
 type SegmentInfo struct {
 	ID          string    `json:"id" yaml:"id"`
@@ -115,4 +127,3 @@ type SegmentInfo struct {
 func (si *SegmentInfo) ClusterIDString() string {
 	return string(si.ClusterID)
 }
-

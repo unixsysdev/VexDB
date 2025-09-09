@@ -1,30 +1,30 @@
-//go:build ignore
-
 package segment
 
 import (
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"io"
-	"math"
-	"os"
-	"sync"
-	"time"
+    "encoding/binary"
+    "errors"
+    "fmt"
+    "io"
+    "hash/crc32"
+    "math"
+    "os"
+    "sync"
+    "time"
 
-	"vexdb/internal/config"
+    "vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+    "vexdb/internal/types"
+    "go.uber.org/zap"
 )
 
 var (
-	ErrSegmentNotOpen    = errors.New("segment not open")
-	ErrReaderClosed      = errors.New("reader is closed")
-	ErrInvalidOffset     = errors.New("invalid offset")
-	ErrReadFailed        = errors.New("read failed")
-	ErrSeekFailed        = errors.New("seek failed")
-	ErrVectorNotFound    = errors.New("vector not found")
+    ErrSegmentNotOpen    = errors.New("segment not open")
+    ErrReaderClosed      = errors.New("reader is closed")
+    ErrInvalidOffset     = errors.New("invalid offset")
+    ErrReadFailed        = errors.New("read failed")
+    ErrSeekFailed        = errors.New("seek failed")
+    ErrVectorNotFound    = errors.New("vector not found")
 	ErrCorruptedIndex    = errors.New("corrupted index")
 	ErrInvalidVectorSize = errors.New("invalid vector size")
 )
@@ -61,12 +61,12 @@ func DefaultReaderConfig() *ReaderConfig {
 
 // Reader represents a segment reader
 type Reader struct {
-	config      *ReaderConfig
-	segment     *Segment
+    config      *ReaderConfig
+    segment     *FileSegment
 	file        *os.File
 	path        string
 	mmapData    []byte
-	index       map[uint64]*IndexEntry
+    index       map[uint64]*FileIndexEntry
 	cache       map[uint64]*types.Vector
 	mu          sync.RWMutex
 	closed      bool
@@ -78,11 +78,11 @@ type Reader struct {
 }
 
 // NewReader creates a new segment reader
-func NewReader(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Reader, error) {
+func NewReader(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Reader, error) {
 	readerConfig := DefaultReaderConfig()
 	
-	if cfg != nil {
-		if readerCfg, ok := cfg.Get("reader"); ok {
+    if cfg != nil {
+        if readerCfg, ok := cfg.Get("reader"); ok {
 			if cfgMap, ok := readerCfg.(map[string]interface{}); ok {
 				if maxOpenFiles, ok := cfgMap["max_open_files"].(int); ok {
 					readerConfig.MaxOpenFiles = maxOpenFiles
@@ -147,7 +147,7 @@ func (r *Reader) Open(path string) error {
 	}
 	
 	// Load segment
-	segment, err := LoadSegment(path)
+    segment, err := LoadFileSegment(path)
 	if err != nil {
 		return fmt.Errorf("failed to load segment: %w", err)
 	}
@@ -159,20 +159,20 @@ func (r *Reader) Open(path string) error {
 	}
 	
 	// Read segment data
-	data, err := io.ReadAll(file)
-	if err != nil {
-		file.Close()
-		return fmt.Errorf("failed to read segment data: %w", err)
-	}
+    data, err := io.ReadAll(file)
+    if err != nil {
+        _ = file.Close()
+        return fmt.Errorf("failed to read segment data: %w", err)
+    }
 	
 	// Deserialize segment
-	if err := segment.Deserialize(data); err != nil {
-		file.Close()
-		return fmt.Errorf("failed to deserialize segment: %w", err)
-	}
+    if err := segment.Deserialize(data); err != nil {
+        _ = file.Close()
+        return fmt.Errorf("failed to deserialize segment: %w", err)
+    }
 	
 	// Build index
-	index := make(map[uint64]*IndexEntry)
+    index := make(map[uint64]*FileIndexEntry)
 	for _, entry := range segment.index {
 		index[entry.VectorID] = entry
 	}
@@ -184,17 +184,17 @@ func (r *Reader) Open(path string) error {
 	
 	// Enable memory mapping if configured
 	if r.config.EnableMMap {
-		if err := r.enableMMap(); err != nil {
-			r.logger.Warn("Failed to enable memory mapping", "error", err)
-		}
+            if err := r.enableMMap(); err != nil {
+                r.logger.Warn("Failed to enable memory mapping", zap.Error(err))
+            }
 	}
 	
-	r.logger.Info("Opened segment for reading",
-		"path", path,
-		"cluster_id", segment.GetClusterID(),
-		"vector_dim", segment.GetVectorDim(),
-		"vector_count", segment.GetVectorCount(),
-		"mmap_enabled", r.mmapData != nil)
+    r.logger.Info("Opened segment for reading",
+        zap.String("path", path),
+        zap.Uint32("cluster_id", segment.GetClusterID()),
+        zap.Uint32("vector_dim", segment.GetVectorDim()),
+        zap.Int("vector_count", segment.GetVectorCount()),
+        zap.Bool("mmap_enabled", r.mmapData != nil))
 	
 	return nil
 }
@@ -253,7 +253,7 @@ func (r *Reader) ReadVector(vectorID uint64) (*types.Vector, error) {
 }
 
 // readVectorFromEntry reads a vector from an index entry
-func (r *Reader) readVectorFromEntry(entry *IndexEntry) (*types.Vector, error) {
+func (r *Reader) readVectorFromEntry(entry *FileIndexEntry) (*types.Vector, error) {
 	var data []byte
 	var err error
 	
@@ -282,13 +282,13 @@ func (r *Reader) readVectorFromEntry(entry *IndexEntry) (*types.Vector, error) {
 }
 
 // parseVectorData parses vector data from bytes
-func (r *Reader) parseVectorData(data []byte, entry *IndexEntry) (*types.Vector, error) {
+func (r *Reader) parseVectorData(data []byte, entry *FileIndexEntry) (*types.Vector, error) {
 	if len(data) < 24 {
 		return nil, ErrCorruptedData
 	}
 	
 	// Read vector header
-	vectorHeader := &VectorHeader{}
+    vectorHeader := &FileVectorHeader{}
 	vectorHeader.VectorID = binary.LittleEndian.Uint64(data[0:8])
 	vectorHeader.Timestamp = int64(binary.LittleEndian.Uint64(data[8:16]))
 	vectorHeader.MetadataSize = binary.LittleEndian.Uint32(data[16:20])

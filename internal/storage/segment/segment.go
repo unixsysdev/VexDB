@@ -1,6 +1,4 @@
 // Package segment provides segment functionality for VexDB
-//go:build ignore
-
 package segment
 
 import (

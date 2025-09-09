@@ -1,16 +1,16 @@
-//go:build ignore
-
 package segment
 
 import (
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
+    "encoding/binary"
+    "errors"
+    "fmt"
+    "io"
+    "hash/crc32"
+    "math"
+    "os"
+    "path/filepath"
+    "sync"
+    "time"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -19,13 +19,12 @@ import (
 )
 
 var (
-	ErrSegmentExists    = errors.New("segment already exists")
-	ErrSegmentNotFound  = errors.New("segment not found")
-	ErrWriterClosed     = errors.New("writer is closed")
-	ErrInvalidVector    = errors.New("invalid vector")
-	ErrWriteFailed      = errors.New("write failed")
-	ErrFlushFailed      = errors.New("flush failed")
-	ErrSyncFailed       = errors.New("sync failed")
+    ErrSegmentExists    = errors.New("segment already exists")
+    ErrWriterClosed     = errors.New("writer is closed")
+    ErrInvalidVector    = errors.New("invalid vector")
+    ErrWriteFailed      = errors.New("write failed")
+    ErrFlushFailed      = errors.New("flush failed")
+    ErrSyncFailed       = errors.New("sync failed")
 	ErrCloseFailed      = errors.New("close failed")
 )
 
@@ -57,8 +56,8 @@ func DefaultWriterConfig() *WriterConfig {
 
 // Writer represents a segment writer
 type Writer struct {
-	config      *WriterConfig
-	segment     *Segment
+    config      *WriterConfig
+    segment     *FileSegment
 	file        *os.File
 	path        string
 	mu          sync.RWMutex
@@ -71,7 +70,7 @@ type Writer struct {
 }
 
 // NewWriter creates a new segment writer
-func NewWriter(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Writer, error) {
+func NewWriter(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Writer, error) {
 	writerConfig := DefaultWriterConfig()
 	
 	if cfg != nil {
@@ -138,7 +137,7 @@ func (w *Writer) CreateSegment(clusterID uint32, vectorDim uint32) error {
 	path := filepath.Join(w.config.DataDir, fmt.Sprintf("segment_%d_%d.vex", clusterID, segmentID))
 	
 	// Create new segment
-	w.segment = NewSegment(path, vectorDim, clusterID, w.config.MaxVectorsPerSegment)
+    w.segment = NewFileSegment(path, vectorDim, clusterID, w.config.MaxVectorsPerSegment)
 	w.path = path
 	
 	// Create file
@@ -264,18 +263,18 @@ func (w *Writer) WriteVector(vector *types.Vector) error {
 // writeVectorToBuffer writes a vector to the write buffer
 func (w *Writer) writeVectorToBuffer(vector *types.Vector) error {
 	// Serialize vector header
-	vectorHeader := &VectorHeader{
-		VectorID:     vector.ID,
-		Timestamp:    vector.Timestamp,
-		VectorSize:   uint32(len(vector.Data) * 4), // float32 = 4 bytes
-		Flags:        0,
-	}
+    vectorHeader := &FileVectorHeader{
+        VectorID:     idToU64(vector.ID),
+        Timestamp:    vector.Timestamp,
+        VectorSize:   uint32(len(vector.Data) * 4), // float32 = 4 bytes
+        Flags:        0,
+    }
 	
 	var metadata []byte
-	if vector.Metadata != nil {
-		metadata = vector.Metadata.Serialize()
-		vectorHeader.MetadataSize = uint32(len(metadata))
-	}
+    if vector.Metadata != nil {
+        metadata = encodeMetadata(vector.Metadata)
+        vectorHeader.MetadataSize = uint32(len(metadata))
+    }
 	
 	// Check buffer capacity
 	headerSize := 24
@@ -290,7 +289,7 @@ func (w *Writer) writeVectorToBuffer(vector *types.Vector) error {
 		
 		// If still not enough space, write directly
 		if totalSize > len(w.writeBuffer) {
-			return w.writeVectorDirectly(vector, vectorHeader, metadata)
+    return w.writeVectorDirectly(vector, vectorHeader, metadata)
 		}
 	}
 	
@@ -324,7 +323,7 @@ func (w *Writer) writeVectorToBuffer(vector *types.Vector) error {
 }
 
 // writeVectorDirectly writes a vector directly to file (bypassing buffer)
-func (w *Writer) writeVectorDirectly(vector *types.Vector, vectorHeader *VectorHeader, metadata []byte) error {
+func (w *Writer) writeVectorDirectly(vector *types.Vector, vectorHeader *FileVectorHeader, metadata []byte) error {
 	// Create temporary buffer for this vector
 	buf := make([]byte, 24+len(metadata)+len(vector.Data)*4)
 	

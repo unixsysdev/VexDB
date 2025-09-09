@@ -1,19 +1,18 @@
 package server
 
 import (
-	"context"
-	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
+    "context"
+    "crypto/tls"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/search/api"
-	"vexdb/internal/search/auth"
-	"vexdb/internal/search/config"
-	"vexdb/internal/service"
+    "vexdb/internal/metrics"
+    "vexdb/internal/search/api"
+    "vexdb/internal/search/auth"
+    "vexdb/internal/search/config"
+    "vexdb/internal/service"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -240,16 +239,9 @@ func (s *HTTPServer) createRecoveryMiddleware() mux.MiddlewareFunc {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusInternalServerError)
 					
-					response := map[string]interface{}{
-						"success": false,
-						"error":   "internal_server_error",
-						"message": "An internal server error occurred",
-						"timestamp": time.Now().Format(time.RFC3339),
-					}
-
-					// Simple JSON encoding
-					jsonResponse := fmt.Sprintf(`{"success":false,"error":"internal_server_error","message":"An internal server error occurred","timestamp":"%s"}`,
-						time.Now().Format(time.RFC3339))
+                    // Simple JSON encoding
+                    jsonResponse := fmt.Sprintf(`{"success":false,"error":"internal_server_error","message":"An internal server error occurred","timestamp":"%s"}`,
+                        time.Now().Format(time.RFC3339))
 
 					w.Write([]byte(jsonResponse))
 				}

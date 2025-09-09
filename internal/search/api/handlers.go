@@ -1,25 +1,21 @@
 package api
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/search/config"
-	"vexdb/internal/search/response"
-	"vexdb/internal/search/validation"
-	"vexdb/internal/service"
-	"vexdb/internal/types"
+    "vexdb/internal/metrics"
+    "vexdb/internal/search/config"
+    "vexdb/internal/search/response"
+    "vexdb/internal/search/validation"
+    "vexdb/internal/service"
+    "vexdb/internal/types"
 
-	"github.com/gorilla/mux"
-	"go.uber.org/zap"
+    "github.com/gorilla/mux"
+    "go.uber.org/zap"
 )
 
 // SearchHandler handles HTTP search requests
@@ -370,8 +366,7 @@ func (h *SearchHandler) handleListClusters(w http.ResponseWriter, r *http.Reques
 // handleGetCluster handles get cluster requests
 func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request) {
 	queryID := generateQueryID()
-	vars := mux.Vars(r)
-	clusterID := vars["id"]
+    _ = mux.Vars(r)["id"]
 
 	// For now, return not implemented
 	h.handleError(w, r, fmt.Errorf("get cluster not implemented"), queryID, "NOT_IMPLEMENTED")
@@ -380,8 +375,7 @@ func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request)
 // handleClusterSearch handles cluster-specific search requests
 func (h *SearchHandler) handleClusterSearch(w http.ResponseWriter, r *http.Request) {
 	queryID := generateQueryID()
-	vars := mux.Vars(r)
-	clusterID := vars["id"]
+    _ = mux.Vars(r)["id"]
 
 	// For now, return not implemented
 	h.handleError(w, r, fmt.Errorf("cluster search not implemented"), queryID, "NOT_IMPLEMENTED")
@@ -437,13 +431,16 @@ func (h *SearchHandler) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		metricType = "system"
 	}
 
-	metrics, err := h.service.GetMetrics(ctx, metricType, "", "")
+    mvals, err := h.service.GetMetrics(ctx, metricType, "", "")
 	if err != nil {
 		h.handleError(w, r, err, queryID, "METRICS_ERROR")
 		return
 	}
 
-	response := h.formatter.FormatMetricsResponse(metrics)
+    // Convert to map[string]interface{}
+    imap := make(map[string]interface{}, len(mvals))
+    for k, v := range mvals { imap[k] = v }
+    response := h.formatter.FormatMetricsResponse(imap)
 	h.sendJSONResponse(w, http.StatusOK, response)
 }
 

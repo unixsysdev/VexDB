@@ -299,11 +299,10 @@ func (s *SearchServer) GetClusterStatus(ctx context.Context, req *emptypb.Empty)
 		s.recordMetrics("grpc_get_cluster_status", time.Since(startTime), nil)
 	}()
 
-	clusterStatus, err := s.service.GetClusterStatus(ctx)
-	if err != nil {
-		s.logger.Error("Failed to get cluster status", zap.String("query_id", queryID), zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get cluster status")
-	}
+    if _, err := s.service.GetClusterStatus(ctx); err != nil {
+        s.logger.Error("Failed to get cluster status", zap.String("query_id", queryID), zap.Error(err))
+        return nil, status.Error(codes.Internal, "Failed to get cluster status")
+    }
 
     // Convert to protobuf format (limited internal fields available)
     pbClusterStatus := &pb.ClusterStatus{}
@@ -359,12 +358,12 @@ func (s *SearchServer) GetMetrics(ctx context.Context, req *pb.MetricsRequest) (
 		pbMetrics[key] = value
 	}
 
-	pbMetricsResponse := &pb.MetricsResponse{
-		Success:   true,
-		Message:   "Metrics retrieved successfully",
-		Metrics:   pbMetrics,
-		Timestamp: time.Now().Unix(),
-	}
+    pbMetricsResponse := &pb.MetricsResponse{
+        Success:   true,
+        Message:   "Metrics retrieved successfully",
+        Metrics:   pbMetrics,
+        Timestamp: timestamppb.Now(),
+    }
 
 	return pbMetricsResponse, nil
 }

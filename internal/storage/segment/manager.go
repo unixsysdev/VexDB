@@ -1,6 +1,4 @@
 // Package segment provides segment management functionality for VexDB
-//go:build ignore
-
 package segment
 
 import (
@@ -8,7 +6,7 @@ import (
 	"sync"
 
 	"vexdb/internal/config"
-	"vexdb/internal/logging"
+    "vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/storage/compression"
 	"vexdb/internal/types"
@@ -18,7 +16,7 @@ import (
 
 // Manager manages all segments in the storage system
 type Manager struct {
-	config      *config.Config
+    config      config.Config
 	logger      *zap.Logger
 	metrics     *metrics.Collector
 	compressor  *compression.Compressor
@@ -31,7 +29,7 @@ type Manager struct {
 }
 
 // NewManager creates a new segment manager
-func NewManager(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collector, compressor *compression.Compressor) (*Manager, error) {
+func NewManager(cfg config.Config, logger *zap.Logger, metrics *metrics.Collector, compressor *compression.Compressor) (*Manager, error) {
 	m := &Manager{
 		config:     cfg,
 		logger:     logger,
@@ -50,16 +48,13 @@ func NewManager(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collect
 
 // initializeManifest initializes the segment manifest
 func (m *Manager) initializeManifest() error {
-	m.manifest = NewManifest(m.config, m.logger, m.metrics)
-	
-	// Load existing segments from manifest
-	if err := m.manifest.Load(); err != nil {
-		m.logger.Warn("Failed to load manifest, creating new one", zap.Error(err))
-		// Create new manifest
-		if err := m.manifest.Create(); err != nil {
-			return err
-		}
-	}
+    // Initialize manifest (using default path and types)
+    m.manifest = NewManifest("./data/manifest.vex", 0, 0, *m.logger, nil)
+    // Load or create
+    if err := m.manifest.Load(); err != nil {
+        m.logger.Warn("Failed to load manifest, creating new one", zap.Error(err))
+        if err := m.manifest.Create(); err != nil { return err }
+    }
 
 	return nil
 }

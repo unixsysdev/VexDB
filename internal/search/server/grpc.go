@@ -1,21 +1,20 @@
 package server
 
 import (
-	"context"
-	"fmt"
-	"net"
-	"time"
+    "context"
+    "fmt"
+    "net"
+    "time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/search/config"
-	"vexdb/internal/search/grpc"
-	"vexdb/internal/service"
+    "vexdb/internal/metrics"
+    "vexdb/internal/search/config"
+    searchgrpc "vexdb/internal/search/grpc"
+    "vexdb/internal/service"
 
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/reflection"
+    "go.uber.org/zap"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/keepalive"
+    "google.golang.org/grpc/reflection"
 )
 
 // GRPCServer represents the gRPC server for the search service
@@ -61,7 +60,7 @@ func (s *GRPCServer) Start(ctx context.Context) error {
 	s.server = grpc.NewServer(opts...)
 
 	// Create and register search server
-	searchServer := grpc.NewSearchServer(s.config, s.logger, s.metrics, s.searchService)
+    searchServer := searchgrpc.NewSearchServer(s.config, s.logger, s.metrics, s.searchService)
 	searchServer.RegisterServer(s.server)
 
 	// Register reflection service for development
