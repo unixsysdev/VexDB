@@ -111,11 +111,11 @@ func (h *SearchHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to internal types
-	queryVector := &types.Vector{
-		ID:     request.VectorID,
-		Data:   request.Vector,
-		Metadata: request.Metadata,
-	}
+    queryVector := &types.Vector{
+        ID:       request.VectorID,
+        Data:     toFloat32(request.Vector),
+        Metadata: toMetadata(request.Metadata),
+    }
 
 	// Set default k if not provided
 	k := request.K
@@ -245,11 +245,11 @@ func (h *SearchHandler) handleBatchSearch(w http.ResponseWriter, r *http.Request
 	var stats []*response.SearchStats
 
 	for i, query := range request.Queries {
-		queryVector := &types.Vector{
-			ID:     query.VectorID,
-			Data:   query.Vector,
-			Metadata: query.Metadata,
-		}
+        queryVector := &types.Vector{
+            ID:       query.VectorID,
+            Data:     toFloat32(query.Vector),
+            Metadata: toMetadata(query.Metadata),
+        }
 
 		k := query.K
 		if k <= 0 {
@@ -302,11 +302,11 @@ func (h *SearchHandler) handleMultiClusterSearch(w http.ResponseWriter, r *http.
 	}
 
 	// Convert to internal types
-	queryVector := &types.Vector{
-		ID:     request.VectorID,
-		Data:   request.Vector,
-		Metadata: request.Metadata,
-	}
+    queryVector := &types.Vector{
+        ID:       request.VectorID,
+        Data:     toFloat32(request.Vector),
+        Metadata: toMetadata(request.Metadata),
+    }
 
 	// Set default k if not provided
 	k := request.K
@@ -684,7 +684,7 @@ func (h *SearchHandler) recordMetrics(operation string, duration time.Duration, 
 }
 
 func generateQueryID() string {
-	return fmt.Sprintf("query_%d", time.Now().UnixNano())
+    return fmt.Sprintf("query_%d", time.Now().UnixNano())
 }
 
 func getStatusLabel(err error) string {
@@ -692,4 +692,20 @@ func getStatusLabel(err error) string {
 		return "error"
 	}
 	return "success"
+}
+
+// toFloat32 converts []float64 to []float32 safely
+func toFloat32(in []float64) []float32 {
+    if len(in) == 0 { return nil }
+    out := make([]float32, len(in))
+    for i, v := range in { out[i] = float32(v) }
+    return out
+}
+
+// toMetadata converts map[string]string to map[string]interface{}
+func toMetadata(in map[string]string) map[string]interface{} {
+    if in == nil { return nil }
+    out := make(map[string]interface{}, len(in))
+    for k, v := range in { out[k] = v }
+    return out
 }

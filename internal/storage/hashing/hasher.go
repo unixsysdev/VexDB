@@ -72,11 +72,11 @@ func DefaultHasherConfig() *HasherConfig {
 
 // Hasher represents a vector hasher and cluster assigner
 type Hasher struct {
-	config      *HasherConfig
-	cache       map[uint64]uint32 // vector_id -> cluster_id
-	mu          sync.RWMutex
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
+    config      *HasherConfig
+    cache       map[string]uint32 // vector_id -> cluster_id
+    mu          sync.RWMutex
+    logger      logging.Logger
+    metrics     *metrics.StorageMetrics
 }
 
 // HasherStats represents hasher statistics
@@ -124,17 +124,17 @@ func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 		return nil, fmt.Errorf("%w: %v", ErrInvalidClusterCount, err)
 	}
 	
-	hasher := &Hasher{
-		config: hasherConfig,
-		cache:  make(map[uint64]uint32),
-		logger: logger,
-		metrics: metrics,
-	}
+    hasher := &Hasher{
+        config: hasherConfig,
+        cache:  make(map[string]uint32),
+        logger: logger,
+        metrics: metrics,
+    }
 	
 	// Pre-allocate cache if enabled
-	if hasherConfig.EnableCache && hasherConfig.CacheSize > 0 {
-		hasher.cache = make(map[uint64]uint32, hasherConfig.CacheSize)
-	}
+    if hasherConfig.EnableCache && hasherConfig.CacheSize > 0 {
+        hasher.cache = make(map[string]uint32, hasherConfig.CacheSize)
+    }
 	
 	hasher.logger.Info("Created hasher",
 		zap.String("algorithm", string(hasherConfig.Algorithm)),
@@ -474,12 +474,12 @@ func (h *Hasher) UpdateConfig(config *HasherConfig) error {
 	}
 	
 	// Clear cache if cluster count changed
-	if config.ClusterCount != h.config.ClusterCount {
-		h.cache = make(map[uint64]uint32)
-		if config.EnableCache && config.CacheSize > 0 {
-			h.cache = make(map[uint64]uint32, config.CacheSize)
-		}
-	}
+    if config.ClusterCount != h.config.ClusterCount {
+        h.cache = make(map[string]uint32)
+        if config.EnableCache && config.CacheSize > 0 {
+            h.cache = make(map[string]uint32, config.CacheSize)
+        }
+    }
 	
 	h.config = config
 	
@@ -493,10 +493,10 @@ func (h *Hasher) ClearCache() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	
-	h.cache = make(map[uint64]uint32)
-	if h.config.EnableCache && h.config.CacheSize > 0 {
-		h.cache = make(map[uint64]uint32, h.config.CacheSize)
-	}
+    h.cache = make(map[string]uint32)
+    if h.config.EnableCache && h.config.CacheSize > 0 {
+        h.cache = make(map[string]uint32, h.config.CacheSize)
+    }
 	
 	h.logger.Info("Cleared hasher cache")
 }

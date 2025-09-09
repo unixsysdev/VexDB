@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"vexdb/internal/logging"

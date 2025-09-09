@@ -1,0 +1,1337 @@
+# VexDB Kubernetes Deployment Configuration
+# This configuration deploys all three VexDB services with production-ready settings
+
+---
+# Namespace for VexDB components
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vexdb
+  labels:
+    app: vexdb
+    component: namespace
+
+---
+# ConfigMap for VexDB Insert Service configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vexinsert-config
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+data:
+  config.yaml: |
+    # VexDB Insert Service Configuration
+    server:
+      host: "0.0.0.0"
+      port: 8080
+      read_timeout: 30s
+      write_timeout: 30s
+      idle_timeout: 60s
+      max_header_bytes: 1048576
+      shutdown_timeout: 30s
+    
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"
+    
+    metrics:
+      enabled: true
+      host: "0.0.0.0"
+      port: 9091
+      path: "/metrics"
+      namespace: "vexdb"
+      subsystem: "insert"
+    
+    cluster:
+      name: "vexdb-cluster"
+      data_dir: "/var/lib/vexdb/data"
+      wal_dir: "/var/lib/vexdb/wal"
+      snapshot_dir: "/var/lib/vexdb/snapshots"
+    
+    replication:
+      enabled: true
+      mode: "async"
+      factor: 2
+      timeout: 30s
+    
+    protocols:
+      http:
+        enabled: true
+        port: 8080
+        host: "0.0.0.0"
+        base_path: "/api/v1"
+        read_timeout: 30s
+        write_timeout: 30s
+        idle_timeout: 60s
+        max_header_bytes: 1048576
+        tls:
+          enabled: false
+        cors:
+          enabled: true
+          allowed_origins: ["*"]
+          allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+          allowed_headers: ["*"]
+          exposed_headers: ["*"]
+          allow_credentials: true
+          max_age: 86400
+        compression:
+          enabled: true
+          level: 6
+        rate_limit:
+          enabled: true
+          requests_per_second: 1000
+          burst: 100
+          by_ip: true
+    
+    auth:
+      enabled: true
+      type: "api_key"
+      rate_limit:
+        enabled: true
+        requests_per_second: 1000
+        burst: 100
+        by_ip: true
+
+---
+# ConfigMap for VexDB Storage Service configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vexstorage-config
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+data:
+  config.yaml: |
+    # VexDB Storage Service Configuration
+    server:
+      host: "0.0.0.0"
+      port: 8082
+      read_timeout: 30s
+      write_timeout: 30s
+      idle_timeout: 60s
+      max_header_bytes: 1048576
+      shutdown_timeout: 30s
+    
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"
+    
+    metrics:
+      enabled: true
+      host: "0.0.0.0"
+      port: 9094
+      path: "/metrics"
+      namespace: "vexdb"
+      subsystem: "storage"
+    
+    cluster:
+      name: "vexdb-cluster"
+      data_dir: "/var/lib/vexdb/data"
+      wal_dir: "/var/lib/vexdb/wal"
+      snapshot_dir: "/var/lib/vexdb/snapshots"
+    
+    storage:
+      data_dir: "/var/lib/vexdb/storage"
+      wal_dir: "/var/lib/vexdb/wal"
+      temp_dir: "/var/lib/vexdb/temp"
+      
+      segment:
+        max_vectors: 10000
+        max_size: 104857600
+        compression:
+          enabled: true
+          algorithm: "lz4"
+          level: 6
+        format_version: 1
+        checksum:
+          enabled: true
+          algorithm: "crc32"
+        sync_on_write: false
+        preallocate: true
+      
+      memory_buffer:
+        enabled: true
+        max_size: 1073741824
+        flush_interval: 5s
+        flush_threshold: 0.8
+        sync_on_flush: false
+        compression:
+          enabled: true
+          algorithm: "lz4"
+          level: 6
+      
+      cache:
+        enabled: true
+        type: "lru"
+        size: 536870912
+        ttl: 3600s
+        eviction_policy: "lru"
+    
+    engine:
+      search:
+        max_results: 100
+        default_k: 10
+        timeout: 30s
+        parallel_search: true
+        max_concurrent_searches: 1000
+        distance_metric: "cosine"
+        normalize_vectors: true
+        prefilter:
+          enabled: true
+          max_filters: 100
+    
+    grpc:
+      enabled: true
+      port: 9096
+      host: "0.0.0.0"
+      max_message_size: 4194304
+      max_concurrent_streams: 1000
+      connection_timeout: 30s
+      tls:
+        enabled: false
+
+---
+# ConfigMap for VexDB Search Service configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vexsearch-config
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+data:
+  config.yaml: |
+    # VexDB Search Service Configuration
+    server:
+      host: "0.0.0.0"
+      port: 8083
+      read_timeout: 30s
+      write_timeout: 30s
+      idle_timeout: 60s
+      max_header_bytes: 1048576
+      shutdown_timeout: 30s
+    
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"
+    
+    metrics:
+      enabled: true
+      host: "0.0.0.0"
+      port: 9097
+      path: "/metrics"
+      namespace: "vexdb"
+      subsystem: "search"
+    
+    cluster:
+      name: "vexdb-cluster"
+      data_dir: "/var/lib/vexdb/data"
+      wal_dir: "/var/lib/vexdb/wal"
+      snapshot_dir: "/var/lib/vexdb/snapshots"
+    
+    engine:
+      max_results: 100
+      default_k: 10
+      timeout: 30s
+      parallel_search: true
+      max_concurrent_searches: 1000
+      distance_metric: "cosine"
+      normalize_vectors: true
+      prefilter:
+        enabled: true
+        max_filters: 100
+    
+    api:
+      http:
+        enabled: true
+        port: 8083
+        host: "0.0.0.0"
+        base_path: "/api/v1"
+        read_timeout: 30s
+        write_timeout: 30s
+        idle_timeout: 60s
+        max_header_bytes: 1048576
+        request_size_limit: 10485760
+        tls:
+          enabled: false
+        cors:
+          enabled: true
+          allowed_origins: ["*"]
+          allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+          allowed_headers: ["*"]
+          exposed_headers: ["*"]
+          allow_credentials: true
+          max_age: 86400
+        compression:
+          enabled: true
+          level: 6
+      
+      grpc:
+        enabled: true
+        port: 9099
+        host: "0.0.0.0"
+        max_message_size: 4194304
+        max_concurrent_streams: 1000
+        connection_timeout: 30s
+        tls:
+          enabled: false
+      
+      response:
+        include_query_vector: false
+        include_metadata: true
+        include_timestamps: true
+        include_scores: true
+        include_distances: true
+        pretty_print: false
+        max_results: 100
+        response_timeout: 30s
+    
+    auth:
+      enabled: true
+      type: "api_key"
+      rate_limit:
+        enabled: true
+        requests_per_second: 1000
+        burst: 100
+        by_ip: true
+    
+    routing:
+      enabled: true
+      strategy: "consistent_hash"
+      hash_ring:
+        virtual_nodes: 100
+        replication_factor: 2
+        hash_function: "murmur3"
+      cache:
+        enabled: true
+        size: 1000
+        ttl: 300s
+    
+    query_coordination:
+      enabled: true
+      strategy: "scatter_gather"
+      timeout: 30s
+      max_concurrent_queries: 1000
+      parallel_execution: true
+      result_merging:
+        enabled: true
+        strategy: "rank_fusion"
+        deduplication: true
+        scoring: true
+        ranking: true
+    
+    cache:
+      enabled: true
+      type: "lru"
+      size: 536870912
+      ttl: 3600s
+      eviction_policy: "lru"
+      query_cache:
+        enabled: true
+        size: 268435456
+        ttl: 300s
+        max_query_length: 1000
+      result_cache:
+        enabled: true
+        size: 268435456
+        ttl: 600s
+        max_results: 1000
+
+---
+# Secret for VexDB API keys and certificates
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vexdb-secrets
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: secrets
+type: Opaque
+data:
+  # Base64 encoded values (replace with actual values)
+  # echo -n "your-api-key" | base64
+  api-keys: "eW91ci1hcGkta2V5Cg=="
+  tls-crt: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+  tls-key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K"
+
+---
+# Service for VexDB Insert Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vexinsert-service
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+spec:
+  selector:
+    app: vexdb
+    component: vexinsert
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9091
+      targetPort: 9091
+      protocol: TCP
+    - name: dashboard
+      port: 9092
+      targetPort: 9092
+      protocol: TCP
+    - name: websocket
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+    - name: grpc
+      port: 9093
+      targetPort: 9093
+      protocol: TCP
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Service for VexDB Storage Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vexstorage-service
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+spec:
+  selector:
+    app: vexdb
+    component: vexstorage
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP
+    - name: metrics
+      port: 9094
+      targetPort: 9094
+      protocol: TCP
+    - name: dashboard
+      port: 9095
+      targetPort: 9095
+      protocol: TCP
+    - name: grpc
+      port: 9096
+      targetPort: 9096
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Service for VexDB Search Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vexsearch-service
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+spec:
+  selector:
+    app: vexdb
+    component: vexsearch
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+      protocol: TCP
+    - name: metrics
+      port: 9097
+      targetPort: 9097
+      protocol: TCP
+    - name: dashboard
+      port: 9098
+      targetPort: 9098
+      protocol: TCP
+    - name: grpc
+      port: 9099
+      targetPort: 9099
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Deployment for VexDB Insert Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vexinsert-deployment
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vexdb
+      component: vexinsert
+  template:
+    metadata:
+      labels:
+        app: vexdb
+        component: vexinsert
+    spec:
+      serviceAccountName: vexdb-service-account
+      containers:
+        - name: vexinsert
+          image: vexdb/vexinsert:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9091
+              name: metrics
+            - containerPort: 9092
+              name: dashboard
+            - containerPort: 8081
+              name: websocket
+            - containerPort: 9093
+              name: grpc
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: VEXDB_CONFIG_FILE
+              value: "/etc/vexdb/config.yaml"
+            - name: GIN_MODE
+              value: "release"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vexdb
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/vexdb/data
+            - name: wal
+              mountPath: /var/lib/vexdb/wal
+            - name: snapshots
+              mountPath: /var/lib/vexdb/snapshots
+            - name: buffer
+              mountPath: /var/lib/vexdb/buffer
+            - name: logs
+              mountPath: /var/log/vexdb
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 1
+      volumes:
+        - name: config
+          configMap:
+            name: vexinsert-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vexinsert-data-pvc
+        - name: wal
+          persistentVolumeClaim:
+            claimName: vexinsert-wal-pvc
+        - name: snapshots
+          persistentVolumeClaim:
+            claimName: vexinsert-snapshots-pvc
+        - name: buffer
+          persistentVolumeClaim:
+            claimName: vexinsert-buffer-pvc
+        - name: logs
+          persistentVolumeClaim:
+            claimName: vexinsert-logs-pvc
+
+---
+# Deployment for VexDB Storage Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vexstorage-deployment
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vexdb
+      component: vexstorage
+  template:
+    metadata:
+      labels:
+        app: vexdb
+        component: vexstorage
+    spec:
+      serviceAccountName: vexdb-service-account
+      containers:
+        - name: vexstorage
+          image: vexdb/vexstorage:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+              name: http
+            - containerPort: 9094
+              name: metrics
+            - containerPort: 9095
+              name: dashboard
+            - containerPort: 9096
+              name: grpc
+          env:
+            - name: VEXDB_CONFIG_FILE
+              value: "/etc/vexdb/config.yaml"
+            - name: GIN_MODE
+              value: "release"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vexdb
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/vexdb/data
+            - name: wal
+              mountPath: /var/lib/vexdb/wal
+            - name: snapshots
+              mountPath: /var/lib/vexdb/snapshots
+            - name: storage
+              mountPath: /var/lib/vexdb/storage
+            - name: temp
+              mountPath: /var/lib/vexdb/temp
+            - name: manifest
+              mountPath: /var/lib/vexdb/manifest
+            - name: backups
+              mountPath: /var/lib/vexdb/backups
+            - name: logs
+              mountPath: /var/log/vexdb
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 1
+      volumes:
+        - name: config
+          configMap:
+            name: vexstorage-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vexstorage-data-pvc
+        - name: wal
+          persistentVolumeClaim:
+            claimName: vexstorage-wal-pvc
+        - name: snapshots
+          persistentVolumeClaim:
+            claimName: vexstorage-snapshots-pvc
+        - name: storage
+          persistentVolumeClaim:
+            claimName: vexstorage-storage-pvc
+        - name: temp
+          persistentVolumeClaim:
+            claimName: vexstorage-temp-pvc
+        - name: manifest
+          persistentVolumeClaim:
+            claimName: vexstorage-manifest-pvc
+        - name: backups
+          persistentVolumeClaim:
+            claimName: vexstorage-backups-pvc
+        - name: logs
+          persistentVolumeClaim:
+            claimName: vexstorage-logs-pvc
+
+---
+# Deployment for VexDB Search Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vexsearch-deployment
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vexdb
+      component: vexsearch
+  template:
+    metadata:
+      labels:
+        app: vexdb
+        component: vexsearch
+    spec:
+      serviceAccountName: vexdb-service-account
+      containers:
+        - name: vexsearch
+          image: vexdb/vexsearch:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+              name: http
+            - containerPort: 9097
+              name: metrics
+            - containerPort: 9098
+              name: dashboard
+            - containerPort: 9099
+              name: grpc
+          env:
+            - name: VEXDB_CONFIG_FILE
+              value: "/etc/vexdb/config.yaml"
+            - name: GIN_MODE
+              value: "release"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vexdb
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/vexdb/data
+            - name: wal
+              mountPath: /var/lib/vexdb/wal
+            - name: snapshots
+              mountPath: /var/lib/vexdb/snapshots
+            - name: cache
+              mountPath: /var/lib/vexdb/cache
+            - name: logs
+              mountPath: /var/log/vexdb
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1000m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 1
+      volumes:
+        - name: config
+          configMap:
+            name: vexsearch-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vexsearch-data-pvc
+        - name: wal
+          persistentVolumeClaim:
+            claimName: vexsearch-wal-pvc
+        - name: snapshots
+          persistentVolumeClaim:
+            claimName: vexsearch-snapshots-pvc
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vexsearch-cache-pvc
+        - name: logs
+          persistentVolumeClaim:
+            claimName: vexsearch-logs-pvc
+
+---
+# Service Account for VexDB services
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vexdb-service-account
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: service-account
+
+---
+# Role for VexDB services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vexdb-role
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+
+---
+# Role Binding for VexDB services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vexdb-role-binding
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: role-binding
+subjects:
+  - kind: ServiceAccount
+    name: vexdb-service-account
+    namespace: vexdb
+roleRef:
+  kind: Role
+  name: vexdb-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Horizontal Pod Autoscaler for VexDB Insert Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vexinsert-hpa
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vexinsert-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# Horizontal Pod Autoscaler for VexDB Storage Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vexstorage-hpa
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vexstorage-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# Horizontal Pod Autoscaler for VexDB Search Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vexsearch-hpa
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vexsearch-deployment
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# Persistent Volume Claims for VexDB Insert Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexinsert-data-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+    volume: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexinsert-wal-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+    volume: wal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexinsert-snapshots-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+    volume: snapshots
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexinsert-buffer-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+    volume: buffer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexinsert-logs-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexinsert
+    volume: logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Persistent Volume Claims for VexDB Storage Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-data-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-wal-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: wal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-snapshots-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: snapshots
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-storage-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-temp-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: temp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-manifest-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: manifest
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-backups-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: backups
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexstorage-logs-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexstorage
+    volume: logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Persistent Volume Claims for VexDB Search Service
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexsearch-data-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+    volume: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexsearch-wal-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+    volume: wal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexsearch-snapshots-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+    volume: snapshots
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexsearch-cache-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+    volume: cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vexsearch-logs-pvc
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: vexsearch
+    volume: logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Ingress for VexDB services
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vexdb-ingress
+  namespace: vexdb
+  labels:
+    app: vexdb
+    component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - vexdb.example.com
+      secretName: vexdb-tls
+  rules:
+    - host: vexdb.example.com
+      http:
+        paths:
+          - path: /insert
+            pathType: Prefix
+            backend:
+              service:
+                name: vexinsert-service
+                port:
+                  number: 8080
+          - path: /storage
+            pathType: Prefix
+            backend:
+              service:
+                name: vexstorage-service
+                port:
+                  number: 8082
+          - path: /search
+            pathType: Prefix
+            backend:
+              service:
+                name: vexsearch-service
+                port:
+                  number: 8083

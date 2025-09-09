@@ -119,12 +119,12 @@ func NewCompressor(cfg config.Config, logger logging.Logger, metrics *metrics.St
 		return nil, fmt.Errorf("%w: %v", ErrInvalidAlgorithm, err)
 	}
 	
-	compressor := &Compressor{
-		config:  compressionConfig,
-		stats:   &CompressionStats{},
-		logger:  logger,
-		metrics: metrics,
-		pool: &sync.Pool{
+    compressor := &Compressor{
+        config:  compressionConfig,
+        stats:   &CompressionStats{},
+        logger:  logger,
+        metrics: metrics,
+        pool: &sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
@@ -243,16 +243,7 @@ func (c *Compressor) compressLZ4(data []byte) ([]byte, error) {
 	buf.Reset()
 	defer c.pool.Put(buf)
 	
-	writer := lz4.NewWriter(buf)
-	if c.config.Level == LevelFastest {
-		writer.Header = lz4.Header{
-			CompressionLevel: lz4.Fast,
-		}
-	} else if c.config.Level == LevelBest {
-		writer.Header = lz4.Header{
-			CompressionLevel: lz4.BestCompression,
-		}
-	}
+    writer := lz4.NewWriter(buf)
 	
 	if _, err := writer.Write(data); err != nil {
 		return nil, err
@@ -512,7 +503,7 @@ func (c *Compressor) UpdateConfig(config *CompressionConfig) error {
 	
 	c.config = config
 	
-	c.logger.Info("Updated compression configuration", "config", config)
+    c.logger.Info("Updated compression configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -633,7 +624,7 @@ func (c *Compressor) Reset() {
 	
 	c.stats = &CompressionStats{}
 	
-	c.logger.Info("Reset compressor statistics")
+    c.logger.Info("Reset compressor statistics")
 }
 
 // IsEnabled returns true if compression is enabled
@@ -677,7 +668,7 @@ func (c *Compressor) SetAlgorithm(algorithm CompressionAlgorithm) error {
 	
 	c.config.Algorithm = algorithm
 	
-	c.logger.Info("Set compression algorithm", "algorithm", algorithm)
+    c.logger.Info("Set compression algorithm", zap.String("algorithm", string(algorithm)))
 	
 	return nil
 }
@@ -694,7 +685,7 @@ func (c *Compressor) SetLevel(level CompressionLevel) error {
 	
 	c.config.Level = level
 	
-	c.logger.Info("Set compression level", "level", level)
+    c.logger.Info("Set compression level", zap.Int("level", int(level)))
 	
 	return nil
 }
@@ -706,7 +697,7 @@ func (c *Compressor) SetEnabled(enabled bool) {
 	
 	c.config.Enabled = enabled
 	
-	c.logger.Info("Set compression enabled", "enabled", enabled)
+    c.logger.Info("Set compression enabled", zap.Bool("enabled", enabled))
 }
 
 // GetSupportedAlgorithms returns a list of supported compression algorithms

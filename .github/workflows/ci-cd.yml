@@ -1,0 +1,413 @@
+name: VexDB CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  GO_VERSION: '1.21'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: vexdb
+
+jobs:
+  # Code Quality and Security Checks
+  code-quality:
+    name: Code Quality and Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run gofmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files are not formatted:"
+            gofmt -s -l .
+            echo "Please run 'gofmt -s -w .' to format the code."
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2023.1.3"
+          install-go: false
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          args: --timeout=5m
+
+      - name: Run security scan with gosec
+        uses: securecodewarrior/github-action-add-sarif@v1
+        with:
+          sarif-file: 'gosec.sarif'
+        continue-on-error: true
+
+      - name: Run gosec
+        run: |
+          go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+          gosec -fmt=sarif -out=gosec.sarif ./...
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'gosec.sarif'
+        continue-on-error: true
+
+  # Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        service: [vexinsert, vexstorage, vexsearch]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run unit tests for ${{ matrix.service }}
+        run: |
+          cd cmd/${{ matrix.service }}
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./cmd/${{ matrix.service }}/coverage.out
+          flags: ${{ matrix.service }}
+          name: codecov-${{ matrix.service }}
+        continue-on-error: true
+
+      - name: Check test coverage
+        run: |
+          cd cmd/${{ matrix.service }}
+          go tool cover -func=coverage.out | grep total
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Test coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 90" | bc -l) )); then
+            echo "Test coverage is below 90%"
+            exit 1
+          fi
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Set up Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml up -d
+          sleep 30
+
+      - name: Run integration tests
+        run: |
+          go test -v -tags=integration ./internal/search/integration/...
+          go test -v -tags=integration ./internal/protocol/...
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          docker-compose logs > docker-compose-logs.txt
+          docker-compose down
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-compose-logs
+          path: docker-compose-logs.txt
+
+      - name: Clean up Docker Compose
+        if: always()
+        run: docker-compose down
+
+  # Build and Test Docker Images
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    strategy:
+      matrix:
+        service: [vexinsert, vexstorage, vexsearch]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: cmd/${{ matrix.service }}/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Security Scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: build-docker
+    strategy:
+      matrix:
+        service: [vexinsert, vexstorage, vexsearch]
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.service }}:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+  # Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Set up Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml up -d
+          sleep 30
+
+      - name: Run performance benchmarks
+        run: |
+          go test -v -bench=. -benchmem -run=^$ ./internal/search/benchmark/...
+
+      - name: Generate performance report
+        run: |
+          go test -v -bench=. -benchmem -run=^$ ./internal/search/benchmark/... > benchmark.txt
+          go install golang.org/x/perf/cmd/benchstat@latest
+          benchstat benchmark.txt > benchmark-stats.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: |
+            benchmark.txt
+            benchmark-stats.txt
+
+      - name: Clean up Docker Compose
+        if: always()
+        run: docker-compose down
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [security-scan, performance-tests]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: '1.28.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy to staging
+        run: |
+          kubectl apply -f kubernetes/vexdb-deployment.yaml
+          kubectl rollout status deployment/vexinsert-deployment -n vexdb
+          kubectl rollout status deployment/vexstorage-deployment -n vexdb
+          kubectl rollout status deployment/vexsearch-deployment -n vexdb
+
+      - name: Run smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=vexdb -n vexdb --timeout=300s
+          # Add smoke test commands here
+
+  # Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [security-scan, performance-tests]
+    if: github.event_name == 'release'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: '1.28.0'
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy to production
+        run: |
+          kubectl apply -f kubernetes/vexdb-deployment.yaml
+          kubectl rollout status deployment/vexinsert-deployment -n vexdb
+          kubectl rollout status deployment/vexstorage-deployment -n vexdb
+          kubectl rollout status deployment/vexsearch-deployment -n vexdb
+
+      - name: Run smoke tests
+        run: |
+          kubectl wait --for=condition=ready pod -l app=vexdb -n vexdb --timeout=300s
+          # Add smoke test commands here
+
+      - name: Create deployment notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Generate Documentation
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    needs: [security-scan, performance-tests]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install godoc
+        run: go install golang.org/x/tools/cmd/godoc@latest
+
+      - name: Generate API documentation
+        run: |
+          godoc -html ./internal > docs/api.html
+          godoc -html ./cmd > docs/services.html
+
+      - name: Commit and push documentation
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update API documentation"
+          file_pattern: 'docs/*.html'
+
+  # Create Release
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build binaries
+        run: |
+          mkdir -p release
+          for service in vexinsert vexstorage vexsearch; do
+            for os in linux darwin windows; do
+              if [ "$os" == "windows" ]; then
+                extension=".exe"
+              else
+                extension=""
+              fi
+              GOOS=$os GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o release/${service}-${os}-amd64${extension} ./cmd/${service}
+            done
+          done
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -329,10 +329,10 @@ func (b *Buffer) flush() error {
 	}
 	
 	// Call flush function
-	if err := b.flushFunc(vectors); err != nil {
-		b.metrics.Errors.WithLabelValues("buffer", "flush_failed").Inc()
-		return fmt.Errorf("%w: %v", ErrFlushFailed, err)
-	}
+    if err := b.flushFunc(vectors); err != nil {
+        b.metrics.Errors.Inc("buffer", "flush_failed")
+        return fmt.Errorf("%w: %v", ErrFlushFailed, err)
+    }
 	
 	// Clear buffer
 	b.vectors = make(map[string]*BufferEntry)
@@ -346,7 +346,7 @@ func (b *Buffer) flush() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.WithLabelValues("flush", "buffer").Inc()
+    b.metrics.BufferOperations.Inc("flush", "buffer")
 	b.metrics.BufferSize.Set(0)
 	
 	b.logger.Info("Flushed buffer", zap.Int("vectors", len(vectors)))
