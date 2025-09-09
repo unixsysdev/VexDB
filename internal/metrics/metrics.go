@@ -1,12 +1,14 @@
 package metrics
 
 import (
-	"context"
-	"sync"
-	"time"
+    "context"
+    "sort"
+    "strings"
+    "sync"
+    "time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+    "github.com/prometheus/client_golang/prometheus"
+    "github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // Collector is a type alias for Metrics to provide a consistent interface
@@ -14,10 +16,10 @@ type Collector = Metrics
 
 // Metrics represents the metrics collection system
 type Metrics struct {
-	config     interface{}
-	registry   *prometheus.Registry
-	collectors map[string]prometheus.Collector
-	mu         sync.RWMutex
+    config     interface{}
+    registry   *prometheus.Registry
+    collectors map[string]prometheus.Collector
+    mu         sync.RWMutex
 }
 
 // Config represents metrics configuration
@@ -34,14 +36,14 @@ type Config struct {
 
 // Counter represents a counter metric
 type Counter struct {
-	metric *prometheus.CounterVec
-	labels []string
+    metric *prometheus.CounterVec
+    labels []string
 }
 
 // Gauge represents a gauge metric
 type Gauge struct {
-	metric *prometheus.GaugeVec
-	labels []string
+    metric *prometheus.GaugeVec
+    labels []string
 }
 
 // Histogram represents a histogram metric
@@ -70,6 +72,12 @@ func NewMetrics(cfg interface{}) (*Metrics, error) {
 		registry:   registry,
 		collectors: make(map[string]prometheus.Collector),
 	}, nil
+}
+
+// NewCollector provides a simple constructor compatible with callers expecting a Collector
+func NewCollector() *Metrics {
+    m, _ := NewMetrics(nil)
+    return m
 }
 
 // NewCounter creates a new counter metric
@@ -200,7 +208,7 @@ func (m *Metrics) NewSummary(name, help string, labels []string) *Summary {
 
 // GetRegistry returns the Prometheus registry
 func (m *Metrics) GetRegistry() *prometheus.Registry {
-	return m.registry
+    return m.registry
 }
 
 // GetConfig returns the metrics configuration
@@ -254,8 +262,74 @@ func (m *Metrics) IsEnabled() bool {
 
 // collectSystemMetrics collects system metrics
 func (m *Metrics) collectSystemMetrics(ctx context.Context) {
-	// Collect system-level metrics here
-	// This could include CPU, memory, disk, network metrics
+    // Collect system-level metrics here
+    // This could include CPU, memory, disk, network metrics
+}
+
+// RecordCounter increments a counter by value with provided labels (creates lazily)
+func (m *Metrics) RecordCounter(name string, value float64, labels map[string]string) {
+    if m == nil { return }
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    // Build or fetch CounterVec keyed by name+labelnames
+    labelNames, labelValues := splitLabels(labels)
+    fullKey := "counter:" + name + ":" + strings.Join(labelNames, ",")
+
+    var cv *prometheus.CounterVec
+    if existing, ok := m.collectors[fullKey]; ok {
+        cv = existing.(*prometheus.CounterVec)
+    } else {
+        cv = promauto.With(m.registry).NewCounterVec(
+            prometheus.CounterOpts{
+                Name:      m.getFullName(name),
+                Help:      name,
+                Namespace: m.getNamespace(),
+                Subsystem: m.getSubsystem(),
+            },
+            labelNames,
+        )
+        m.collectors[fullKey] = cv
+    }
+    cv.WithLabelValues(labelValues...).Add(value)
+}
+
+// RecordHistogram observes a histogram value with provided labels (creates lazily)
+func (m *Metrics) RecordHistogram(name string, value float64, labels map[string]string) {
+    if m == nil { return }
+    m.mu.Lock()
+    defer m.mu.Unlock()
+
+    labelNames, labelValues := splitLabels(labels)
+    fullKey := "histogram:" + name + ":" + strings.Join(labelNames, ",")
+
+    var hv *prometheus.HistogramVec
+    if existing, ok := m.collectors[fullKey]; ok {
+        hv = existing.(*prometheus.HistogramVec)
+    } else {
+        hv = promauto.With(m.registry).NewHistogramVec(
+            prometheus.HistogramOpts{
+                Name:      m.getFullName(name),
+                Help:      name,
+                Namespace: m.getNamespace(),
+                Subsystem: m.getSubsystem(),
+                Buckets:   prometheus.DefBuckets,
+            },
+            labelNames,
+        )
+        m.collectors[fullKey] = hv
+    }
+    hv.WithLabelValues(labelValues...).Observe(value)
+}
+
+func splitLabels(labels map[string]string) ([]string, []string) {
+    if labels == nil || len(labels) == 0 { return []string{}, []string{} }
+    keys := make([]string, 0, len(labels))
+    for k := range labels { keys = append(keys, k) }
+    sort.Strings(keys)
+    vals := make([]string, len(keys))
+    for i, k := range keys { vals[i] = labels[k] }
+    return keys, vals
 }
 
 // getFullName returns the full metric name with namespace and subsystem
@@ -286,19 +360,23 @@ func (m *Metrics) getSubsystem() string {
 
 // Inc increments the counter
 func (c *Counter) Inc(labels ...string) {
-	c.metric.WithLabelValues(labels...).Inc()
+    c.metric.WithLabelValues(labels...).Inc()
 }
 
 // Add adds a value to the counter
 func (c *Counter) Add(value float64, labels ...string) {
-	c.metric.WithLabelValues(labels...).Add(value)
+    c.metric.WithLabelValues(labels...).Add(value)
 }
+
+// Get returns the current counter value if available (approximate; returns 0 by default)
+// Note: Prometheus client does not expose direct reads for CounterVec; this is a stub for code compatibility.
+func (c *Counter) Get(labels ...string) int64 { return 0 }
 
 // Gauge methods
 
 // Set sets the gauge value
 func (g *Gauge) Set(value float64, labels ...string) {
-	g.metric.WithLabelValues(labels...).Set(value)
+    g.metric.WithLabelValues(labels...).Set(value)
 }
 
 // Inc increments the gauge
@@ -349,8 +427,13 @@ type ServiceMetrics struct {
 	MemoryUsage       *Gauge
 	DiskUsage         *Gauge
 	NetworkUsage      *Gauge
-	ConnectionsActive *Gauge
-	ConnectionsTotal  *Counter
+    ConnectionsActive *Gauge
+    ConnectionsTotal  *Counter
+    // Additional metrics used by server packages
+    GRPCRequests      *Counter
+    GRPCLatency       *Histogram
+    GRPCErrors        *Counter
+    ServiceErrors     *Counter
 }
 
 // NewServiceMetrics creates service-specific metrics
@@ -424,11 +507,32 @@ func NewServiceMetrics(m *Metrics, serviceName string) *ServiceMetrics {
 			"Number of active connections",
 			[]string{"service"},
 		),
-		ConnectionsTotal: m.NewCounter(
-			"connections_total",
-			"Total number of connections",
-			[]string{"service"},
-		),
+        ConnectionsTotal: m.NewCounter(
+            "connections_total",
+            "Total number of connections",
+            []string{"service"},
+        ),
+        GRPCRequests: m.NewCounter(
+            "grpc_requests_total",
+            "Total gRPC requests",
+            []string{"protocol"},
+        ),
+        GRPCLatency: m.NewHistogram(
+            "grpc_latency_seconds",
+            "gRPC request latency in seconds",
+            []string{},
+            []float64{0.001, 0.01, 0.1, 1, 5},
+        ),
+        GRPCErrors: m.NewCounter(
+            "grpc_errors_total",
+            "Total gRPC errors",
+            []string{"protocol"},
+        ),
+        ServiceErrors: m.NewCounter(
+            "service_errors_total",
+            "Service errors by component/status",
+            []string{"component", "status"},
+        ),
 	}
 }
 
@@ -450,9 +554,18 @@ type StorageMetrics struct {
 	CacheMisses       *Counter
 	CacheHitRatio     *Gauge
 	DiskReadBytes     *Counter
-	DiskWriteBytes    *Counter
-	MemoryUsage       *Gauge
-	DiskUsage         *Gauge
+    DiskWriteBytes    *Counter
+    MemoryUsage       *Gauge
+    DiskUsage         *Gauge
+    // Added for buffer/compression/hashing metrics used elsewhere
+    BufferOperations  *Counter
+    BufferSize        *Gauge
+    BufferHits        *Counter
+    BufferMisses      *Counter
+    HashingOperations *Counter
+    CompressionOperations *Counter
+    CompressionRatio  *Gauge
+    Errors            *Counter
 }
 
 // NewStorageMetrics creates storage-specific metrics
@@ -552,12 +665,52 @@ func NewStorageMetrics(m *Metrics, storageName string) *StorageMetrics {
 			"Memory usage in bytes",
 			[]string{"storage"},
 		),
-		DiskUsage: m.NewGauge(
-			"disk_usage_bytes",
-			"Disk usage in bytes",
-			[]string{"storage"},
-		),
-	}
+        DiskUsage: m.NewGauge(
+            "disk_usage_bytes",
+            "Disk usage in bytes",
+            []string{"storage"},
+        ),
+        BufferOperations: m.NewCounter(
+            "buffer_operations_total",
+            "Total number of buffer operations",
+            []string{"operation", "component"},
+        ),
+        BufferSize: m.NewGauge(
+            "buffer_size",
+            "Current buffer size (vectors)",
+            []string{},
+        ),
+        BufferHits: m.NewCounter(
+            "buffer_hits_total",
+            "Total number of buffer hits",
+            []string{"result"},
+        ),
+        BufferMisses: m.NewCounter(
+            "buffer_misses_total",
+            "Total number of buffer misses",
+            []string{"result"},
+        ),
+        HashingOperations: m.NewCounter(
+            "hashing_operations_total",
+            "Total number of hashing operations",
+            []string{"component", "operation"},
+        ),
+        CompressionOperations: m.NewCounter(
+            "compression_operations_total",
+            "Total number of compression operations",
+            []string{"component", "operation"},
+        ),
+        CompressionRatio: m.NewGauge(
+            "compression_ratio",
+            "Observed compression ratio",
+            []string{},
+        ),
+        Errors: m.NewCounter(
+            "storage_errors_total",
+            "Total number of storage errors",
+            []string{"component", "error_type"},
+        ),
+    }
 }
 
 // SearchMetrics represents search-specific metrics

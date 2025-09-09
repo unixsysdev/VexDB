@@ -1,0 +1,486 @@
+# VexDB Search Service Production Configuration
+# This configuration is optimized for production environments
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8083
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  max_header_bytes: 1048576  # 1MB
+  shutdown_timeout: 30s
+
+# Logging configuration
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, console
+  output: "stdout"  # stdout, stderr, or file path
+  file:
+    path: "/var/log/vexdb/vexsearch.log"
+    max_size: 100  # MB
+    max_backups: 10
+    max_age: 30  # days
+    compress: true
+  encoding: "json"
+  encoder_config:
+    message_key: "message"
+    level_key: "level"
+    time_key: "timestamp"
+    name_key: "logger"
+    caller_key: "caller"
+    stacktrace_key: "stacktrace"
+    line_ending: "\n"
+    time_format: "RFC3339"
+
+# Metrics configuration
+metrics:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9097
+  path: "/metrics"
+  namespace: "vexdb"
+  subsystem: "search"
+  buckets: [0.001, 0.01, 0.1, 1.0, 10.0, 60.0]
+  enable_profiling: false
+  profiling_port: 6065
+
+# Tracing configuration
+tracing:
+  enabled: true
+  service_name: "vexsearch"
+  endpoint: "http://jaeger:14268/api/traces"
+  sampling_rate: 0.1  # 10% sampling in production
+  batch_size: 512
+  timeout: 30s
+  max_payload: 4096
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  collect_interval: 15s
+  health_check_interval: 30s
+  enable_profiling: false
+  profiling_port: 6066
+
+# Dashboard configuration
+dashboard:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9098
+  base_path: "/"
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  enable_profiling: false
+  profiling_path: "/debug/pprof"
+  enable_pprof: false
+  pprof_path: "/debug/pprof"
+  enable_metrics: true
+  metrics_path: "/metrics"
+  enable_health: true
+  health_path: "/health"
+  enable_debug: false
+  debug_path: "/debug"
+
+# Cluster configuration
+cluster:
+  name: "vexdb-cluster"
+  node_id: ""  # Auto-generated if empty
+  data_dir: "/var/lib/vexdb/data"
+  wal_dir: "/var/lib/vexdb/wal"
+  snapshot_dir: "/var/lib/vexdb/snapshots"
+  join: []  # List of existing nodes to join
+  bootstrap_expect: 3  # Expected number of nodes in cluster
+  retry_join:
+    enabled: true
+    interval: 30s
+    max_attempts: 10
+  gossip:
+    enabled: true
+    port: 7950
+    bind_addr: "0.0.0.0"
+    advertise_addr: ""  # Auto-detected if empty
+  serf:
+    enabled: true
+    port: 7951
+    bind_addr: "0.0.0.0"
+    advertise_addr: ""  # Auto-detected if empty
+
+# Engine configuration
+engine:
+  # Search configuration
+  max_results: 100
+  default_k: 10
+  timeout: 30s
+  parallel_search: true
+  max_concurrent_searches: 1000
+  distance_metric: "cosine"  # cosine, euclidean, manhattan
+  normalize_vectors: true
+  prefilter:
+    enabled: true
+    max_filters: 100
+  
+  # Query planning configuration
+  query_planning:
+    enabled: true
+    cache_size: 1000
+    cache_ttl: 300s  # 5 minutes
+    optimize_queries: true
+    explain_queries: false
+  
+  # Result processing configuration
+  result_processing:
+    enabled: true
+    deduplication: true
+    scoring: true
+    ranking: true
+    pagination: true
+    max_page_size: 100
+  
+  # Performance configuration
+  performance:
+    go_max_procs: 0  # 0 means use all available CPUs
+    gc_percent: 100
+    memory_limit: "4gb"
+    cpu_profile: false
+    memory_profile: false
+    block_profile: false
+    mutex_profile: false
+    trace_profile: false
+    profile_duration: 30s
+    profile_path: "/var/log/vexdb/profile"
+
+# API configuration
+api:
+  # HTTP API configuration
+  http:
+    enabled: true
+    port: 8083
+    host: "0.0.0.0"
+    base_path: "/api/v1"
+    read_timeout: 30s
+    write_timeout: 30s
+    idle_timeout: 60s
+    max_header_bytes: 1048576  # 1MB
+    request_size_limit: 10485760  # 10MB
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexsearch.crt"
+      key_file: "/etc/vexdb/certs/vexsearch.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+      cipher_suites: []
+      prefer_server_cipher_suites: true
+    cors:
+      enabled: true
+      allowed_origins: ["*"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed_headers: ["*"]
+      exposed_headers: ["*"]
+      allow_credentials: true
+      max_age: 86400  # 24 hours
+    compression:
+      enabled: true
+      level: 6  # 1-9, where 9 is best compression
+  
+  # gRPC API configuration
+  grpc:
+    enabled: true
+    port: 9099
+    host: "0.0.0.0"
+    max_message_size: 4194304  # 4MB
+    max_concurrent_streams: 1000
+    connection_timeout: 30s
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexsearch.crt"
+      key_file: "/etc/vexdb/certs/vexsearch.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+    keepalive:
+      enabled: true
+      time: 30s
+      timeout: 5s
+      permit_without_stream: false
+    reflection: false
+    interceptors:
+      logging: true
+      metrics: true
+      tracing: true
+      recovery: true
+      validation: true
+  
+  # Response configuration
+  response:
+    include_query_vector: false
+    include_metadata: true
+    include_timestamps: true
+    include_scores: true
+    include_distances: true
+    pretty_print: false
+    max_results: 100
+    response_timeout: 30s
+
+# Authentication configuration
+auth:
+  enabled: true
+  type: "api_key"  # none, basic, bearer, api_key
+  api_keys: []  # List of valid API keys
+  basic_auth:
+    users: []  # List of username/password pairs
+  bearer_auth:
+    tokens: []  # List of valid bearer tokens
+  jwt:
+    enabled: false
+    secret: ""  # JWT secret key
+    algorithm: "HS256"
+    expiration: 24h
+    issuer: "vexdb"
+    audience: "vexdb-clients"
+  rate_limit:
+    enabled: true
+    requests_per_second: 1000
+    burst: 100
+    by_ip: true
+    by_user: false
+    by_api_key: true
+
+# Routing configuration
+routing:
+  enabled: true
+  strategy: "consistent_hash"  # consistent_hash, round_robin, random, least_connections
+  hash_ring:
+    virtual_nodes: 100
+    replication_factor: 2
+    hash_function: "murmur3"  # murmur3, fnv1a, sha256
+  cache:
+    enabled: true
+    size: 1000
+    ttl: 300s  # 5 minutes
+  health_check:
+    enabled: true
+    interval: 30s
+    timeout: 5s
+    failure_threshold: 3
+    success_threshold: 2
+  circuit_breaker:
+    enabled: true
+    timeout: 30s
+    max_concurrent_requests: 1000
+    error_threshold_percentage: 50
+    bulkhead:
+      enabled: true
+      max_concurrent_calls: 100
+      max_wait_duration: 1s
+    retry:
+      enabled: true
+      max_attempts: 3
+      wait_duration: 100ms
+      backoff_policy: "exponential"
+      retryable_status_codes: [408, 429, 500, 502, 503, 504]
+      retryable_exceptions: []
+
+# Query coordination configuration
+query_coordination:
+  enabled: true
+  strategy: "scatter_gather"  # scatter_gather, broadcast, single_node
+  timeout: 30s
+  max_concurrent_queries: 1000
+  parallel_execution: true
+  result_merging:
+    enabled: true
+    strategy: "rank_fusion"  # rank_fusion, score_fusion, reciprocal_rank_fusion
+    deduplication: true
+    scoring: true
+    ranking: true
+  node_selection:
+    enabled: true
+    strategy: "primary_first"  # primary_first, replica_first, random, round_robin
+    preference: "locality"  # locality, load, latency
+    health_aware: true
+  load_balancing:
+    enabled: true
+    strategy: "least_connections"  # least_connections, round_robin, random, weighted
+    weights: {}  # Node weights for weighted load balancing
+
+# Cache configuration
+cache:
+  enabled: true
+  type: "lru"  # lru, lfu, arc
+  size: 536870912  # 512MB
+  ttl: 3600s  # 1 hour
+  eviction_policy: "lru"
+  stats:
+    enabled: true
+    interval: 60s
+  query_cache:
+    enabled: true
+    size: 268435456  # 256MB
+    ttl: 300s  # 5 minutes
+    max_query_length: 1000
+  result_cache:
+    enabled: true
+    size: 268435456  # 256MB
+    ttl: 600s  # 10 minutes
+    max_results: 1000
+
+# Health check configuration
+health:
+  enabled: true
+  path: "/health"
+  detailed_path: "/health/detailed"
+  check_interval: 30s
+  timeout: 10s
+  checks:
+    - name: "cluster"
+      type: "cluster"
+      enabled: true
+      timeout: 5s
+    - name: "routing"
+      type: "routing"
+      enabled: true
+      timeout: 5s
+    - name: "cache"
+      type: "cache"
+      enabled: true
+      timeout: 2s
+    - name: "memory"
+      type: "memory"
+      enabled: true
+      timeout: 2s
+      threshold: 0.9  # 90% memory usage threshold
+
+# Security configuration
+security:
+  enabled: true
+  tls:
+    enabled: true
+    cert_file: "/etc/vexdb/certs/vexsearch.crt"
+    key_file: "/etc/vexdb/certs/vexsearch.key"
+    ca_file: "/etc/vexdb/certs/ca.crt"
+    client_auth: false
+    min_version: "1.2"
+    max_version: "1.3"
+    cipher_suites: []
+    prefer_server_cipher_suites: true
+  encryption:
+    enabled: false
+    algorithm: "aes-256-gcm"
+    key_file: "/etc/vexdb/encryption.key"
+  audit:
+    enabled: true
+    log_file: "/var/log/vexdb/audit.log"
+    max_size: 100  # MB
+    max_backups: 10
+    max_age: 30  # days
+    compress: true
+    events:
+      - "authentication"
+      - "authorization"
+      - "query_execution"
+      - "data_access"
+      - "system_events"
+
+# Validation configuration
+validation:
+  enabled: true
+  strict_mode: true
+  max_vector_dimension: 10000
+  max_metadata_filters: 100
+  max_query_length: 10000
+  allowed_distance_metrics: ["cosine", "euclidean", "manhattan"]
+  vector_validation:
+    enabled: true
+    normalize: true
+    check_dimension: true
+    check_values: true
+    min_value: -1.0
+    max_value: 1.0
+  query_validation:
+    enabled: true
+    check_syntax: true
+    check_semantics: true
+    optimize_queries: true
+    explain_queries: false
+
+# Alerting configuration
+alerting:
+  enabled: true
+  rules:
+    - name: "high_query_latency"
+      condition: "query_latency_p99 > 1s"
+      severity: "warning"
+      duration: "5m"
+      message: "High query latency detected"
+    - name: "high_error_rate"
+      condition: "error_rate > 0.05"
+      severity: "critical"
+      duration: "1m"
+      message: "High error rate detected"
+    - name: "low_cache_hit_rate"
+      condition: "cache_hit_rate < 0.8"
+      severity: "warning"
+      duration: "10m"
+      message: "Low cache hit rate detected"
+    - name: "high_memory_usage"
+      condition: "memory_usage > 0.9"
+      severity: "critical"
+      duration: "1m"
+      message: "High memory usage detected"
+  notifications:
+    enabled: false
+    webhook:
+      enabled: false
+      url: ""
+      timeout: 10s
+      headers: {}
+    email:
+      enabled: false
+      smtp_server: ""
+      smtp_port: 587
+      username: ""
+      password: ""
+      from: ""
+      to: []
+    slack:
+      enabled: false
+      webhook_url: ""
+      channel: ""
+      username: ""
+      icon_emoji: ""
+
+# Performance monitoring configuration
+performance_monitoring:
+  enabled: true
+  interval: 60s
+  metrics:
+    - "query_latency"
+    - "query_throughput"
+    - "error_rate"
+    - "cache_hit_rate"
+    - "memory_usage"
+    - "cpu_usage"
+    - "network_io"
+    - "disk_io"
+  thresholds:
+    query_latency_p99: 1s
+    query_latency_p95: 500ms
+    query_latency_p50: 100ms
+    error_rate: 0.05
+    cache_hit_rate: 0.8
+    memory_usage: 0.9
+    cpu_usage: 0.8
+  profiling:
+    enabled: false
+    cpu_profile: false
+    memory_profile: false
+    block_profile: false
+    mutex_profile: false
+    trace_profile: false
+    profile_duration: 30s
+    profile_path: "/var/log/vexdb/profile"

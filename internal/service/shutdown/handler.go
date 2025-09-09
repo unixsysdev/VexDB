@@ -604,11 +604,11 @@ func (h *ShutdownHandler) executeShutdownHooks() error {
 		
 		// Update metrics if enabled
 		if h.config.EnableMetrics && h.metrics != nil {
-			if result.Success {
-				h.metrics.ServiceErrors.WithLabelValues("shutdown", "success").Inc()
-			} else {
-				h.metrics.ServiceErrors.WithLabelValues("shutdown", "failure").Inc()
-			}
+            if result.Success {
+                h.metrics.ServiceErrors.Inc("shutdown", "success")
+            } else {
+                h.metrics.ServiceErrors.Inc("shutdown", "failure")
+            }
 		}
 		
 		// If critical hook failed, stop shutdown

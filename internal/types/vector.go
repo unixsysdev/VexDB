@@ -59,11 +59,11 @@ func NewVector(id string, data []float32, metadata map[string]interface{}) (*Vec
 	return vector, nil
 }
 
-// Validate validates the vector data
-func (v *Vector) Validate(config *VectorConfig) error {
-	if v == nil {
-		return errors.New("vector cannot be nil")
-	}
+// Validate validates the vector data with optional config
+func (v *Vector) ValidateWithConfig(config *VectorConfig) error {
+    if v == nil {
+        return errors.New("vector cannot be nil")
+    }
 	
 	if len(v.Data) == 0 {
 		return errors.New("vector data cannot be empty")
@@ -86,8 +86,11 @@ func (v *Vector) Validate(config *VectorConfig) error {
 		}
 	}
 	
-	return nil
+    return nil
 }
+
+// Validate validates the vector with default rules (no extra constraints)
+func (v *Vector) Validate() error { return v.ValidateWithConfig(nil) }
 
 // Normalize normalizes the vector to unit length
 func (v *Vector) Normalize() error {

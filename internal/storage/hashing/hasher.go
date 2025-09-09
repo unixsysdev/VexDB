@@ -1,18 +1,19 @@
 package hashing
 
 import (
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"hash/fnv"
-	"math"
-	"sync"
-	"time"
+    "encoding/binary"
+    "errors"
+    "fmt"
+    "hash/fnv"
+    "math"
+    "sync"
+    "time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+    "vexdb/internal/config"
+    "vexdb/internal/logging"
+    "vexdb/internal/metrics"
+    "vexdb/internal/types"
+    "go.uber.org/zap"
 )
 
 var (
@@ -177,12 +178,12 @@ func validateHasherConfig(cfg *HasherConfig) error {
 
 // HashVector computes a hash of the vector data
 func (h *Hasher) HashVector(vector *types.Vector) (uint64, error) {
-	if h.config.EnableValidation {
-		if err := vector.Validate(); err != nil {
-			h.metrics.Errors.Inc("hashing", "validation_failed")
-			return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
-		}
-	}
+    if h.config.EnableValidation {
+        if err := vector.Validate(); err != nil {
+            h.metrics.Errors.Inc("hashing", "validation_failed")
+            return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
+        }
+    }
 	
 	hash, err := h.hashVectorData(vector.Data)
 	if err != nil {

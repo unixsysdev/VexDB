@@ -36,9 +36,23 @@ type MetadataField struct {
 
 // MetadataFilter represents a filter for metadata queries
 type MetadataFilter struct {
-	Field    string      `json:"field" yaml:"field"`
-	Operator string      `json:"operator" yaml:"operator"` // "=", "!=", ">", "<", ">=", "<=", "in", "contains", "startswith", "endswith"
-	Value    interface{} `json:"value" yaml:"value"`
+    // Backward-compatible flexible structure used by validators and handlers
+    // When Conditions is non-nil, it contains either typed MetadataCondition
+    // or map[string]interface{} entries with keys: key, operator, value/values.
+    Conditions []interface{} `json:"conditions,omitempty" yaml:"conditions,omitempty"`
+
+    // Simple single-field filter (legacy)
+    Field    string      `json:"field,omitempty" yaml:"field,omitempty"`
+    Operator string      `json:"operator,omitempty" yaml:"operator,omitempty"` // "=", "!=", ">", "<", ">=", "<=", "in", "contains", "startswith", "endswith"
+    Value    interface{} `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+// MetadataCondition is a typed representation of a filter condition
+type MetadataCondition struct {
+    Key      string   `json:"key" yaml:"key"`
+    Operator string   `json:"operator" yaml:"operator"`
+    Value    string   `json:"value,omitempty" yaml:"value,omitempty"`
+    Values   []string `json:"values,omitempty" yaml:"values,omitempty"`
 }
 
 // MetadataQuery represents a complex metadata query

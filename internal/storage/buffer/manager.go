@@ -187,9 +187,9 @@ func (b *Buffer) Add(vector *types.Vector) error {
 	}
 	
 	// Validate vector
-	if err := vector.Validate(nil); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidVector, err)
-	}
+    if err := vector.ValidateWithConfig(nil); err != nil {
+        return fmt.Errorf("%w: %v", ErrInvalidVector, err)
+    }
 	
 	// Check if buffer is full
 	if b.shouldEvict() {
@@ -236,8 +236,8 @@ func (b *Buffer) Add(vector *types.Vector) error {
 	}
 	
 	// Update metrics
-	b.metrics.BufferOperations.WithLabelValues("add", "buffer").Inc()
-	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+    b.metrics.BufferOperations.Inc("add", "buffer")
+    b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
 }
@@ -253,8 +253,8 @@ func (b *Buffer) Get(vectorID string) (*types.Vector, error) {
 	
 	entry, exists := b.vectors[vectorID]
 	if !exists {
-		b.stats.MissCount++
-		b.metrics.BufferMisses.WithLabelValues("miss").Inc()
+    b.stats.MissCount++
+    b.metrics.BufferMisses.Inc("miss")
 		return nil, ErrVectorNotFound
 	}
 	
@@ -264,8 +264,8 @@ func (b *Buffer) Get(vectorID string) (*types.Vector, error) {
 	heap.Fix(b.accessOrder, entry.Index)
 	
 	// Update stats
-	b.stats.HitCount++
-	b.metrics.BufferHits.WithLabelValues("hit").Inc()
+    b.stats.HitCount++
+    b.metrics.BufferHits.Inc("hit")
 	
 	return entry.Vector, nil
 }
@@ -294,8 +294,8 @@ func (b *Buffer) Remove(vectorID string) error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.WithLabelValues("remove", "buffer").Inc()
-	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+    b.metrics.BufferOperations.Inc("remove", "buffer")
+    b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
 }
@@ -390,8 +390,8 @@ func (b *Buffer) evict() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.WithLabelValues("evict", "buffer").Inc()
-	b.metrics.BufferSize.Set(float64(len(b.vectors)))
+    b.metrics.BufferOperations.Inc("evict", "buffer")
+    b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
 }
@@ -605,8 +605,8 @@ func (b *Buffer) Clear() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.WithLabelValues("clear", "buffer").Inc()
-	b.metrics.BufferSize.Set(0)
+    b.metrics.BufferOperations.Inc("clear", "buffer")
+    b.metrics.BufferSize.Set(0)
 	
 	return nil
 }
@@ -627,9 +627,9 @@ func (b *Buffer) Validate() error {
 	
 	// Validate all vectors
 	for _, entry := range b.vectors {
-		if err := entry.Vector.Validate(nil); err != nil {
-			return fmt.Errorf("invalid vector %s: %w", entry.Vector.ID, err)
-		}
+        if err := entry.Vector.ValidateWithConfig(nil); err != nil {
+            return fmt.Errorf("invalid vector %s: %w", entry.Vector.ID, err)
+        }
 	}
 	
 	return nil

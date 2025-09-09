@@ -416,6 +416,9 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 			break
 		}
 	}
+
+	// suppress unused variable warning if not used elsewhere
+	_ = rngIndex
 	
 	if rng == nil {
 		return ErrRangeNotFound

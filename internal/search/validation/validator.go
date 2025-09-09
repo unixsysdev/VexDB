@@ -1,12 +1,12 @@
 package validation
 
 import (
-	"fmt"
-	"math"
-	"regexp"
-	"strings"
+    "fmt"
+    "math"
+    "regexp"
+    "strings"
 
-	"vexdb/internal/types"
+    "vexdb/internal/types"
 )
 
 // SearchRequestValidator validates search requests
@@ -88,74 +88,95 @@ func (v *SearchRequestValidator) validateK(k int) error {
 
 // validateMetadataFilter validates the metadata filter
 func (v *SearchRequestValidator) validateMetadataFilter(filter *types.MetadataFilter) error {
-	if filter == nil {
-		return nil
-	}
+    if filter == nil {
+        return nil
+    }
 
-	if len(filter.Conditions) > v.maxMetadataFilters {
-		return fmt.Errorf("metadata filter has %d conditions, maximum is %d", len(filter.Conditions), v.maxMetadataFilters)
-	}
+    // Support both typed and map-based conditions
+    if len(filter.Conditions) > v.maxMetadataFilters {
+        return fmt.Errorf("metadata filter has %d conditions, maximum is %d", len(filter.Conditions), v.maxMetadataFilters)
+    }
 
-	// Validate each condition
-	if filter != nil {
-		for i, condition := range filter.Conditions {
-			if err := v.validateMetadataCondition(condition); err != nil {
-				return fmt.Errorf("invalid metadata condition at index %d: %w", i, err)
-			}
-		}
-	}
+    for i, raw := range filter.Conditions {
+        if err := v.validateMetadataCondition(raw); err != nil {
+            return fmt.Errorf("invalid metadata condition at index %d: %w", i, err)
+        }
+    }
 
-	return nil
+    return nil
 }
 
 // validateMetadataCondition validates a single metadata condition
-func (v *SearchRequestValidator) validateMetadataCondition(condition interface{}) error {
-	if condition == nil {
-		return fmt.Errorf("metadata condition cannot be nil")
-	}
+func (v *SearchRequestValidator) validateMetadataCondition(raw interface{}) error {
+    if raw == nil {
+        return fmt.Errorf("metadata condition cannot be nil")
+    }
 
-	// Validate key
-	if strings.TrimSpace(condition.Key) == "" {
-		return fmt.Errorf("metadata condition key cannot be empty")
-	}
+    // Normalize into a typed condition
+    var key, op string
+    var value string
+    var values []string
 
-	if len(condition.Key) > 256 {
-		return fmt.Errorf("metadata condition key length %d exceeds maximum 256", len(condition.Key))
-	}
+    switch c := raw.(type) {
+    case *types.MetadataCondition:
+        key = c.Key
+        op = c.Operator
+        value = c.Value
+        values = c.Values
+    case map[string]interface{}:
+        if k, ok := c["key"].(string); ok { key = k }
+        if o, ok := c["operator"].(string); ok { op = o }
+        if vStr, ok := c["value"].(string); ok { value = vStr }
+        if vs, ok := c["values"].([]string); ok {
+            values = vs
+        } else if vsi, ok := c["values"].([]interface{}); ok {
+            for _, it := range vsi {
+                if s, ok := it.(string); ok { values = append(values, s) }
+            }
+        }
+    default:
+        return fmt.Errorf("unsupported condition type %T", raw)
+    }
 
-	// Validate key format (alphanumeric, underscore, dot, hyphen)
-	keyRegex := regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
-	if !keyRegex.MatchString(condition.Key) {
-		return fmt.Errorf("metadata condition key contains invalid characters")
-	}
+    // Validate key
+    if strings.TrimSpace(key) == "" {
+        return fmt.Errorf("metadata condition key cannot be empty")
+    }
+    if len(key) > 256 {
+        return fmt.Errorf("metadata condition key length %d exceeds maximum 256", len(key))
+    }
+    keyRegex := regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+    if !keyRegex.MatchString(key) {
+        return fmt.Errorf("metadata condition key contains invalid characters")
+    }
 
-	// Validate operator
-	validOperators := []string{"=", "!=", ">", "<", ">=", "<=", "in", "not_in", "contains", "not_contains"}
-	if !contains(validOperators, condition.Operator) {
-		return fmt.Errorf("metadata condition operator %s is not valid", condition.Operator)
-	}
+    // Validate operator
+    validOperators := []string{"=", "!=", ">", "<", ">=", "<=", "in", "not_in", "contains", "not_contains"}
+    if !contains(validOperators, op) {
+        return fmt.Errorf("metadata condition operator %s is not valid", op)
+    }
 
-	// Validate value based on operator
-	switch condition.Operator {
-	case "in", "not_in":
-		if len(condition.Values) == 0 {
-			return fmt.Errorf("metadata condition with operator %s requires values", condition.Operator)
-		}
-		for _, value := range condition.Values {
-			if err := v.validateMetadataValue(value); err != nil {
-				return fmt.Errorf("invalid metadata value: %w", err)
-			}
-		}
-	default:
-		if condition.Value == "" {
-			return fmt.Errorf("metadata condition with operator %s requires a value", condition.Operator)
-		}
-		if err := v.validateMetadataValue(condition.Value); err != nil {
-			return fmt.Errorf("invalid metadata value: %w", err)
-		}
-	}
+    // Validate value(s)
+    switch op {
+    case "in", "not_in":
+        if len(values) == 0 {
+            return fmt.Errorf("metadata condition with operator %s requires values", op)
+        }
+        for _, val := range values {
+            if err := v.validateMetadataValue(val); err != nil {
+                return fmt.Errorf("invalid metadata value: %w", err)
+            }
+        }
+    default:
+        if value == "" {
+            return fmt.Errorf("metadata condition with operator %s requires a value", op)
+        }
+        if err := v.validateMetadataValue(value); err != nil {
+            return fmt.Errorf("invalid metadata value: %w", err)
+        }
+    }
 
-	return nil
+    return nil
 }
 
 // validateMetadataValue validates a metadata value

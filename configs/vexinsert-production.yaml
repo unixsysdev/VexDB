@@ -1,0 +1,457 @@
+# VexDB Insert Service Production Configuration
+# This configuration is optimized for production environments
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  max_header_bytes: 1048576  # 1MB
+  shutdown_timeout: 30s
+
+# Logging configuration
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, console
+  output: "stdout"  # stdout, stderr, or file path
+  file:
+    path: "/var/log/vexdb/vexinsert.log"
+    max_size: 100  # MB
+    max_backups: 10
+    max_age: 30  # days
+    compress: true
+  encoding: "json"
+  encoder_config:
+    message_key: "message"
+    level_key: "level"
+    time_key: "timestamp"
+    name_key: "logger"
+    caller_key: "caller"
+    stacktrace_key: "stacktrace"
+    line_ending: "\n"
+    time_format: "RFC3339"
+
+# Metrics configuration
+metrics:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9091
+  path: "/metrics"
+  namespace: "vexdb"
+  subsystem: "insert"
+  buckets: [0.001, 0.01, 0.1, 1.0, 10.0, 60.0]
+  enable_profiling: false
+  profiling_port: 6061
+
+# Tracing configuration
+tracing:
+  enabled: true
+  service_name: "vexinsert"
+  endpoint: "http://jaeger:14268/api/traces"
+  sampling_rate: 0.1  # 10% sampling in production
+  batch_size: 512
+  timeout: 30s
+  max_payload: 4096
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  collect_interval: 15s
+  health_check_interval: 30s
+  enable_profiling: false
+  profiling_port: 6062
+
+# Dashboard configuration
+dashboard:
+  enabled: true
+  host: "0.0.0.0"
+  port: 9092
+  base_path: "/"
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  enable_profiling: false
+  profiling_path: "/debug/pprof"
+  enable_pprof: false
+  pprof_path: "/debug/pprof"
+  enable_metrics: true
+  metrics_path: "/metrics"
+  enable_health: true
+  health_path: "/health"
+  enable_debug: false
+  debug_path: "/debug"
+
+# Cluster configuration
+cluster:
+  name: "vexdb-cluster"
+  node_id: ""  # Auto-generated if empty
+  data_dir: "/var/lib/vexdb/data"
+  wal_dir: "/var/lib/vexdb/wal"
+  snapshot_dir: "/var/lib/vexdb/snapshots"
+  join: []  # List of existing nodes to join
+  bootstrap_expect: 3  # Expected number of nodes in cluster
+  retry_join:
+    enabled: true
+    interval: 30s
+    max_attempts: 10
+  gossip:
+    enabled: true
+    port: 7946
+    bind_addr: "0.0.0.0"
+    advertise_addr: ""  # Auto-detected if empty
+  serf:
+    enabled: true
+    port: 7947
+    bind_addr: "0.0.0.0"
+    advertise_addr: ""  # Auto-detected if empty
+
+# Replication configuration
+replication:
+  enabled: true
+  mode: "async"  # sync, async
+  factor: 2  # Number of replicas
+  timeout: 30s
+  retry:
+    enabled: true
+    max_attempts: 5
+    backoff: "exponential"
+    initial_delay: 100ms
+    max_delay: 5s
+    multiplier: 2.0
+    jitter: 0.1
+  batch:
+    enabled: true
+    size: 1000  # Number of operations per batch
+    timeout: 1s  # Maximum time to wait for batch
+    max_memory: 10485760  # 10MB
+  consistency:
+    level: "eventual"  # strong, eventual
+    read_quorum: 1  # Minimum number of successful reads
+    write_quorum: 2  # Minimum number of successful writes
+
+# Protocol adapters configuration
+protocols:
+  # HTTP REST API
+  http:
+    enabled: true
+    port: 8080
+    host: "0.0.0.0"
+    base_path: "/api/v1"
+    read_timeout: 30s
+    write_timeout: 30s
+    idle_timeout: 60s
+    max_header_bytes: 1048576  # 1MB
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexinsert.crt"
+      key_file: "/etc/vexdb/certs/vexinsert.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+      cipher_suites: []
+      prefer_server_cipher_suites: true
+    cors:
+      enabled: true
+      allowed_origins: ["*"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed_headers: ["*"]
+      exposed_headers: ["*"]
+      allow_credentials: true
+      max_age: 86400  # 24 hours
+    compression:
+      enabled: true
+      level: 6  # 1-9, where 9 is best compression
+    rate_limit:
+      enabled: true
+      requests_per_second: 1000
+      burst: 100
+      by_ip: true
+      by_user: false
+      by_api_key: true
+
+  # WebSocket API
+  websocket:
+    enabled: true
+    port: 8081
+    host: "0.0.0.0"
+    path: "/ws"
+    read_buffer_size: 4096
+    write_buffer_size: 4096
+    handshake_timeout: 30s
+    write_timeout: 30s
+    pong_timeout: 60s
+    ping_interval: 30s
+    max_message_size: 10485760  # 10MB
+    enable_compression: true
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexinsert.crt"
+      key_file: "/etc/vexdb/certs/vexinsert.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+    origins: ["*"]
+    rate_limit:
+      enabled: true
+      connections_per_ip: 100
+      messages_per_second: 1000
+      by_ip: true
+      by_user: false
+      by_api_key: true
+
+  # gRPC API
+  grpc:
+    enabled: true
+    port: 9093
+    host: "0.0.0.0"
+    max_message_size: 4194304  # 4MB
+    max_concurrent_streams: 1000
+    connection_timeout: 30s
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexinsert.crt"
+      key_file: "/etc/vexdb/certs/vexinsert.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+    keepalive:
+      enabled: true
+      time: 30s
+      timeout: 5s
+      permit_without_stream: false
+    reflection: false
+    interceptors:
+      logging: true
+      metrics: true
+      tracing: true
+      recovery: true
+      validation: true
+      rate_limit:
+        enabled: true
+        requests_per_second: 1000
+        burst: 100
+        by_ip: true
+        by_user: false
+        by_api_key: true
+
+  # Redis protocol
+  redis:
+    enabled: true
+    port: 6379
+    host: "0.0.0.0"
+    max_clients: 10000
+    timeout: 300s
+    tcp_keepalive: 300s
+    tls:
+      enabled: true
+      cert_file: "/etc/vexdb/certs/vexinsert.crt"
+      key_file: "/etc/vexdb/certs/vexinsert.key"
+      ca_file: "/etc/vexdb/certs/ca.crt"
+      client_auth: false
+      min_version: "1.2"
+      max_version: "1.3"
+    auth:
+      enabled: true
+      password: ""  # Set to secure password
+    databases: 16
+    max_memory: "2gb"
+    max_memory_policy: "allkeys-lru"
+    save:
+      - "900 1"
+      - "300 10"
+      - "60 10000"
+    appendonly: true
+    appendfilename: "appendonly.aof"
+    appendfsync: "everysec"
+    no_appendfsync_on_rewrite: false
+    auto_aof_rewrite_percentage: 100
+    auto_aof_rewrite_min_size: "64mb"
+    aof_load_truncated: true
+    aof_rewrite_incremental_fsync: true
+    rdb_compression: true
+    rdb_checksum: true
+    stop_writes_on_bgsave_error: true
+    rdb_save_in_background: true
+    aof_rewrite_in_background: true
+    lua_time_limit: 5000
+    cluster_enabled: false
+    cluster_config_file: "nodes.conf"
+    cluster_node_timeout: 5000
+    cluster_slave_validity_factor: 10
+    cluster_migration_barrier: 1
+    cluster_require_full_coverage: true
+    slowlog_log_slower_than: 10000
+    slowlog_max_len: 128
+    latency_monitor_threshold: 100
+    notify_keyspace_events: ""
+    hash_max_ziplist_entries: 512
+    hash_max_ziplist_value: 64
+    list_max_ziplist_size: -2
+    list_compress_depth: 0
+    set_max_intset_entries: 512
+    zset_max_ziplist_entries: 128
+    zset_max_ziplist_value: 64
+    hll_sparse_max_bytes: 3000
+    activerehashing: yes
+    client_output_buffer_limit:
+      normal: "0 0 0"
+      slave: "256mb 64mb 60"
+      pubsub: "32mb 8mb 60"
+    hz: 10
+    aof_rewrite_incremental_fsync: yes
+    rate_limit:
+      enabled: true
+      commands_per_second: 10000
+      by_ip: true
+      by_user: false
+      by_api_key: true
+
+# Authentication configuration
+auth:
+  enabled: true
+  type: "api_key"  # none, basic, bearer, api_key
+  api_keys: []  # List of valid API keys
+  basic_auth:
+    users: []  # List of username/password pairs
+  bearer_auth:
+    tokens: []  # List of valid bearer tokens
+  jwt:
+    enabled: false
+    secret: ""  # JWT secret key
+    algorithm: "HS256"
+    expiration: 24h
+    issuer: "vexdb"
+    audience: "vexdb-clients"
+  rate_limit:
+    enabled: true
+    requests_per_second: 1000
+    burst: 100
+    by_ip: true
+    by_user: false
+    by_api_key: true
+
+# Buffer configuration
+buffer:
+  enabled: true
+  size: 104857600  # 100MB
+  flush_interval: 1s
+  max_batch_size: 1000
+  compression:
+    enabled: true
+    algorithm: "lz4"
+    level: 6
+  persistence:
+    enabled: true
+    path: "/var/lib/vexdb/buffer"
+    sync_interval: 5s
+    max_file_size: 104857600  # 100MB
+    max_files: 10
+
+# Validation configuration
+validation:
+  enabled: true
+  strict_mode: true
+  max_vector_dimension: 10000
+  max_metadata_size: 1048576  # 1MB
+  max_metadata_keys: 100
+  allowed_metadata_types: ["string", "number", "boolean", "array"]
+  vector_validation:
+    enabled: true
+    normalize: true
+    check_dimension: true
+    check_values: true
+    min_value: -1.0
+    max_value: 1.0
+
+# Circuit breaker configuration
+circuit_breaker:
+  enabled: true
+  timeout: 30s
+  max_concurrent_requests: 1000
+  error_threshold_percentage: 50
+  bulkhead:
+    enabled: true
+    max_concurrent_calls: 100
+    max_wait_duration: 1s
+  retry:
+    enabled: true
+    max_attempts: 3
+    wait_duration: 100ms
+    backoff_policy: "exponential"
+    retryable_status_codes: [408, 429, 500, 502, 503, 504]
+    retryable_exceptions: []
+
+# Health check configuration
+health:
+  enabled: true
+  path: "/health"
+  detailed_path: "/health/detailed"
+  check_interval: 30s
+  timeout: 10s
+  checks:
+    - name: "storage"
+      type: "storage"
+      enabled: true
+      timeout: 5s
+    - name: "cluster"
+      type: "cluster"
+      enabled: true
+      timeout: 5s
+    - name: "replication"
+      type: "replication"
+      enabled: true
+      timeout: 5s
+    - name: "memory"
+      type: "memory"
+      enabled: true
+      timeout: 2s
+      threshold: 0.9  # 90% memory usage threshold
+
+# Performance configuration
+performance:
+  go_max_procs: 0  # 0 means use all available CPUs
+  gc_percent: 100
+  memory_limit: "4gb"
+  cpu_profile: false
+  memory_profile: false
+  block_profile: false
+  mutex_profile: false
+  trace_profile: false
+  profile_duration: 30s
+  profile_path: "/var/log/vexdb/profile"
+
+# Security configuration
+security:
+  enabled: true
+  tls:
+    enabled: true
+    cert_file: "/etc/vexdb/certs/vexinsert.crt"
+    key_file: "/etc/vexdb/certs/vexinsert.key"
+    ca_file: "/etc/vexdb/certs/ca.crt"
+    client_auth: false
+    min_version: "1.2"
+    max_version: "1.3"
+    cipher_suites: []
+    prefer_server_cipher_suites: true
+  encryption:
+    enabled: false
+    algorithm: "aes-256-gcm"
+    key_file: "/etc/vexdb/encryption.key"
+  audit:
+    enabled: true
+    log_file: "/var/log/vexdb/audit.log"
+    max_size: 100  # MB
+    max_backups: 10
+    max_age: 30  # days
+    compress: true
+    events:
+      - "authentication"
+      - "authorization"
+      - "data_access"
+      - "data_modification"
+      - "system_events"

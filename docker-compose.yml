@@ -1,0 +1,256 @@
+version: '3.8'
+
+services:
+  # VexDB Insert Service
+  vexinsert:
+    build:
+      context: .
+      dockerfile: cmd/vexinsert/Dockerfile
+    container_name: vexinsert
+    restart: unless-stopped
+    ports:
+      - "8080:8080"    # HTTP API
+      - "9091:9091"    # Metrics
+      - "9092:9092"    # Dashboard
+      - "8081:8081"    # WebSocket
+      - "9093:9093"    # gRPC
+      - "6379:6379"    # Redis protocol
+      - "7946:7946"    # Gossip
+      - "7947:7947"    # Serf
+    volumes:
+      - vexinsert_data:/var/lib/vexdb/data
+      - vexinsert_wal:/var/lib/vexdb/wal
+      - vexinsert_snapshots:/var/lib/vexdb/snapshots
+      - vexinsert_buffer:/var/lib/vexdb/buffer
+      - vexinsert_logs:/var/log/vexdb
+      - ./configs/vexinsert-production.yaml:/etc/vexdb/config.yaml
+      - ./certs:/etc/vexdb/certs
+    environment:
+      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - GIN_MODE=release
+    networks:
+      - vexdb_network
+    depends_on:
+      - vexstorage
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # VexDB Storage Service
+  vexstorage:
+    build:
+      context: .
+      dockerfile: cmd/vexstorage/Dockerfile
+    container_name: vexstorage
+    restart: unless-stopped
+    ports:
+      - "8082:8082"    # HTTP API
+      - "9094:9094"    # Metrics
+      - "9095:9095"    # Dashboard
+      - "9096:9096"    # gRPC
+      - "7948:7948"    # Gossip
+      - "7949:7949"    # Serf
+    volumes:
+      - vexstorage_data:/var/lib/vexdb/data
+      - vexstorage_wal:/var/lib/vexdb/wal
+      - vexstorage_snapshots:/var/lib/vexdb/snapshots
+      - vexstorage_storage:/var/lib/vexdb/storage
+      - vexstorage_temp:/var/lib/vexdb/temp
+      - vexstorage_manifest:/var/lib/vexdb/manifest
+      - vexstorage_backups:/var/lib/vexdb/backups
+      - vexstorage_logs:/var/log/vexdb
+      - ./configs/vexstorage-production.yaml:/etc/vexdb/config.yaml
+      - ./certs:/etc/vexdb/certs
+    environment:
+      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - GIN_MODE=release
+    networks:
+      - vexdb_network
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # VexDB Search Service
+  vexsearch:
+    build:
+      context: .
+      dockerfile: cmd/vexsearch/Dockerfile
+    container_name: vexsearch
+    restart: unless-stopped
+    ports:
+      - "8083:8083"    # HTTP API
+      - "9097:9097"    # Metrics
+      - "9098:9098"    # Dashboard
+      - "9099:9099"    # gRPC
+      - "7950:7950"    # Gossip
+      - "7951:7951"    # Serf
+    volumes:
+      - vexsearch_data:/var/lib/vexdb/data
+      - vexsearch_wal:/var/lib/vexdb/wal
+      - vexsearch_snapshots:/var/lib/vexdb/snapshots
+      - vexsearch_cache:/var/lib/vexdb/cache
+      - vexsearch_logs:/var/log/vexdb
+      - ./configs/vexsearch-production.yaml:/etc/vexdb/config.yaml
+      - ./certs:/etc/vexdb/certs
+    environment:
+      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - GIN_MODE=release
+    networks:
+      - vexdb_network
+    depends_on:
+      - vexstorage
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - vexdb_network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./configs/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - vexdb_network
+    depends_on:
+      - prometheus
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP collector
+      - "14250:14250"  # gRPC collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - vexdb_network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - vexdb_network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./configs/nginx/conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
+    networks:
+      - vexdb_network
+    depends_on:
+      - vexinsert
+      - vexstorage
+      - vexsearch
+
+volumes:
+  # VexDB Insert Service volumes
+  vexinsert_data:
+    driver: local
+  vexinsert_wal:
+    driver: local
+  vexinsert_snapshots:
+    driver: local
+  vexinsert_buffer:
+    driver: local
+  vexinsert_logs:
+    driver: local
+
+  # VexDB Storage Service volumes
+  vexstorage_data:
+    driver: local
+  vexstorage_wal:
+    driver: local
+  vexstorage_snapshots:
+    driver: local
+  vexstorage_storage:
+    driver: local
+  vexstorage_temp:
+    driver: local
+  vexstorage_manifest:
+    driver: local
+  vexstorage_backups:
+    driver: local
+  vexstorage_logs:
+    driver: local
+
+  # VexDB Search Service volumes
+  vexsearch_data:
+    driver: local
+  vexsearch_wal:
+    driver: local
+  vexsearch_snapshots:
+    driver: local
+  vexsearch_cache:
+    driver: local
+  vexsearch_logs:
+    driver: local
+
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  vexdb_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

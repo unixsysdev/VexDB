@@ -1,21 +1,22 @@
 package compression
 
 import (
-	"bytes"
-	"compress/flate"
-	"compress/gzip"
-	"compress/lzw"
-	"compress/zlib"
+    "bytes"
+    "compress/flate"
+    "compress/gzip"
+    "compress/lzw"
+    "compress/zlib"
 	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 
-	"github.com/pierrec/lz4/v4"
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
+    "github.com/pierrec/lz4/v4"
+    "vexdb/internal/config"
+    "vexdb/internal/logging"
+    "vexdb/internal/metrics"
+    "go.uber.org/zap"
 )
 
 var (
@@ -79,21 +80,21 @@ type CompressionStats struct {
 
 // Compressor represents a compression engine
 type Compressor struct {
-	config      *CompressionConfig
-	stats       *CompressionStats
-	mu          sync.RWMutex
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
-	pool        *sync.Pool
+    config      *CompressionConfig
+    stats       *CompressionStats
+    mu          sync.RWMutex
+    logger      logging.Logger
+    metrics     *metrics.StorageMetrics
+    pool        *sync.Pool
 }
 
 // NewCompressor creates a new compressor
-func NewCompressor(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Compressor, error) {
-	compressionConfig := DefaultCompressionConfig()
-	
-	if cfg != nil {
-		if compressionCfg, ok := cfg.Get("compression"); ok {
-			if cfgMap, ok := compressionCfg.(map[string]interface{}); ok {
+func NewCompressor(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Compressor, error) {
+    compressionConfig := DefaultCompressionConfig()
+    
+    if cfg != nil {
+        if compressionCfg, ok := cfg.Get("compression"); ok {
+            if cfgMap, ok := compressionCfg.(map[string]interface{}); ok {
 				if algorithm, ok := cfgMap["algorithm"].(string); ok {
 					compressionConfig.Algorithm = CompressionAlgorithm(algorithm)
 				}
@@ -130,12 +131,12 @@ func NewCompressor(cfg *config.Config, logger logging.Logger, metrics *metrics.S
 		},
 	}
 	
-	compressor.logger.Info("Created compressor",
-		"algorithm", compressionConfig.Algorithm,
-		"level", compressionConfig.Level,
-		"enabled", compressionConfig.Enabled,
-		"threshold", compressionConfig.Threshold,
-		"max_size", compressionConfig.MaxSize)
+    compressor.logger.Info("Created compressor",
+        zap.String("algorithm", string(compressionConfig.Algorithm)),
+        zap.Int("level", int(compressionConfig.Level)),
+        zap.Bool("enabled", compressionConfig.Enabled),
+        zap.Int("threshold", compressionConfig.Threshold),
+        zap.Int("max_size", compressionConfig.MaxSize))
 	
 	return compressor, nil
 }
@@ -212,8 +213,8 @@ func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	}
 	
 	// Update metrics
-	c.metrics.CompressionOperations.Inc("compression", "compress")
-	c.metrics.CompressionRatio.Set(c.stats.CompressionRatio)
+    c.metrics.CompressionOperations.Inc("compression", "compress")
+    c.metrics.CompressionRatio.Set(c.stats.CompressionRatio)
 	
 	return compressed, nil
 }
@@ -369,7 +370,7 @@ func (c *Compressor) Decompress(data []byte) ([]byte, error) {
 	c.stats.TotalDecompressions++
 	
 	// Update metrics
-	c.metrics.CompressionOperations.Inc("compression", "decompress")
+    c.metrics.CompressionOperations.Inc("compression", "decompress")
 	
 	return decompressed, nil
 }

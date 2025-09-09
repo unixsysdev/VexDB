@@ -1,8 +1,9 @@
 package auth
 
 import (
-	"sync"
-	"time"
+    "context"
+    "sync"
+    "time"
 )
 
 // RateLimiter implements a token bucket rate limiter

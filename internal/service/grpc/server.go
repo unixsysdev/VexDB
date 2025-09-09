@@ -1,12 +1,12 @@
 package grpc
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"net"
-	"sync"
-	"time"
+    "context"
+    "errors"
+    "fmt"
+    "net"
+    "sync"
+    "time"
 
 	"go.uber.org/zap"
 	"vexdb/internal/config"
@@ -583,16 +583,16 @@ func (s *Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckReque
 	}
 	
 	// Check service health through health checker
-	if s.health != nil {
-		if s.health.CheckHealth(ctx, false) == nil {
-			return &grpc_health_v1.HealthCheckResponse{
-				Status: grpc_health_v1.HealthCheckResponse_SERVING,
-			}, nil
-		}
-		return &grpc_health_v1.HealthCheckResponse{
-			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
-		}, nil
-	}
+    if s.health != nil {
+        if status, err := s.health.CheckHealth(ctx, false); err == nil && status != nil && status.Status != "" {
+            return &grpc_health_v1.HealthCheckResponse{
+                Status: grpc_health_v1.HealthCheckResponse_SERVING,
+            }, nil
+        }
+        return &grpc_health_v1.HealthCheckResponse{
+            Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+        }, nil
+    }
 	
 	// Default to serving if no health checker
 	return &grpc_health_v1.HealthCheckResponse{
@@ -609,6 +609,18 @@ func (s *Server) Watch(req *grpc_health_v1.HealthCheckRequest, stream grpc_healt
 	}
 	
 	return stream.Send(resp)
+}
+
+// List implements the HealthServer List method introduced in newer grpc-health versions.
+func (s *Server) List(ctx context.Context, req *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
+    s.mu.RLock()
+    defer s.mu.RUnlock()
+
+    resp := &grpc_health_v1.HealthListResponse{Statuses: make(map[string]*grpc_health_v1.HealthCheckResponse)}
+    for name := range s.services {
+        resp.Statuses[name] = &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}
+    }
+    return resp, nil
 }
 
 // Interceptor implementations
@@ -646,14 +658,13 @@ func (s *Server) metricsInterceptor(ctx context.Context, req interface{}, info *
 	duration := time.Since(start)
 	
 	// Update metrics
-	if s.metrics != nil {
-		s.metrics.GRPCRequests.WithLabelValues("grpc").Inc()
-		s.metrics.GRPCLatency.Observe(duration.Seconds())
-		
-		if err != nil {
-			s.metrics.GRPCErrors.WithLabelValues("grpc").Inc()
-		}
-	}
+    if s.metrics != nil {
+        s.metrics.GRPCRequests.Inc("grpc")
+        s.metrics.GRPCLatency.Observe(duration.Seconds())
+        if err != nil {
+            s.metrics.GRPCErrors.Inc("grpc")
+        }
+    }
 	
 	return resp, err
 }
