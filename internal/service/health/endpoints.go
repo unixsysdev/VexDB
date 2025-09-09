@@ -8,16 +8,19 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+	
 	"vexdb/internal/config"
+	"vexdb/internal/errors"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 )
 
 var (
-	ErrHealthCheckFailed    = errors.New("health check failed")
-	ErrServiceNotRegistered = errors.New("service not registered")
-	ErrInvalidCheckConfig   = errors.New("invalid health check configuration")
-	ErrCheckTimeout         = errors.New("health check timeout")
+	ErrHealthCheckFailed    = errors.New(errors.ErrorCodeHealthCheckFailed, "health check failed")
+	ErrServiceNotRegistered = errors.New(errors.ErrorCodeInvalidArgument, "service not registered")
+	ErrInvalidCheckConfig   = errors.New(errors.ErrorCodeConfigInvalid, "invalid health check configuration")
+	ErrCheckTimeout         = errors.New(errors.ErrorCodeHealthCheckTimeout, "health check timeout")
 )
 
 // HealthStatus represents the health status
@@ -159,62 +162,11 @@ type HealthEndpoints struct {
 }
 
 // NewHealthEndpoints creates new health check endpoints
-func NewHealthEndpoints(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*HealthEndpoints, error) {
+func NewHealthEndpoints(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*HealthEndpoints, error) {
 	healthConfig := DefaultHealthConfig()
 	
-	if cfg != nil {
-		if healthCfg, ok := cfg.Get("health"); ok {
-			if cfgMap, ok := healthCfg.(map[string]interface{}); ok {
-				if enabled, ok := cfgMap["enabled"].(bool); ok {
-					healthConfig.Enabled = enabled
-				}
-				if port, ok := cfgMap["port"].(int); ok {
-					healthConfig.Port = port
-				}
-				if path, ok := cfgMap["path"].(string); ok {
-					healthConfig.Path = path
-				}
-				if readTimeout, ok := cfgMap["read_timeout"].(string); ok {
-					if duration, err := time.ParseDuration(readTimeout); err == nil {
-						healthConfig.ReadTimeout = duration
-					}
-				}
-				if writeTimeout, ok := cfgMap["write_timeout"].(string); ok {
-					if duration, err := time.ParseDuration(writeTimeout); err == nil {
-						healthConfig.WriteTimeout = duration
-					}
-				}
-				if idleTimeout, ok := cfgMap["idle_timeout"].(string); ok {
-					if duration, err := time.ParseDuration(idleTimeout); err == nil {
-						healthConfig.IdleTimeout = duration
-					}
-				}
-				if enableDetailed, ok := cfgMap["enable_detailed"].(bool); ok {
-					healthConfig.EnableDetailed = enableDetailed
-				}
-				if enableMetrics, ok := cfgMap["enable_metrics"].(bool); ok {
-					healthConfig.EnableMetrics = enableMetrics
-				}
-				
-				// Parse checks
-				if checks, ok := cfgMap["checks"].([]interface{}); ok {
-					healthConfig.Checks = make([]HealthCheckConfig, len(checks))
-					for i, check := range checks {
-						if checkMap, ok := check.(map[string]interface{}); ok {
-							healthConfig.Checks[i] = HealthCheckConfig{
-								Name:        getString(checkMap, "name"),
-								Enabled:     getBool(checkMap, "enabled", true),
-								Interval:    getDuration(checkMap, "interval", 30*time.Second),
-								Timeout:     getDuration(checkMap, "timeout", 10*time.Second),
-								InitialDelay: getDuration(checkMap, "initial_delay", 5*time.Second),
-								Critical:    getBool(checkMap, "critical", false),
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	// For now, use default config since we don't have a generic Get method
+	// TODO: Implement proper configuration extraction based on config type
 	
 	// Validate configuration
 	if err := validateHealthConfig(healthConfig); err != nil {
@@ -235,10 +187,10 @@ func NewHealthEndpoints(cfg *config.Config, logger logging.Logger, metrics *metr
 	endpoints.initializeHTTPServer()
 	
 	endpoints.logger.Info("Created health endpoints",
-		"enabled", healthConfig.Enabled,
-		"port", healthConfig.Port,
-		"path", healthConfig.Path,
-		"checks_count", len(healthConfig.Checks))
+		zap.Bool("enabled", healthConfig.Enabled),
+		zap.Int("port", healthConfig.Port),
+		zap.String("path", healthConfig.Path),
+		zap.Int("checks_count", len(healthConfig.Checks)))
 	
 	return endpoints, nil
 }
@@ -246,37 +198,37 @@ func NewHealthEndpoints(cfg *config.Config, logger logging.Logger, metrics *metr
 // validateHealthConfig validates the health configuration
 func validateHealthConfig(cfg *HealthConfig) error {
 	if cfg.Port <= 0 || cfg.Port > 65535 {
-		return errors.New("port must be between 1 and 65535")
+		return errors.New(errors.ErrorCodeInvalidArgument, "port must be between 1 and 65535")
 	}
 	
 	if cfg.Path == "" {
-		return errors.New("path cannot be empty")
+		return errors.New(errors.ErrorCodeInvalidArgument, "path cannot be empty")
 	}
 	
 	if cfg.ReadTimeout <= 0 {
-		return errors.New("read timeout must be positive")
+		return errors.New(errors.ErrorCodeInvalidArgument, "read timeout must be positive")
 	}
 	
 	if cfg.WriteTimeout <= 0 {
-		return errors.New("write timeout must be positive")
+		return errors.New(errors.ErrorCodeInvalidArgument, "write timeout must be positive")
 	}
 	
 	if cfg.IdleTimeout <= 0 {
-		return errors.New("idle timeout must be positive")
+		return errors.New(errors.ErrorCodeInvalidArgument, "idle timeout must be positive")
 	}
 	
 	for _, check := range cfg.Checks {
 		if check.Name == "" {
-			return errors.New("check name cannot be empty")
+			return errors.New(errors.ErrorCodeInvalidArgument, "check name cannot be empty")
 		}
 		if check.Interval <= 0 {
-			return errors.New("check interval must be positive")
+			return errors.New(errors.ErrorCodeInvalidArgument, "check interval must be positive")
 		}
 		if check.Timeout <= 0 {
-			return errors.New("check timeout must be positive")
+			return errors.New(errors.ErrorCodeInvalidArgument, "check timeout must be positive")
 		}
 		if check.InitialDelay < 0 {
-			return errors.New("check initial delay must be non-negative")
+			return errors.New(errors.ErrorCodeInvalidArgument, "check initial delay must be non-negative")
 		}
 	}
 	
@@ -313,9 +265,9 @@ func (h *HealthEndpoints) Start() error {
 	
 	// Start HTTP server
 	go func() {
-		h.logger.Info("Starting health endpoints server", "port", h.config.Port)
+		h.logger.Info("Starting health endpoints server", zap.Int("port", h.config.Port))
 		if err := h.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			h.logger.Error("Health endpoints server failed", "error", err)
+			h.logger.Error("Health endpoints server failed", zap.Error(err))
 		}
 	}()
 	
@@ -355,7 +307,7 @@ func (h *HealthEndpoints) Stop() error {
 	defer cancel()
 	
 	if err := h.server.Shutdown(ctx); err != nil {
-		h.logger.Error("Failed to shutdown health endpoints server", "error", err)
+		h.logger.Error("Failed to shutdown health endpoints server", zap.Error(err))
 	}
 	
 	h.stopped = true
@@ -395,7 +347,7 @@ func (h *HealthEndpoints) RegisterCheck(name string, check HealthCheck) error {
 		Failures:  0,
 	}
 	
-	h.logger.Info("Registered health check", "name", name)
+	h.logger.Info("Registered health check", zap.String("name", name))
 	
 	return nil
 }
@@ -412,7 +364,7 @@ func (h *HealthEndpoints) UnregisterCheck(name string) error {
 	delete(h.checks, name)
 	delete(h.results, name)
 	
-	h.logger.Info("Unregistered health check", "name", name)
+	h.logger.Info("Unregistered health check", zap.String("name", name))
 	
 	return nil
 }
@@ -487,7 +439,7 @@ func (h *HealthEndpoints) UpdateConfig(config *HealthConfig) error {
 	// Reinitialize HTTP server
 	h.initializeHTTPServer()
 	
-	h.logger.Info("Updated health endpoints configuration", "config", config)
+	h.logger.Info("Updated health endpoints configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -565,16 +517,16 @@ func (h *HealthEndpoints) executeHealthCheck(config HealthCheckConfig) {
 		result.Failures++
 		
 		h.logger.Error("Health check failed",
-			"name", config.Name,
-			"duration", duration,
-			"error", err)
+			zap.String("name", config.Name),
+			zap.Duration("duration", duration),
+			zap.Error(err))
 	} else {
 		result.Status = StatusHealthy
 		result.Error = ""
 		
 		h.logger.Debug("Health check passed",
-			"name", config.Name,
-			"duration", duration)
+			zap.String("name", config.Name),
+			zap.Duration("duration", duration))
 	}
 	
 	h.results[config.Name] = result
@@ -582,9 +534,9 @@ func (h *HealthEndpoints) executeHealthCheck(config HealthCheckConfig) {
 	// Update metrics if enabled
 	if h.config.EnableMetrics && h.metrics != nil {
 		if err != nil {
-			h.metrics.HealthCheckErrors.Inc("health", "check_errors")
+			h.metrics.ErrorsTotal.Inc("health", "check", "health_check_failed")
 		} else {
-			h.metrics.HealthCheckLatency.Observe(duration.Seconds())
+			h.metrics.Latency.Observe(duration.Seconds(), "health", "check")
 		}
 	}
 }

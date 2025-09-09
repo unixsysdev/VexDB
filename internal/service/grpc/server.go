@@ -2,21 +2,23 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/health"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/keepalive"
 )
 
 var (
@@ -105,7 +107,7 @@ type Server struct {
 }
 
 // NewServer creates a new gRPC server
-func NewServer(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics, health health.HealthChecker) (*Server, error) {
+func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics, health health.HealthChecker) (*Server, error) {
 	serverConfig := DefaultServerConfig()
 	
 	if cfg != nil {
@@ -212,11 +214,11 @@ func NewServer(cfg *config.Config, logger logging.Logger, metrics *metrics.Servi
 	}
 	
 	server.logger.Info("Created gRPC server",
-		"host", serverConfig.Host,
-		"port", serverConfig.Port,
-		"enable_reflection", serverConfig.EnableReflection,
-		"enable_health_check", serverConfig.EnableHealthCheck,
-		"enable_tls", serverConfig.EnableTLS)
+		zap.String("host", serverConfig.Host),
+		zap.Int("port", serverConfig.Port),
+		zap.Bool("enable_reflection", serverConfig.EnableReflection),
+		zap.Bool("enable_health_check", serverConfig.EnableHealthCheck),
+		zap.Bool("enable_tls", serverConfig.EnableTLS))
 	
 	return server, nil
 }
@@ -296,7 +298,7 @@ func (s *Server) getServerOptions() []grpc.ServerOption {
 	
 	// Add keepalive parameters
 	if s.config.KeepaliveParams != nil {
-		keepalive := grpc.KeepaliveParams{
+		keepalive := keepalive.ServerParameters{
 			MaxConnectionIdle:     s.config.KeepaliveParams.MaxConnectionIdle,
 			MaxConnectionAge:      s.config.KeepaliveParams.MaxConnectionAge,
 			MaxConnectionAgeGrace: s.config.KeepaliveParams.MaxConnectionAgeGrace,
@@ -383,16 +385,16 @@ func (s *Server) Start() error {
 	
 	// Start server in goroutine
 	go func() {
-		s.logger.Info("Starting gRPC server", "address", address)
+		s.logger.Info("Starting gRPC server", zap.String("address", address))
 		if err := s.server.Serve(listener); err != nil && err != grpc.ErrServerStopped {
-			s.logger.Error("gRPC server failed", "error", err)
+			s.logger.Error("gRPC server failed", zap.Error(err))
 		}
 	}()
 	
 	s.started = true
 	s.stopped = false
 	
-	s.logger.Info("Started gRPC server", "address", address)
+	s.logger.Info("Started gRPC server", zap.String("address", address))
 	
 	return nil
 }
@@ -475,7 +477,7 @@ func (s *Server) RegisterService(name string, service interface{}) error {
 	// In a real implementation, you would use the specific registration methods
 	s.services[name] = service
 	
-	s.logger.Info("Registered gRPC service", "name", name)
+	s.logger.Info("Registered gRPC service", zap.String("name", name))
 	
 	return nil
 }
@@ -497,7 +499,7 @@ func (s *Server) UnregisterService(name string) error {
 	// Unregister service
 	delete(s.services, name)
 	
-	s.logger.Info("Unregistered gRPC service", "name", name)
+	s.logger.Info("Unregistered gRPC service", zap.String("name", name))
 	
 	return nil
 }
@@ -537,7 +539,7 @@ func (s *Server) UpdateConfig(config *ServerConfig) error {
 	
 	s.config = config
 	
-	s.logger.Info("Updated gRPC server configuration", "config", config)
+	s.logger.Info("Updated gRPC server configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -582,7 +584,7 @@ func (s *Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckReque
 	
 	// Check service health through health checker
 	if s.health != nil {
-		if s.health.IsHealthy(service) {
+		if s.health.CheckHealth(ctx, false) == nil {
 			return &grpc_health_v1.HealthCheckResponse{
 				Status: grpc_health_v1.HealthCheckResponse_SERVING,
 			}, nil
@@ -599,7 +601,7 @@ func (s *Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckReque
 }
 
 // Watch implements the health check streaming method
-func (s *Server) Watch(req *grpc_health_v1.HealthCheckRequest, stream grpc_health_v1.HealthCheck_WatchServer) error {
+func (s *Server) Watch(req *grpc_health_v1.HealthCheckRequest, stream grpc_health_v1.Health_WatchServer) error {
 	// Simple implementation - just send current status
 	resp, err := s.Check(stream.Context(), req)
 	if err != nil {
@@ -614,8 +616,8 @@ func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *
 	start := time.Now()
 	
 	s.logger.Info("gRPC request started",
-		"method", info.FullMethod,
-		"request_type", fmt.Sprintf("%T", req))
+		zap.String("method", info.FullMethod),
+		zap.String("request_type", fmt.Sprintf("%T", req)))
 	
 	resp, err := handler(ctx, req)
 	
@@ -623,14 +625,14 @@ func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *
 	
 	if err != nil {
 		s.logger.Error("gRPC request failed",
-			"method", info.FullMethod,
-			"duration", duration,
-			"error", err)
+			zap.String("method", info.FullMethod),
+			zap.Duration("duration", duration),
+			zap.Error(err))
 	} else {
 		s.logger.Info("gRPC request completed",
-			"method", info.FullMethod,
-			"duration", duration,
-			"response_type", fmt.Sprintf("%T", resp))
+			zap.String("method", info.FullMethod),
+			zap.Duration("duration", duration),
+			zap.String("response_type", fmt.Sprintf("%T", resp)))
 	}
 	
 	return resp, err
@@ -645,11 +647,11 @@ func (s *Server) metricsInterceptor(ctx context.Context, req interface{}, info *
 	
 	// Update metrics
 	if s.metrics != nil {
-		s.metrics.GRPCRequests.Inc("grpc", "requests")
+		s.metrics.GRPCRequests.WithLabelValues("grpc").Inc()
 		s.metrics.GRPCLatency.Observe(duration.Seconds())
 		
 		if err != nil {
-			s.metrics.GRPCErrors.Inc("grpc", "errors")
+			s.metrics.GRPCErrors.WithLabelValues("grpc").Inc()
 		}
 	}
 	
@@ -660,8 +662,8 @@ func (s *Server) recoveryInterceptor(ctx context.Context, req interface{}, info 
 	defer func() {
 		if r := recover(); r != nil {
 			s.logger.Error("gRPC panic recovered",
-				"method", info.FullMethod,
-				"panic", r)
+				zap.String("method", info.FullMethod),
+				zap.Any("panic", r))
 			
 			err = status.Error(codes.Internal, "internal server error")
 		}

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"unsafe"
 
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
@@ -60,7 +62,7 @@ func DefaultBufferConfig() *BufferConfig {
 // Buffer represents a memory buffer for vectors
 type Buffer struct {
 	config      *BufferConfig
-	vectors     map[uint64]*BufferEntry
+	vectors     map[string]*BufferEntry
 	accessOrder *AccessOrderHeap
 	mu          sync.RWMutex
 	closed      bool
@@ -86,7 +88,7 @@ type BufferStats struct {
 }
 
 // NewBuffer creates a new memory buffer
-func NewBuffer(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics, flushFunc func([]*types.Vector) error) (*Buffer, error) {
+func NewBuffer(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics, flushFunc func([]*types.Vector) error) (*Buffer, error) {
 	bufferConfig := DefaultBufferConfig()
 	
 	if cfg != nil {
@@ -129,7 +131,7 @@ func NewBuffer(cfg *config.Config, logger logging.Logger, metrics *metrics.Stora
 	
 	buffer := &Buffer{
 		config:      bufferConfig,
-		vectors:     make(map[uint64]*BufferEntry),
+		vectors:     make(map[string]*BufferEntry),
 		accessOrder: NewAccessOrderHeap(bufferConfig.EvictionPolicy),
 		flushChan:   make(chan struct{}, 1),
 		logger:      logger,
@@ -140,17 +142,17 @@ func NewBuffer(cfg *config.Config, logger logging.Logger, metrics *metrics.Stora
 	
 	// Pre-allocate if configured
 	if bufferConfig.PreallocateSize > 0 {
-		buffer.vectors = make(map[uint64]*BufferEntry, bufferConfig.PreallocateSize)
+		buffer.vectors = make(map[string]*BufferEntry, bufferConfig.PreallocateSize)
 	}
 	
 	// Start auto-flush goroutine
 	go buffer.autoFlush()
 	
 	buffer.logger.Info("Created memory buffer",
-		"max_size", bufferConfig.MaxSize,
-		"max_memory_mb", bufferConfig.MaxMemoryMB,
-		"flush_threshold", bufferConfig.FlushThreshold,
-		"eviction_policy", bufferConfig.EvictionPolicy)
+		zap.Int("max_size", bufferConfig.MaxSize),
+		zap.Int("max_memory_mb", bufferConfig.MaxMemoryMB),
+		zap.Float64("flush_threshold", bufferConfig.FlushThreshold),
+		zap.String("eviction_policy", bufferConfig.EvictionPolicy))
 	
 	return buffer, nil
 }
@@ -185,7 +187,7 @@ func (b *Buffer) Add(vector *types.Vector) error {
 	}
 	
 	// Validate vector
-	if err := vector.Validate(); err != nil {
+	if err := vector.Validate(nil); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidVector, err)
 	}
 	
@@ -202,7 +204,7 @@ func (b *Buffer) Add(vector *types.Vector) error {
 		entry.Vector = vector
 		entry.LastAccess = time.Now()
 		entry.AccessCount++
-		heap.Update(b.accessOrder, entry.Index)
+		heap.Fix(b.accessOrder, entry.Index)
 		return nil
 	}
 	
@@ -234,14 +236,14 @@ func (b *Buffer) Add(vector *types.Vector) error {
 	}
 	
 	// Update metrics
-	b.metrics.BufferOperations.Inc("buffer", "add")
+	b.metrics.BufferOperations.WithLabelValues("add", "buffer").Inc()
 	b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
 }
 
 // Get retrieves a vector from the buffer
-func (b *Buffer) Get(vectorID uint64) (*types.Vector, error) {
+func (b *Buffer) Get(vectorID string) (*types.Vector, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	
@@ -252,24 +254,24 @@ func (b *Buffer) Get(vectorID uint64) (*types.Vector, error) {
 	entry, exists := b.vectors[vectorID]
 	if !exists {
 		b.stats.MissCount++
-		b.metrics.CacheMisses.Inc("buffer", "get")
+		b.metrics.BufferMisses.WithLabelValues("miss").Inc()
 		return nil, ErrVectorNotFound
 	}
 	
 	// Update access information
 	entry.LastAccess = time.Now()
 	entry.AccessCount++
-	heap.Update(b.accessOrder, entry.Index)
+	heap.Fix(b.accessOrder, entry.Index)
 	
 	// Update stats
 	b.stats.HitCount++
-	b.metrics.CacheHits.Inc("buffer", "get")
+	b.metrics.BufferHits.WithLabelValues("hit").Inc()
 	
 	return entry.Vector, nil
 }
 
 // Remove removes a vector from the buffer
-func (b *Buffer) Remove(vectorID uint64) error {
+func (b *Buffer) Remove(vectorID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	
@@ -292,7 +294,7 @@ func (b *Buffer) Remove(vectorID uint64) error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.Inc("buffer", "remove")
+	b.metrics.BufferOperations.WithLabelValues("remove", "buffer").Inc()
 	b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
@@ -328,12 +330,12 @@ func (b *Buffer) flush() error {
 	
 	// Call flush function
 	if err := b.flushFunc(vectors); err != nil {
-		b.metrics.Errors.Inc("buffer", "flush_failed")
+		b.metrics.Errors.WithLabelValues("buffer", "flush_failed").Inc()
 		return fmt.Errorf("%w: %v", ErrFlushFailed, err)
 	}
 	
 	// Clear buffer
-	b.vectors = make(map[uint64]*BufferEntry)
+	b.vectors = make(map[string]*BufferEntry)
 	b.accessOrder = NewAccessOrderHeap(b.config.EvictionPolicy)
 	
 	// Update stats
@@ -344,10 +346,10 @@ func (b *Buffer) flush() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.Inc("buffer", "flush")
+	b.metrics.BufferOperations.WithLabelValues("flush", "buffer").Inc()
 	b.metrics.BufferSize.Set(0)
 	
-	b.logger.Info("Flushed buffer", "vectors", len(vectors))
+	b.logger.Info("Flushed buffer", zap.Int("vectors", len(vectors)))
 	
 	return nil
 }
@@ -388,7 +390,7 @@ func (b *Buffer) evict() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.Inc("buffer", "evict")
+	b.metrics.BufferOperations.WithLabelValues("evict", "buffer").Inc()
 	b.metrics.BufferSize.Set(float64(len(b.vectors)))
 	
 	return nil
@@ -410,7 +412,7 @@ func (b *Buffer) autoFlush() {
 			b.mu.Lock()
 			if !b.closed && len(b.vectors) > 0 {
 				if err := b.flush(); err != nil {
-					b.logger.Error("Failed to auto-flush buffer", "error", err)
+					b.logger.Error("Failed to auto-flush buffer", zap.Error(err))
 				}
 			}
 			b.mu.Unlock()
@@ -419,7 +421,7 @@ func (b *Buffer) autoFlush() {
 			b.mu.Lock()
 			if !b.closed && len(b.vectors) > 0 {
 				if err := b.flush(); err != nil {
-					b.logger.Error("Failed to flush buffer", "error", err)
+					b.logger.Error("Failed to flush buffer", zap.Error(err))
 				}
 			}
 			b.mu.Unlock()
@@ -439,7 +441,8 @@ func (b *Buffer) updateMemoryUsage() {
 		vectorSize := int64(len(entry.Vector.Data) * 4) // float32 = 4 bytes
 		metadataSize := int64(0)
 		if entry.Vector.Metadata != nil {
-			metadataSize = int64(len(entry.Vector.Metadata.Serialize()))
+			// Estimate metadata size (simplified)
+			metadataSize = int64(len(entry.Vector.Metadata) * 16) // Approximate
 		}
 		totalMemory += vectorSize + metadataSize + int64(unsafe.Sizeof(BufferEntry{}))
 	}
@@ -468,7 +471,7 @@ func (b *Buffer) Close() error {
 	// Flush remaining vectors
 	if len(b.vectors) > 0 {
 		if err := b.flush(); err != nil {
-			b.logger.Error("Failed to flush buffer on close", "error", err)
+			b.logger.Error("Failed to flush buffer on close", zap.Error(err))
 		}
 	}
 	
@@ -549,7 +552,7 @@ func (b *Buffer) UpdateConfig(config *BufferConfig) error {
 		}
 	}
 	
-	b.logger.Info("Updated buffer configuration", "config", config)
+	b.logger.Info("Updated buffer configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -563,11 +566,11 @@ func (b *Buffer) IsClosed() bool {
 }
 
 // GetVectorIDs returns all vector IDs in the buffer
-func (b *Buffer) GetVectorIDs() []uint64 {
+func (b *Buffer) GetVectorIDs() []string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	
-	ids := make([]uint64, 0, len(b.vectors))
+	ids := make([]string, 0, len(b.vectors))
 	for id := range b.vectors {
 		ids = append(ids, id)
 	}
@@ -576,7 +579,7 @@ func (b *Buffer) GetVectorIDs() []uint64 {
 }
 
 // HasVector checks if a vector exists in the buffer
-func (b *Buffer) HasVector(vectorID uint64) bool {
+func (b *Buffer) HasVector(vectorID string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	
@@ -593,7 +596,7 @@ func (b *Buffer) Clear() error {
 		return ErrBufferClosed
 	}
 	
-	b.vectors = make(map[uint64]*BufferEntry)
+	b.vectors = make(map[string]*BufferEntry)
 	b.accessOrder = NewAccessOrderHeap(b.config.EvictionPolicy)
 	
 	// Update stats
@@ -602,7 +605,7 @@ func (b *Buffer) Clear() error {
 	b.updateBufferUsage()
 	
 	// Update metrics
-	b.metrics.BufferOperations.Inc("buffer", "clear")
+	b.metrics.BufferOperations.WithLabelValues("clear", "buffer").Inc()
 	b.metrics.BufferSize.Set(0)
 	
 	return nil
@@ -624,8 +627,8 @@ func (b *Buffer) Validate() error {
 	
 	// Validate all vectors
 	for _, entry := range b.vectors {
-		if err := entry.Vector.Validate(); err != nil {
-			return fmt.Errorf("invalid vector %d: %w", entry.Vector.ID, err)
+		if err := entry.Vector.Validate(nil); err != nil {
+			return fmt.Errorf("invalid vector %s: %w", entry.Vector.ID, err)
 		}
 	}
 	
@@ -689,7 +692,9 @@ func (h *AccessOrderHeap) Pop() interface{} {
 
 // Update updates an entry in the heap
 func (h *AccessOrderHeap) Update(index int) {
-	heap.Fix(h, index)
+	if index >= 0 && index < len(h.entries) {
+		heap.Fix(h, index)
+	}
 }
 
 // Remove removes an entry from the heap
@@ -704,6 +709,3 @@ func max(a, b int) int {
 	}
 	return b
 }
-
-// unsafe is used for size calculations
-import "unsafe"

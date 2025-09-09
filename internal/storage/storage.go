@@ -9,7 +9,7 @@ import (
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
 	"vexdb/internal/storage/buffer"
-	"vexdb/internal/storage/cluster_range"
+	"vexdb/internal/storage/clusterrange"
 	"vexdb/internal/storage/compression"
 	"vexdb/internal/storage/hashing"
 	"vexdb/internal/storage/search"
@@ -28,7 +28,7 @@ type Storage struct {
 	buffer      *buffer.Manager
 	compressor  *compression.Compressor
 	hasher      *hashing.Hasher
-	ranges      *cluster_range.Manager
+	ranges      *clusterrange.Manager
 	segments    *segment.Manager
 	search      *search.Engine
 	
@@ -75,7 +75,7 @@ func (s *Storage) initializeComponents() error {
 	}
 
 	// Initialize cluster range manager
-	s.ranges, err = cluster_range.NewManager(s.config, s.logger, s.metrics)
+	s.ranges, err = clusterrange.NewManager(s.config, s.logger, s.metrics)
 	if err != nil {
 		return err
 	}

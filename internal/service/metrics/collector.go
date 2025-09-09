@@ -1,21 +1,22 @@
 package metrics
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.uber.org/zap"
 	"vexdb/internal/config"
+	"vexdb/internal/errors"
 	"vexdb/internal/logging"
 )
 
 var (
-	ErrMetricsNotEnabled    = errors.New("metrics not enabled")
-	ErrInvalidMetricsConfig = errors.New("invalid metrics configuration")
-	ErrCollectorNotRunning  = errors.New("collector not running")
+	ErrMetricsNotEnabled    = errors.New(errors.ErrorCodeInvalidArgument, "metrics not enabled")
+	ErrInvalidMetricsConfig = errors.New(errors.ErrorCodeConfigInvalid, "invalid metrics configuration")
+	ErrCollectorNotRunning  = errors.New(errors.ErrorCodeInternal, "collector not running")
 )
 
 // MetricsConfig represents the metrics collection configuration
@@ -97,18 +98,19 @@ type StorageMetrics struct {
 	BufferEvictions   prometheus.Counter
 	BufferHits        prometheus.Counter
 	BufferMisses      prometheus.Counter
+	BufferOperations  *prometheus.CounterVec
 	
 	// Search operations
 	SearchOperations  prometheus.Counter
-	SearchErrors      prometheus.Counter
-	SearchLatency     prometheus.Histogram
+	SearchErrors      *prometheus.CounterVec
+	SearchLatency     prometheus.Observer
 	ParallelSearchOperations prometheus.Counter
-	ParallelSearchLatency prometheus.Histogram
+	ParallelSearchLatency prometheus.Observer
 	
 	// Compression operations
 	CompressionOps    prometheus.Counter
 	CompressionErrors prometheus.Counter
-	CompressionRatio  prometheus.Histogram
+	CompressionRatio  prometheus.Observer
 	
 	// Storage size
 	StorageSize       prometheus.Gauge
@@ -117,14 +119,14 @@ type StorageMetrics struct {
 	BufferSize        prometheus.Gauge
 	
 	// Performance
-	InsertLatency     prometheus.Histogram
-	ReadLatency       prometheus.Histogram
-	DeleteLatency     prometheus.Histogram
-	FlushLatency      prometheus.Histogram
-	CompactionLatency prometheus.Histogram
+	InsertLatency     prometheus.Observer
+	ReadLatency       prometheus.Observer
+	DeleteLatency     prometheus.Observer
+	FlushLatency      prometheus.Observer
+	CompactionLatency prometheus.Observer
 	
 	// Errors
-	Errors            prometheus.CounterVec
+	Errors            *prometheus.CounterVec
 }
 
 // ServiceMetrics represents service-specific metrics
@@ -132,27 +134,27 @@ type ServiceMetrics struct {
 	// gRPC metrics
 	GRPCRequests      prometheus.Counter
 	GRPCErrors        prometheus.Counter
-	GRPCLatency       prometheus.Histogram
+	GRPCLatency       prometheus.Observer
 	GRPCConnections   prometheus.Gauge
 	
 	// HTTP metrics
-	HTTPRequests      prometheus.CounterVec
-	HTTPErrors        prometheus.CounterVec
-	HTTPLatency       prometheus.HistogramVec
+	HTTPRequests      *prometheus.CounterVec
+	HTTPErrors        *prometheus.CounterVec
+	HTTPLatency       *prometheus.HistogramVec
 	HTTPConnections   prometheus.Gauge
 	
 	// Health check metrics
 	HealthCheckErrors prometheus.Counter
-	HealthCheckLatency prometheus.Histogram
+	HealthCheckLatency prometheus.Observer
 	
 	// Service metrics
 	ServiceUptime     prometheus.Gauge
-	ServiceVersion    prometheus.GaugeVec
-	ServiceErrors     prometheus.CounterVec
+	ServiceVersion    *prometheus.GaugeVec
+	ServiceErrors     *prometheus.CounterVec
 }
 
 // NewMetricsCollector creates a new metrics collector
-func NewMetricsCollector(cfg *config.Config, logger logging.Logger) (*MetricsCollector, error) {
+func NewMetricsCollector(cfg config.Config, logger logging.Logger) (*MetricsCollector, error) {
 	metricsConfig := DefaultMetricsConfig()
 	
 	if cfg != nil {
@@ -233,11 +235,11 @@ func NewMetricsCollector(cfg *config.Config, logger logging.Logger) (*MetricsCol
 	}
 	
 	collector.logger.Info("Created metrics collector",
-		"enabled", metricsConfig.Enabled,
-		"port", metricsConfig.Port,
-		"path", metricsConfig.Path,
-		"namespace", metricsConfig.Namespace,
-		"subsystem", metricsConfig.Subsystem)
+		zap.Bool("enabled", metricsConfig.Enabled),
+		zap.Int("port", metricsConfig.Port),
+		zap.String("path", metricsConfig.Path),
+		zap.String("namespace", metricsConfig.Namespace),
+		zap.String("subsystem", metricsConfig.Subsystem))
 	
 	return collector, nil
 }
@@ -245,24 +247,24 @@ func NewMetricsCollector(cfg *config.Config, logger logging.Logger) (*MetricsCol
 // validateMetricsConfig validates the metrics configuration
 func validateMetricsConfig(cfg *MetricsConfig) error {
 	if cfg.Port <= 0 || cfg.Port > 65535 {
-		return errors.New("port must be between 1 and 65535")
+		return errors.New(errors.ErrorCodeConfigInvalid, "port must be between 1 and 65535")
 	}
 	
 	if cfg.Path == "" {
-		return errors.New("path cannot be empty")
+		return errors.New(errors.ErrorCodeConfigInvalid, "path cannot be empty")
 	}
 	
 	if cfg.Namespace == "" {
-		return errors.New("namespace cannot be empty")
+		return errors.New(errors.ErrorCodeConfigInvalid, "namespace cannot be empty")
 	}
 	
 	if cfg.CollectInterval <= 0 {
-		return errors.New("collect interval must be positive")
+		return errors.New(errors.ErrorCodeConfigInvalid, "collect interval must be positive")
 	}
 	
 	for _, bucket := range cfg.HistogramBuckets {
 		if bucket <= 0 {
-			return errors.New("histogram buckets must be positive")
+			return errors.New(errors.ErrorCodeConfigInvalid, "histogram buckets must be positive")
 		}
 	}
 	
@@ -378,7 +380,7 @@ func (m *MetricsCollector) UpdateConfig(config *MetricsConfig) error {
 	
 	m.config = config
 	
-	m.logger.Info("Updated metrics collector configuration", "config", config)
+	m.logger.Info("Updated metrics collector configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -393,7 +395,7 @@ func (m *MetricsCollector) RegisterCustomMetric(name string, metric prometheus.C
 	}
 	
 	if !m.config.EnableCustom {
-		return errors.New("custom metrics are disabled")
+		return errors.New(errors.ErrorCodeInvalidArgument, "custom metrics are disabled")
 	}
 	
 	if _, exists := m.customMetrics[name]; exists {
@@ -407,7 +409,7 @@ func (m *MetricsCollector) RegisterCustomMetric(name string, metric prometheus.C
 	
 	m.customMetrics[name] = metric
 	
-	m.logger.Info("Registered custom metric", "name", name)
+	m.logger.Info("Registered custom metric", zap.String("name", name))
 	
 	return nil
 }
@@ -430,7 +432,7 @@ func (m *MetricsCollector) UnregisterCustomMetric(name string) error {
 	m.registry.Unregister(metric)
 	delete(m.customMetrics, name)
 	
-	m.logger.Info("Unregistered custom metric", "name", name)
+	m.logger.Info("Unregistered custom metric", zap.String("name", name))
 	
 	return nil
 }
@@ -556,6 +558,13 @@ func (m *MetricsCollector) NewStorageMetrics() (*StorageMetrics, error) {
 			Help:      "Total number of buffer misses",
 		}, []string{"operation"}).WithLabelValues("miss"),
 		
+		BufferOperations: promauto.NewCounterVec(prometheus.CounterOpts{
+			Namespace: m.config.Namespace,
+			Subsystem: m.config.Subsystem,
+			Name:      "buffer_operations_total",
+			Help:      "Total number of buffer operations",
+		}, []string{"operation", "type"}),
+		
 		// Search operations
 		SearchOperations: promauto.NewCounterVec(prometheus.CounterOpts{
 			Namespace: m.config.Namespace,
@@ -608,7 +617,7 @@ func (m *MetricsCollector) NewStorageMetrics() (*StorageMetrics, error) {
 		}),
 		
 		// Errors
-		Errors: *promauto.NewCounterVec(prometheus.CounterOpts{
+		Errors: promauto.NewCounterVec(prometheus.CounterOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: m.config.Subsystem,
 			Name:      "errors_total",
@@ -730,14 +739,14 @@ func (m *MetricsCollector) NewServiceMetrics() (*ServiceMetrics, error) {
 		}),
 		
 		// HTTP metrics
-		HTTPRequests: *promauto.NewCounterVec(prometheus.CounterOpts{
+		HTTPRequests: promauto.NewCounterVec(prometheus.CounterOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: "service",
 			Name:      "http_requests_total",
 			Help:      "Total number of HTTP requests",
 		}, []string{"method", "endpoint"}),
 		
-		HTTPErrors: *promauto.NewCounterVec(prometheus.CounterOpts{
+		HTTPErrors: promauto.NewCounterVec(prometheus.CounterOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: "service",
 			Name:      "http_errors_total",
@@ -767,14 +776,14 @@ func (m *MetricsCollector) NewServiceMetrics() (*ServiceMetrics, error) {
 			Help:      "Service uptime in seconds",
 		}),
 		
-		ServiceVersion: *promauto.NewGaugeVec(prometheus.GaugeOpts{
+		ServiceVersion: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: "service",
 			Name:      "version_info",
 			Help:      "Service version information",
 		}, []string{"version", "build"}),
 		
-		ServiceErrors: *promauto.NewCounterVec(prometheus.CounterOpts{
+		ServiceErrors: promauto.NewCounterVec(prometheus.CounterOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: "service",
 			Name:      "service_errors_total",
@@ -792,7 +801,7 @@ func (m *MetricsCollector) NewServiceMetrics() (*ServiceMetrics, error) {
 			Buckets:   m.config.HistogramBuckets,
 		}, []string{"method"}).WithLabelValues("grpc")
 		
-		metrics.HTTPLatency = *promauto.NewHistogramVec(prometheus.HistogramOpts{
+		metrics.HTTPLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: m.config.Namespace,
 			Subsystem: "service",
 			Name:      "http_latency_seconds",

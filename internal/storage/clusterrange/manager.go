@@ -1,8 +1,9 @@
-package range
+package clusterrange
 
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
+	"go.uber.org/zap"
 )
 
 var (
@@ -85,7 +87,7 @@ type RangeStats struct {
 }
 
 // NewRangeManager creates a new range manager
-func NewRangeManager(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*RangeManager, error) {
+func NewRangeManager(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*RangeManager, error) {
 	rangeConfig := DefaultRangeConfig()
 	
 	if cfg != nil {
@@ -143,11 +145,11 @@ func NewRangeManager(cfg *config.Config, logger logging.Logger, metrics *metrics
 	}
 	
 	manager.logger.Info("Created range manager",
-		"cluster_count", rangeConfig.ClusterCount,
-		"replication_factor", rangeConfig.ReplicationFactor,
-		"range_size", rangeConfig.RangeSize,
-		"nodes", rangeConfig.Nodes,
-		"strategy", rangeConfig.Strategy)
+		zap.Uint32("cluster_count", rangeConfig.ClusterCount),
+		zap.Int("replication_factor", rangeConfig.ReplicationFactor),
+		zap.Uint32("range_size", rangeConfig.RangeSize),
+		zap.Strings("nodes", rangeConfig.Nodes),
+		zap.String("strategy", rangeConfig.Strategy))
 	
 	return manager, nil
 }
@@ -336,11 +338,11 @@ func (m *RangeManager) AddNode(nodeID string) error {
 	// Rebalance ranges if auto-balance is enabled
 	if m.config.EnableAutoBalance {
 		if err := m.rebalanceRanges(); err != nil {
-			m.logger.Error("Failed to rebalance ranges after adding node", "node_id", nodeID, "error", err)
+			m.logger.Error("Failed to rebalance ranges after adding node", zap.String("node_id", nodeID), zap.Error(err))
 		}
 	}
 	
-	m.logger.Info("Added node to range manager", "node_id", nodeID)
+	m.logger.Info("Added node to range manager", zap.String("node_id", nodeID))
 	
 	return nil
 }
@@ -374,11 +376,11 @@ func (m *RangeManager) RemoveNode(nodeID string) error {
 	// Rebalance ranges if auto-balance is enabled
 	if m.config.EnableAutoBalance {
 		if err := m.rebalanceRanges(); err != nil {
-			m.logger.Error("Failed to rebalance ranges after removing node", "node_id", nodeID, "error", err)
+			m.logger.Error("Failed to rebalance ranges after removing node", zap.String("node_id", nodeID), zap.Error(err))
 		}
 	}
 	
-	m.logger.Info("Removed node from range manager", "node_id", nodeID)
+	m.logger.Info("Removed node from range manager", zap.String("node_id", nodeID))
 	
 	return nil
 }
@@ -451,10 +453,10 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 	m.nodeRanges[newNodeID] = append(m.nodeRanges[newNodeID], rng)
 	
 	m.logger.Info("Moved range",
-		"start", start,
-		"end", end,
-		"old_node", oldNodeID,
-		"new_node", newNodeID)
+		zap.Uint32("start", start),
+		zap.Uint32("end", end),
+		zap.String("old_node", oldNodeID),
+		zap.String("new_node", newNodeID))
 	
 	return nil
 }
@@ -522,13 +524,13 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 	m.nodeRanges[rng.NodeID] = append(m.nodeRanges[rng.NodeID], range1, range2)
 	
 	m.logger.Info("Split range",
-		"original_start", start,
-		"original_end", end,
-		"split_point", splitPoint,
-		"new_range1_start", range1.Start,
-		"new_range1_end", range1.End,
-		"new_range2_start", range2.Start,
-		"new_range2_end", range2.End)
+		zap.Uint32("original_start", start),
+		zap.Uint32("original_end", end),
+		zap.Uint32("split_point", splitPoint),
+		zap.Uint32("new_range1_start", range1.Start),
+		zap.Uint32("new_range1_end", range1.End),
+		zap.Uint32("new_range2_start", range2.Start),
+		zap.Uint32("new_range2_end", range2.End))
 	
 	return nil
 }
@@ -603,12 +605,12 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 	m.nodeRanges[range1.NodeID] = append(m.nodeRanges[range1.NodeID], mergedRange)
 	
 	m.logger.Info("Merged ranges",
-		"range1_start", start1,
-		"range1_end", end1,
-		"range2_start", start2,
-		"range2_end", end2,
-		"merged_start", mergedRange.Start,
-		"merged_end", mergedRange.End)
+		zap.Uint32("range1_start", start1),
+		zap.Uint32("range1_end", end1),
+		zap.Uint32("range2_start", start2),
+		zap.Uint32("range2_end", end2),
+		zap.Uint32("merged_start", mergedRange.Start),
+		zap.Uint32("merged_end", mergedRange.End))
 	
 	return nil
 }
@@ -760,7 +762,7 @@ func (m *RangeManager) UpdateConfig(config *RangeConfig) error {
 		m.config = config
 	}
 	
-	m.logger.Info("Updated range configuration", "config", config)
+	m.logger.Info("Updated range configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -895,6 +897,3 @@ func (m *RangeManager) GetClusterDistribution() map[string]uint32 {
 	
 	return distribution
 }
-
-// math is used for balance factor calculation
-import "math"

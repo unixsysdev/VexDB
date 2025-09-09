@@ -21,7 +21,7 @@ import (
 	"vexdb/internal/storage/buffer"
 	"vexdb/internal/storage/compression"
 	"vexdb/internal/storage/hashing"
-	"vexdb/internal/storage/cluster_range"
+	"vexdb/internal/storage/clusterrange"
 	"vexdb/internal/storage/search"
 	"vexdb/internal/storage/segment"
 	"vexdb/internal/types"
@@ -188,7 +188,7 @@ func initializeStorageComponents(cfg *config.Config, logger logging.Logger, metr
 	}
 	
 	// Initialize range manager
-	rangeManager, err := range.NewManager(cfg, logger, metrics)
+	rangeManager, err := clusterrange.NewManager(cfg, logger, metrics)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize range manager: %w", err)
 	}
@@ -223,7 +223,7 @@ type StorageComponents struct {
 	BufferManager     *buffer.Manager
 	CompressionEngine *compression.Engine
 	HashingEngine     *hashing.Engine
-	RangeManager      *range.Manager
+	RangeManager      *clusterrange.Manager
 	SearchEngine      *search.Engine
 	StorageService    *storage.Service
 }

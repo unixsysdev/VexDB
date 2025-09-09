@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"math"
 	"sync"
+	"time"
 
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
@@ -86,7 +87,7 @@ type HasherStats struct {
 }
 
 // NewHasher creates a new hasher
-func NewHasher(cfg *config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Hasher, error) {
+func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Hasher, error) {
 	hasherConfig := DefaultHasherConfig()
 	
 	if cfg != nil {
@@ -135,12 +136,12 @@ func NewHasher(cfg *config.Config, logger logging.Logger, metrics *metrics.Stora
 	}
 	
 	hasher.logger.Info("Created hasher",
-		"algorithm", hasherConfig.Algorithm,
-		"strategy", hasherConfig.Strategy,
-		"cluster_count", hasherConfig.ClusterCount,
-		"seed", hasherConfig.Seed,
-		"enable_cache", hasherConfig.EnableCache,
-		"cache_size", hasherConfig.CacheSize)
+		zap.String("algorithm", string(hasherConfig.Algorithm)),
+		zap.String("strategy", string(hasherConfig.Strategy)),
+		zap.Uint32("cluster_count", hasherConfig.ClusterCount),
+		zap.Uint64("seed", hasherConfig.Seed),
+		zap.Bool("enable_cache", hasherConfig.EnableCache),
+		zap.Int("cache_size", hasherConfig.CacheSize))
 	
 	return hasher, nil
 }
@@ -481,7 +482,7 @@ func (h *Hasher) UpdateConfig(config *HasherConfig) error {
 	
 	h.config = config
 	
-	h.logger.Info("Updated hasher configuration", "config", config)
+	h.logger.Info("Updated hasher configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -762,6 +763,3 @@ func (h *Hasher) GetStrategyInfo(strategy AssignmentStrategy) map[string]interfa
 	
 	return info
 }
-
-// time is used for benchmarking
-import "time"

@@ -5,6 +5,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Logger is a type alias for zap.Logger to provide a consistent interface
+type Logger = zap.Logger
+
 // NewLogger creates and configures a new zap logger
 func NewLogger() (*zap.Logger, error) {
 	// Configure zap logger with production settings

@@ -55,8 +55,8 @@ Annual self-certification required for production deployments
 Revenue Optimization Strategy
 Pricing Tiers (Estimated)
 
-Starter: $500/month (up to x nodes, xTB data)
-Professional: $x,000/month (up to xx nodes, xxTB data)
+Starter: $xxx/month (up to x nodes, xTB data)
+Professional: $x,xxx/month (up to xx nodes, xxTB data)
 Enterprise: Custom pricing (unlimited scale + support)
 
 Value-Based Pricing Triggers

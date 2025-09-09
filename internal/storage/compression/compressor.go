@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pierrec/lz4/v4"
 	"vexdb/internal/config"
@@ -776,6 +777,3 @@ func (c *Compressor) GetAlgorithmInfo(algorithm CompressionAlgorithm) map[string
 	
 	return info
 }
-
-// time is used for benchmarking
-import "time"

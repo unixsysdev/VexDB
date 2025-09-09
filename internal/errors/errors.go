@@ -486,3 +486,8 @@ func NewHealthCheckTimeoutError(service string) *VexError {
 	return New(ErrorCodeHealthCheckTimeout, fmt.Sprintf("health check timeout: %s", service)).
 		WithDetail("service", service)
 }
+
+// NewInvalidArgumentError creates a new invalid argument error
+func NewInvalidArgumentError(message string) *VexError {
+	return New(ErrorCodeInvalidArgument, message)
+}

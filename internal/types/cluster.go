@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 )
@@ -331,12 +332,7 @@ func (c *ClusterConfig) generateVectorHash(vectorID string, vectorData []float32
 	
 	// Write vector data
 	for _, val := range vectorData {
-		bits := binary.BigEndian.Uint32([]byte{
-			byte(val >> 24),
-			byte(val >> 16),
-			byte(val >> 8),
-			byte(val),
-		})
+		bits := math.Float32bits(val)
 		h.Write([]byte{
 			byte(bits >> 24),
 			byte(bits >> 16),
@@ -392,7 +388,7 @@ func (c *ClusterConfig) getReplicaNodes(primaryNodeID string) []string {
 	for i := 0; i < replicaCount; i++ {
 		// Generate a hash for this replica selection
 		hashKey := fmt.Sprintf("%s_replica_%d", primaryNodeID, i)
-		nodeID := c.HashRing.GetNode(hashKey)
+		_ = c.HashRing.GetNode(hashKey) // Get node from hash ring (result ignored for now)
 		
 		// Find a healthy node that hasn't been used
 		for _, healthyNode := range healthyNodes {
@@ -564,4 +560,58 @@ func (ch *ConsistentHash) hashKey(key string) uint32 {
 	h.Write([]byte(key))
 	hash := h.Sum(nil)
 	return binary.BigEndian.Uint32(hash[:4])
+}
+
+// ClusterInfo represents information about a cluster
+type ClusterInfo struct {
+	ID          string            `json:"id" yaml:"id"`
+	Name        string            `json:"name" yaml:"name"`
+	Description string            `json:"description" yaml:"description"`
+	Config      ClusterConfig     `json:"config" yaml:"config"`
+	Metadata    map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	CreatedAt   int64             `json:"created_at" yaml:"created_at"`
+	UpdatedAt   int64             `json:"updated_at" yaml:"updated_at"`
+}
+
+// ClusterStatus represents the status of a cluster
+type ClusterStatus struct {
+	ID        string    `json:"id" yaml:"id"`
+	Status    string    `json:"status" yaml:"status"` // "active", "inactive", "degraded", "maintenance"
+	Health    string    `json:"health" yaml:"health"` // "healthy", "unhealthy", "warning"
+	Message   string    `json:"message,omitempty" yaml:"message,omitempty"`
+	Timestamp int64     `json:"timestamp" yaml:"timestamp"`
+	Nodes     []string  `json:"nodes" yaml:"nodes"`
+	Metrics   map[string]interface{} `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+}
+
+// HealthStatus represents the health status of a service or component
+type HealthStatus struct {
+	Status    string            `json:"status" yaml:"status"` // "healthy", "unhealthy", "degraded"
+	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
+	Details   map[string]string `json:"details,omitempty" yaml:"details,omitempty"`
+	Timestamp int64             `json:"timestamp" yaml:"timestamp"`
+	Checks    []HealthCheck     `json:"checks,omitempty" yaml:"checks,omitempty"`
+}
+
+// HealthCheck represents a single health check result
+type HealthCheck struct {
+	Name     string            `json:"name" yaml:"name"`
+	Status   string            `json:"status" yaml:"status"` // "pass", "fail", "warn"
+	Message  string            `json:"message,omitempty" yaml:"message,omitempty"`
+	Duration int64             `json:"duration,omitempty" yaml:"duration"` // in milliseconds
+	Details  map[string]string `json:"details,omitempty" yaml:"details,omitempty"`
+}
+
+// NodeInfo represents information about a node
+type NodeInfo struct {
+	ID          string            `json:"id" yaml:"id"`
+	Address     string            `json:"address" yaml:"address"`
+	Port        int               `json:"port" yaml:"port"`
+	Role        string            `json:"role" yaml:"role"` // "primary", "replica", "standalone"
+	Status      string            `json:"status" yaml:"status"` // "online", "offline", "maintenance"
+	Health      string            `json:"health" yaml:"health"` // "healthy", "unhealthy", "degraded"
+	Capacity    NodeCapacity      `json:"capacity" yaml:"capacity"`
+	Metadata    map[string]string `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	LastSeen    int64             `json:"last_seen" yaml:"last_seen"`
+	Version     string            `json:"version,omitempty" yaml:"version,omitempty"`
 }

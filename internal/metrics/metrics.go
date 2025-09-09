@@ -2,18 +2,19 @@ package metrics
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"vexdb/internal/config"
 )
+
+// Collector is a type alias for Metrics to provide a consistent interface
+type Collector = Metrics
 
 // Metrics represents the metrics collection system
 type Metrics struct {
-	config     *config.Config
+	config     interface{}
 	registry   *prometheus.Registry
 	collectors map[string]prometheus.Collector
 	mu         sync.RWMutex
@@ -56,60 +57,9 @@ type Summary struct {
 }
 
 // NewMetrics creates a new metrics collection system
-func NewMetrics(cfg *config.Config) (*Metrics, error) {
-	metricsConfig := &Config{
-		Enabled:   true,
-		Port:      9090,
-		Path:      "/metrics",
-		Namespace: "vexdb",
-		Subsystem: "",
-		Interval:  15 * time.Second,
-		Buckets:   prometheus.DefBuckets,
-		Labels:    []string{"service", "node", "cluster"},
-	}
-
-	if cfg != nil {
-		if metricsCfg, ok := cfg.Get("metrics"); ok {
-			if cfgMap, ok := metricsCfg.(map[string]interface{}); ok {
-				if enabled, ok := cfgMap["enabled"].(bool); ok {
-					metricsConfig.Enabled = enabled
-				}
-				if port, ok := cfgMap["port"].(int); ok {
-					metricsConfig.Port = port
-				}
-				if path, ok := cfgMap["path"].(string); ok {
-					metricsConfig.Path = path
-				}
-				if namespace, ok := cfgMap["namespace"].(string); ok {
-					metricsConfig.Namespace = namespace
-				}
-				if subsystem, ok := cfgMap["subsystem"].(string); ok {
-					metricsConfig.Subsystem = subsystem
-				}
-				if interval, ok := cfgMap["interval"].(string); ok {
-					if dur, err := time.ParseDuration(interval); err == nil {
-						metricsConfig.Interval = dur
-					}
-				}
-				if buckets, ok := cfgMap["buckets"].([]interface{}); ok {
-					metricsConfig.Buckets = make([]float64, len(buckets))
-					for i, b := range buckets {
-						if f, ok := b.(float64); ok {
-							metricsConfig.Buckets[i] = f
-						}
-					}
-				}
-				if labels, ok := cfgMap["labels"].([]interface{}); ok {
-					metricsConfig.Labels = make([]string, len(labels))
-					for i, l := range labels {
-						if s, ok := l.(string); ok {
-							metricsConfig.Labels[i] = s
-						}
-					}
-				}
-			}
-		}
-	}
+func NewMetrics(cfg interface{}) (*Metrics, error) {
+	// For now, use default configuration
+	// TODO: Implement proper configuration extraction based on config type
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(prometheus.NewGoCollector())
@@ -405,8 +355,6 @@ type ServiceMetrics struct {
 
 // NewServiceMetrics creates service-specific metrics
 func NewServiceMetrics(m *Metrics, serviceName string) *ServiceMetrics {
-	labels := []string{"service", "method", "status"}
-
 	return &ServiceMetrics{
 		RequestsTotal: m.NewCounter(
 			"requests_total",

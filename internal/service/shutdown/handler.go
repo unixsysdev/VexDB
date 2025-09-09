@@ -2,6 +2,7 @@ package shutdown
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
@@ -120,7 +122,7 @@ type ShutdownHandler struct {
 }
 
 // NewShutdownHandler creates a new shutdown handler
-func NewShutdownHandler(cfg *config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*ShutdownHandler, error) {
+func NewShutdownHandler(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*ShutdownHandler, error) {
 	shutdownConfig := DefaultShutdownConfig()
 	
 	if cfg != nil {
@@ -191,11 +193,11 @@ func NewShutdownHandler(cfg *config.Config, logger logging.Logger, metrics *metr
 	}
 	
 	handler.logger.Info("Created shutdown handler",
-		"enabled", shutdownConfig.Enabled,
-		"timeout", shutdownConfig.Timeout,
-		"grace_period", shutdownConfig.GracePeriod,
-		"enable_signals", shutdownConfig.EnableSignals,
-		"signals", shutdownConfig.Signals)
+		zap.Bool("enabled", shutdownConfig.Enabled),
+		zap.Duration("timeout", shutdownConfig.Timeout),
+		zap.Duration("grace_period", shutdownConfig.GracePeriod),
+		zap.Bool("enable_signals", shutdownConfig.EnableSignals),
+		zap.Strings("signals", shutdownConfig.Signals))
 	
 	return handler, nil
 }
@@ -319,11 +321,11 @@ func (h *ShutdownHandler) RegisterHook(name string, hook ShutdownHook, config Sh
 	h.hookConfigs[name] = config
 	
 	h.logger.Info("Registered shutdown hook",
-		"name", name,
-		"order", config.Order,
-		"timeout", config.Timeout,
-		"critical", config.Critical,
-		"retry_count", config.RetryCount)
+		zap.String("name", name),
+		zap.Int("order", config.Order),
+		zap.Duration("timeout", config.Timeout),
+		zap.Bool("critical", config.Critical),
+		zap.Int("retry_count", config.RetryCount))
 	
 	return nil
 }
@@ -340,7 +342,7 @@ func (h *ShutdownHandler) UnregisterHook(name string) error {
 	delete(h.hooks, name)
 	delete(h.hookConfigs, name)
 	
-	h.logger.Info("Unregistered shutdown hook", "name", name)
+	h.logger.Info("Unregistered shutdown hook", zap.String("name", name))
 	
 	return nil
 }
@@ -380,7 +382,7 @@ func (h *ShutdownHandler) UpdateConfig(config *ShutdownConfig) error {
 	
 	h.config = config
 	
-	h.logger.Info("Updated shutdown handler configuration", "config", config)
+	h.logger.Info("Updated shutdown handler configuration", zap.Any("config", config))
 	
 	return nil
 }
@@ -420,11 +422,11 @@ func (h *ShutdownHandler) ShutdownWithSignal(signal string) error {
 	
 	h.mu.Unlock()
 	
-	h.logger.Info("Initiating graceful shutdown", "signal", signal)
+	h.logger.Info("Initiating graceful shutdown", zap.String("signal", signal))
 	
 	// Execute shutdown hooks
 	if err := h.executeShutdownHooks(); err != nil {
-		h.logger.Error("Shutdown failed", "error", err)
+		h.logger.Error("Shutdown failed", zap.Error(err))
 		return fmt.Errorf("%w: %v", ErrShutdownFailed, err)
 	}
 	
@@ -534,7 +536,7 @@ func (h *ShutdownHandler) startSignalHandling() {
 		case "SIGHUP":
 			signals[i] = syscall.SIGHUP
 		default:
-			h.logger.Warn("Unknown signal", "signal", sigStr)
+			h.logger.Warn("Unknown signal", zap.String("signal", sigStr))
 			continue
 		}
 	}
@@ -555,7 +557,7 @@ func (h *ShutdownHandler) stopSignalHandling() {
 // handleSignals handles incoming signals
 func (h *ShutdownHandler) handleSignals() {
 	for sig := range h.signalChan {
-		h.logger.Info("Received shutdown signal", "signal", sig)
+		h.logger.Info("Received shutdown signal", zap.String("signal", sig.String()))
 		
 		// Convert signal to string
 		sigStr := ""
@@ -572,7 +574,7 @@ func (h *ShutdownHandler) handleSignals() {
 		
 		// Initiate shutdown
 		if err := h.ShutdownWithSignal(sigStr); err != nil {
-			h.logger.Error("Shutdown failed", "error", err)
+			h.logger.Error("Shutdown failed", zap.Error(err))
 		}
 		
 		break
@@ -592,7 +594,7 @@ func (h *ShutdownHandler) executeShutdownHooks() error {
 	for _, hookConfig := range sortedHooks {
 		select {
 		case <-ctx.Done():
-			h.logger.Error("Shutdown timeout reached", "hook", hookConfig.Name)
+			h.logger.Error("Shutdown timeout reached", zap.String("hook", hookConfig.Name))
 			return ErrShutdownTimeout
 		default:
 		}
@@ -611,7 +613,7 @@ func (h *ShutdownHandler) executeShutdownHooks() error {
 		
 		// If critical hook failed, stop shutdown
 		if hookConfig.Critical && !result.Success {
-			h.logger.Error("Critical shutdown hook failed", "hook", hookConfig.Name, "error", result.Error)
+			h.logger.Error("Critical shutdown hook failed", zap.String("hook", hookConfig.Name), zap.String("error", result.Error))
 			return fmt.Errorf("critical hook %s failed: %s", hookConfig.Name, result.Error)
 		}
 	}
@@ -679,10 +681,10 @@ func (h *ShutdownHandler) executeShutdownHook(ctx context.Context, config Shutdo
 		}
 		
 		h.logger.Warn("Shutdown hook failed, retrying",
-			"hook", config.Name,
-			"attempt", i+1,
-			"max_attempts", config.RetryCount+1,
-			"error", err)
+			zap.String("hook", config.Name),
+			zap.Int("attempt", i+1),
+			zap.Int("max_attempts", config.RetryCount+1),
+			zap.Error(err))
 	}
 	
 	result.Duration = time.Since(start)

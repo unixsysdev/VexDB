@@ -7,6 +7,27 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Config is a generic interface for all configuration types
+type Config interface {
+	Validate() error
+	Get(key string) (interface{}, bool)
+	GetMetricsConfig() interface{}
+}
+
+// LoadConfig loads configuration based on the service type
+func LoadConfig(serviceType, path string) (Config, error) {
+	switch serviceType {
+	case "insert":
+		return LoadInsertConfig(path)
+	case "storage":
+		return LoadStorageConfig(path)
+	case "search":
+		return LoadSearchConfig(path)
+	default:
+		return nil, fmt.Errorf("unknown service type: %s", serviceType)
+	}
+}
+
 // InsertConfig holds configuration for the vexinsert service
 type InsertConfig struct {
 	Server   ServerConfig   `yaml:"server"`
@@ -120,6 +141,26 @@ func LoadSearchConfig(path string) (*SearchConfig, error) {
 	return &config, nil
 }
 
+// Get returns a configuration value by key
+func (c *InsertConfig) Get(key string) (interface{}, bool) {
+	switch key {
+	case "server":
+		return c.Server, true
+	case "cluster":
+		return c.Cluster, true
+	case "protocols":
+		return c.Protocols, true
+	default:
+		return nil, false
+	}
+}
+
+// GetMetricsConfig returns the metrics configuration
+func (c *InsertConfig) GetMetricsConfig() interface{} {
+	// For now, return nil as metrics config is not defined in InsertConfig
+	return nil
+}
+
 // Validate validates the configuration and returns any errors
 func (c *InsertConfig) Validate() error {
 	if c.Server.Host == "" {
@@ -128,6 +169,26 @@ func (c *InsertConfig) Validate() error {
 	if c.Server.Port <= 0 {
 		return fmt.Errorf("server port must be positive")
 	}
+	return nil
+}
+
+// Get returns a configuration value by key
+func (c *StorageConfig) Get(key string) (interface{}, bool) {
+	switch key {
+	case "server":
+		return c.Server, true
+	case "storage":
+		return c.Storage, true
+	case "cluster":
+		return c.Cluster, true
+	default:
+		return nil, false
+	}
+}
+
+// GetMetricsConfig returns the metrics configuration
+func (c *StorageConfig) GetMetricsConfig() interface{} {
+	// For now, return nil as metrics config is not defined in StorageConfig
 	return nil
 }
 
@@ -142,6 +203,24 @@ func (c *StorageConfig) Validate() error {
 	if c.Storage.DataDir == "" {
 		return fmt.Errorf("storage data directory is required")
 	}
+	return nil
+}
+
+// Get returns a configuration value by key
+func (c *SearchConfig) Get(key string) (interface{}, bool) {
+	switch key {
+	case "server":
+		return c.Server, true
+	case "cluster":
+		return c.Cluster, true
+	default:
+		return nil, false
+	}
+}
+
+// GetMetricsConfig returns the metrics configuration
+func (c *SearchConfig) GetMetricsConfig() interface{} {
+	// For now, return nil as metrics config is not defined in SearchConfig
 	return nil
 }
 
