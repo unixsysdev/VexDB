@@ -110,6 +110,20 @@ Content-Type: application/json
 - **Health:** `/health` and `/ready` endpoints
 - **Tracing:** Jaeger integration
 
+## Testing
+
+Run unit tests:
+
+```
+go test ./...
+```
+
+Run integration tests (requires additional services):
+
+```
+go test -tags integration ./...
+```
+
 ## Security
 - mTLS for inter-service
 - API key/token for client auth

@@ -1,7 +1,8 @@
 package segment
 
 import (
-	"vexdb/internal/types"
+       "fmt"
+       "vexdb/internal/types"
 )
 
 // Segment magic number and version
@@ -44,7 +45,7 @@ type SegmentInfo struct {
 
 // ClusterIDString returns a string representation of the cluster ID
 func (si *SegmentInfo) ClusterIDString() string {
-	return string(si.ClusterID)
+       return fmt.Sprintf("%d", si.ClusterID)
 }
 
 // IsValid checks if the segment info is valid

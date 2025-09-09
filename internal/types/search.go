@@ -129,5 +129,5 @@ type SegmentInfo struct {
 
 // ClusterIDString returns a string representation of the cluster ID
 func (si *SegmentInfo) ClusterIDString() string {
-	return string(si.ClusterID)
+       return fmt.Sprintf("%d", si.ClusterID)
 }
