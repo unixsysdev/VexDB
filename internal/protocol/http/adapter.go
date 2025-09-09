@@ -14,7 +14,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/protocol"
+	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
 	"go.uber.org/zap"
 )
@@ -26,8 +26,8 @@ type HTTPAdapter struct {
 	listener   net.Listener
 	logger     logging.Logger
 	metrics    *metrics.IngestionMetrics
-	validator  protocol.Validator
-	handler    protocol.Handler
+	validator  adapter.Validator
+	handler    adapter.Handler
 	protocol   string
 	startTime  time.Time
 	mu         sync.RWMutex
@@ -71,7 +71,7 @@ func DefaultHTTPConfig() *HTTPConfig {
 }
 
 // NewHTTPAdapter creates a new HTTP adapter
-func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator protocol.Validator, handler protocol.Handler) (*HTTPAdapter, error) {
+func NewHTTPAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*HTTPAdapter, error) {
 	httpConfig := DefaultHTTPConfig()
 	
 	if cfg != nil {

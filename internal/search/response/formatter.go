@@ -3,6 +3,8 @@ package response
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"vexdb/internal/types"
@@ -183,12 +185,22 @@ func (f *Formatter) formatSearchResult(result *types.SearchResult) SearchResult 
 
 	// Include vector data if configured
 	if f.config.IncludeQueryVector && result.Vector != nil {
-		formatted.Vector = result.Vector.Data
+		// Convert float32 to float64 for JSON compatibility
+		formatted.Vector = make([]float64, len(result.Vector.Data))
+		for i, val := range result.Vector.Data {
+			formatted.Vector[i] = float64(val)
+		}
 	}
 
 	// Include metadata if configured
 	if f.config.IncludeMetadata && result.Vector != nil && result.Vector.Metadata != nil {
-		formatted.Metadata = result.Vector.Metadata
+		// Convert metadata to string map
+		formatted.Metadata = make(map[string]string)
+		for k, v := range result.Vector.Metadata {
+			if str, ok := v.(string); ok {
+				formatted.Metadata[k] = str
+			}
+		}
 	}
 
 	// Include cluster and node information if available

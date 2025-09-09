@@ -12,7 +12,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/protocol"
+	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -31,8 +31,8 @@ type GRPCAdapter struct {
 	listener   net.Listener
 	logger     logging.Logger
 	metrics    *metrics.IngestionMetrics
-	validator  protocol.Validator
-	handler    protocol.Handler
+	validator  adapter.Validator
+	handler    adapter.Handler
 	protocol   string
 	startTime  time.Time
 	health     *health.Server
@@ -97,7 +97,7 @@ func DefaultGRPCConfig() *GRPCConfig {
 }
 
 // NewGRPCAdapter creates a new gRPC adapter
-func NewGRPCAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator protocol.Validator, handler protocol.Handler) (*GRPCAdapter, error) {
+func NewGRPCAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*GRPCAdapter, error) {
 	grpcConfig := DefaultGRPCConfig()
 	
 	if cfg != nil {

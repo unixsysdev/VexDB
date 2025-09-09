@@ -13,7 +13,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/protocol"
+	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -27,8 +27,8 @@ type WebSocketAdapter struct {
 	upgrader   *websocket.Upgrader
 	logger     logging.Logger
 	metrics    *metrics.IngestionMetrics
-	validator  protocol.Validator
-	handler    protocol.Handler
+	validator  adapter.Validator
+	handler    adapter.Handler
 	protocol   string
 	startTime  time.Time
 	mu         sync.RWMutex
@@ -79,7 +79,7 @@ func DefaultWebSocketConfig() *WebSocketConfig {
 }
 
 // NewWebSocketAdapter creates a new WebSocket adapter
-func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator protocol.Validator, handler protocol.Handler) (*WebSocketAdapter, error) {
+func NewWebSocketAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*WebSocketAdapter, error) {
 	wsConfig := DefaultWebSocketConfig()
 	
 	if cfg != nil {

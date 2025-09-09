@@ -65,7 +65,7 @@ func (v *SearchRequestValidator) validateQueryVector(query *types.Vector) error 
 
 	// Validate vector data
 	for i, value := range query.Data {
-		if math.IsNaN(value) || math.IsInf(value, 0) {
+		if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
 			return fmt.Errorf("query vector contains invalid value at index %d: %f", i, value)
 		}
 	}
@@ -97,9 +97,11 @@ func (v *SearchRequestValidator) validateMetadataFilter(filter *types.MetadataFi
 	}
 
 	// Validate each condition
-	for i, condition := range filter.Conditions {
-		if err := v.validateMetadataCondition(condition); err != nil {
-			return fmt.Errorf("invalid metadata condition at index %d: %w", i, err)
+	if filter != nil {
+		for i, condition := range filter.Conditions {
+			if err := v.validateMetadataCondition(condition); err != nil {
+				return fmt.Errorf("invalid metadata condition at index %d: %w", i, err)
+			}
 		}
 	}
 
@@ -107,7 +109,7 @@ func (v *SearchRequestValidator) validateMetadataFilter(filter *types.MetadataFi
 }
 
 // validateMetadataCondition validates a single metadata condition
-func (v *SearchRequestValidator) validateMetadataCondition(condition *types.MetadataCondition) error {
+func (v *SearchRequestValidator) validateMetadataCondition(condition interface{}) error {
 	if condition == nil {
 		return fmt.Errorf("metadata condition cannot be nil")
 	}

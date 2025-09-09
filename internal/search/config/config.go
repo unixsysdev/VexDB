@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"time"
-
-	"vexdb/internal/types"
 )
 
 // SearchServiceConfig represents the configuration for the search service
@@ -76,6 +74,7 @@ type HTTPConfig struct {
 	RequestSizeLimit   int64         `yaml:"request_size_limit" json:"request_size_limit"`
 	EnableCompression  bool          `yaml:"enable_compression" json:"enable_compression"`
 	CompressionLevel   int           `yaml:"compression_level" json:"compression_level"`
+	TLS                *TLSConfig    `yaml:"tls" json:"tls"`
 }
 
 // GRPCConfig represents gRPC API configuration
@@ -164,6 +163,14 @@ type HealthConfig struct {
 	Enabled       bool          `yaml:"enabled" json:"enabled"`
 	CheckInterval time.Duration `yaml:"check_interval" json:"check_interval"`
 	Timeout       time.Duration `yaml:"timeout" json:"timeout"`
+}
+
+// TLSConfig represents TLS configuration
+type TLSConfig struct {
+	Enabled    bool   `yaml:"enabled" json:"enabled"`
+	CertFile   string `yaml:"cert_file" json:"cert_file"`
+	KeyFile    string `yaml:"key_file" json:"key_file"`
+	ClientAuth bool   `yaml:"client_auth" json:"client_auth"`
 }
 
 // DefaultSearchServiceConfig returns the default search service configuration

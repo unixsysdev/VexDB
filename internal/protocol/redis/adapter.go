@@ -13,7 +13,7 @@ import (
 	"vexdb/internal/config"
 	"vexdb/internal/logging"
 	"vexdb/internal/metrics"
-	"vexdb/internal/protocol"
+	"vexdb/internal/protocol/adapter"
 	"vexdb/internal/types"
 	"go.uber.org/zap"
 )
@@ -24,8 +24,8 @@ type RedisAdapter struct {
 	listener   net.Listener
 	logger     logging.Logger
 	metrics    *metrics.IngestionMetrics
-	validator  protocol.Validator
-	handler    protocol.Handler
+	validator  adapter.Validator
+	handler    adapter.Handler
 	protocol   string
 	startTime  time.Time
 	mu         sync.RWMutex
@@ -64,7 +64,7 @@ func DefaultRedisConfig() *RedisConfig {
 }
 
 // NewRedisAdapter creates a new Redis adapter
-func NewRedisAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator protocol.Validator, handler protocol.Handler) (*RedisAdapter, error) {
+func NewRedisAdapter(cfg config.Config, logger logging.Logger, metrics *metrics.IngestionMetrics, validator adapter.Validator, handler adapter.Handler) (*RedisAdapter, error) {
 	redisConfig := DefaultRedisConfig()
 	
 	if cfg != nil {
