@@ -117,7 +117,7 @@ services:
       dockerfile: cmd/vxsearch/Dockerfile
     container_name: vxsearch
     restart: unless-stopped
-    command: ["./vxsearch", "--config=/etc/vxdb/config.yaml", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
+    command: ["./vxsearch", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8083:8083"    # HTTP API
       - "9106:9097"    # Metrics
