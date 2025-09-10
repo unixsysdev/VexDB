@@ -373,9 +373,9 @@ circuit_breaker:
 
 # Security configuration
 security:
-  enabled: true
+  enabled: false
   tls:
-    enabled: true
+    enabled: false
     cert_file: "/etc/vxdb/certs/vxstorage.crt"
     key_file: "/etc/vxdb/certs/vxstorage.key"
     ca_file: "/etc/vxdb/certs/ca.crt"
