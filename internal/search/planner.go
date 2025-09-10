@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/routing"
-	"vexdb/internal/types"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/routing"
+	"vxdb/internal/types"
 )
 
 // QueryPlanner handles query planning and optimization for similarity searches

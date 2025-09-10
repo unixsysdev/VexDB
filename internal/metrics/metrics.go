@@ -350,7 +350,7 @@ func (m *Metrics) GetConfig() *Config {
 		Enabled:   true,
 		Port:      9090,
 		Path:      "/metrics",
-		Namespace: "vexdb",
+		Namespace: "vxdb",
 		Subsystem: "",
 		Interval:  15 * time.Second,
 		Buckets:   prometheus.DefBuckets,

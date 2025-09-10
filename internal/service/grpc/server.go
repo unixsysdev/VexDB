@@ -1,46 +1,46 @@
 package grpc
 
 import (
-    "context"
-    "errors"
-    "fmt"
-    "net"
-    "sync"
-    "time"
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"sync"
+	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/config"
-	"vexdb/internal/health"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/keepalive"
+	"vxdb/internal/config"
+	"vxdb/internal/health"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 var (
-	ErrServerNotRunning    = errors.New("server is not running")
+	ErrServerNotRunning     = errors.New("server is not running")
 	ErrServerAlreadyRunning = errors.New("server is already running")
-	ErrInvalidConfig       = errors.New("invalid server configuration")
-	ErrServiceRegistration = errors.New("service registration failed")
+	ErrInvalidConfig        = errors.New("invalid server configuration")
+	ErrServiceRegistration  = errors.New("service registration failed")
 )
 
 // ServerConfig represents the gRPC server configuration
 type ServerConfig struct {
-	Host               string        `yaml:"host" json:"host"`
-	Port               int           `yaml:"port" json:"port"`
-	EnableReflection   bool          `yaml:"enable_reflection" json:"enable_reflection"`
-	EnableHealthCheck  bool          `yaml:"enable_health_check" json:"enable_health_check"`
-	MaxConnectionAge   time.Duration `yaml:"max_connection_age" json:"max_connection_age"`
-	MaxConnectionAgeGrace time.Duration `yaml:"max_connection_age_grace" json:"max_connection_age_grace"`
-	KeepaliveParams    *KeepaliveParams `yaml:"keepalive_params" json:"keepalive_params"`
-	Interceptors       []InterceptorConfig `yaml:"interceptors" json:"interceptors"`
-	EnableTLS          bool          `yaml:"enable_tls" json:"enable_tls"`
-	TLSCertFile        string        `yaml:"tls_cert_file" json:"tls_cert_file"`
-	TLSKeyFile         string        `yaml:"tls_key_file" json:"tls_key_file"`
+	Host                  string              `yaml:"host" json:"host"`
+	Port                  int                 `yaml:"port" json:"port"`
+	EnableReflection      bool                `yaml:"enable_reflection" json:"enable_reflection"`
+	EnableHealthCheck     bool                `yaml:"enable_health_check" json:"enable_health_check"`
+	MaxConnectionAge      time.Duration       `yaml:"max_connection_age" json:"max_connection_age"`
+	MaxConnectionAgeGrace time.Duration       `yaml:"max_connection_age_grace" json:"max_connection_age_grace"`
+	KeepaliveParams       *KeepaliveParams    `yaml:"keepalive_params" json:"keepalive_params"`
+	Interceptors          []InterceptorConfig `yaml:"interceptors" json:"interceptors"`
+	EnableTLS             bool                `yaml:"enable_tls" json:"enable_tls"`
+	TLSCertFile           string              `yaml:"tls_cert_file" json:"tls_cert_file"`
+	TLSKeyFile            string              `yaml:"tls_key_file" json:"tls_key_file"`
 }
 
 // KeepaliveParams represents gRPC keepalive parameters
@@ -62,11 +62,11 @@ type InterceptorConfig struct {
 // DefaultServerConfig returns the default gRPC server configuration
 func DefaultServerConfig() *ServerConfig {
 	return &ServerConfig{
-		Host:              "0.0.0.0",
-		Port:              50051,
-		EnableReflection:  true,
-		EnableHealthCheck: true,
-		MaxConnectionAge:  5 * time.Minute,
+		Host:                  "0.0.0.0",
+		Port:                  50051,
+		EnableReflection:      true,
+		EnableHealthCheck:     true,
+		MaxConnectionAge:      5 * time.Minute,
 		MaxConnectionAgeGrace: 30 * time.Second,
 		KeepaliveParams: &KeepaliveParams{
 			MaxConnectionIdle:     5 * time.Minute,
@@ -81,35 +81,35 @@ func DefaultServerConfig() *ServerConfig {
 			{Name: "recovery", Enabled: true, Order: 3},
 			{Name: "validation", Enabled: true, Order: 4},
 		},
-		EnableTLS:   false,
+		EnableTLS: false,
 	}
 }
 
 // Server represents a gRPC server
 type Server struct {
-	config     *ServerConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	health     health.HealthChecker
-	
+	config  *ServerConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+	health  health.HealthChecker
+
 	// gRPC components
-	server     *grpc.Server
-	listener   net.Listener
-	
+	server   *grpc.Server
+	listener net.Listener
+
 	// Service registry
-	services   map[string]interface{}
-	mu         sync.RWMutex
-	
+	services map[string]interface{}
+	mu       sync.RWMutex
+
 	// Lifecycle
-	started    bool
-	stopped    bool
-	shutdown   chan struct{}
+	started  bool
+	stopped  bool
+	shutdown chan struct{}
 }
 
 // NewServer creates a new gRPC server
 func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics, health health.HealthChecker) (*Server, error) {
 	serverConfig := DefaultServerConfig()
-	
+
 	if cfg != nil {
 		if serverCfg, ok := cfg.Get("grpc"); ok {
 			if cfgMap, ok := serverCfg.(map[string]interface{}); ok {
@@ -144,7 +144,7 @@ func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.Servic
 				if tlsKeyFile, ok := cfgMap["tls_key_file"].(string); ok {
 					serverConfig.TLSKeyFile = tlsKeyFile
 				}
-				
+
 				// Parse keepalive parameters
 				if keepalive, ok := cfgMap["keepalive_params"].(map[string]interface{}); ok {
 					if serverConfig.KeepaliveParams == nil {
@@ -176,7 +176,7 @@ func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.Servic
 						}
 					}
 				}
-				
+
 				// Parse interceptors
 				if interceptors, ok := cfgMap["interceptors"].([]interface{}); ok {
 					serverConfig.Interceptors = make([]InterceptorConfig, len(interceptors))
@@ -193,12 +193,12 @@ func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.Servic
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateServerConfig(serverConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
-	
+
 	server := &Server{
 		config:   serverConfig,
 		logger:   logger,
@@ -207,19 +207,19 @@ func NewServer(cfg config.Config, logger logging.Logger, metrics *metrics.Servic
 		services: make(map[string]interface{}),
 		shutdown: make(chan struct{}),
 	}
-	
+
 	// Initialize gRPC server
 	if err := server.initializeGRPCServer(); err != nil {
 		return nil, fmt.Errorf("failed to initialize gRPC server: %w", err)
 	}
-	
+
 	server.logger.Info("Created gRPC server",
 		zap.String("host", serverConfig.Host),
 		zap.Int("port", serverConfig.Port),
 		zap.Bool("enable_reflection", serverConfig.EnableReflection),
 		zap.Bool("enable_health_check", serverConfig.EnableHealthCheck),
 		zap.Bool("enable_tls", serverConfig.EnableTLS))
-	
+
 	return server, nil
 }
 
@@ -228,19 +228,19 @@ func validateServerConfig(cfg *ServerConfig) error {
 	if cfg.Host == "" {
 		return errors.New("host cannot be empty")
 	}
-	
+
 	if cfg.Port <= 0 || cfg.Port > 65535 {
 		return errors.New("port must be between 1 and 65535")
 	}
-	
+
 	if cfg.MaxConnectionAge <= 0 {
 		return errors.New("max connection age must be positive")
 	}
-	
+
 	if cfg.MaxConnectionAgeGrace <= 0 {
 		return errors.New("max connection age grace must be positive")
 	}
-	
+
 	if cfg.EnableTLS {
 		if cfg.TLSCertFile == "" {
 			return errors.New("TLS cert file is required when TLS is enabled")
@@ -249,7 +249,7 @@ func validateServerConfig(cfg *ServerConfig) error {
 			return errors.New("TLS key file is required when TLS is enabled")
 		}
 	}
-	
+
 	if cfg.KeepaliveParams != nil {
 		if cfg.KeepaliveParams.MaxConnectionIdle <= 0 {
 			return errors.New("max connection idle must be positive")
@@ -267,7 +267,7 @@ func validateServerConfig(cfg *ServerConfig) error {
 			return errors.New("keepalive timeout must be positive")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -275,27 +275,27 @@ func validateServerConfig(cfg *ServerConfig) error {
 func (s *Server) initializeGRPCServer() error {
 	// Create server options
 	opts := s.getServerOptions()
-	
+
 	// Create gRPC server
 	s.server = grpc.NewServer(opts...)
-	
+
 	// Register reflection service if enabled
 	if s.config.EnableReflection {
 		reflection.Register(s.server)
 	}
-	
+
 	// Register health check service if enabled
 	if s.config.EnableHealthCheck {
 		grpc_health_v1.RegisterHealthServer(s.server, s)
 	}
-	
+
 	return nil
 }
 
 // getServerOptions returns gRPC server options
 func (s *Server) getServerOptions() []grpc.ServerOption {
 	var opts []grpc.ServerOption
-	
+
 	// Add keepalive parameters
 	if s.config.KeepaliveParams != nil {
 		keepalive := keepalive.ServerParameters{
@@ -307,25 +307,25 @@ func (s *Server) getServerOptions() []grpc.ServerOption {
 		}
 		opts = append(opts, grpc.KeepaliveParams(keepalive))
 	}
-	
+
 	// Add interceptors
 	interceptors := s.getInterceptors()
 	if len(interceptors) > 0 {
 		opts = append(opts, grpc.ChainUnaryInterceptor(interceptors...))
 		opts = append(opts, grpc.ChainStreamInterceptor(s.getStreamInterceptors()...))
 	}
-	
+
 	return opts
 }
 
 // getInterceptors returns unary interceptors
 func (s *Server) getInterceptors() []grpc.UnaryServerInterceptor {
 	var interceptors []grpc.UnaryServerInterceptor
-	
+
 	// Sort interceptors by order
 	sortedInterceptors := make([]InterceptorConfig, len(s.config.Interceptors))
 	copy(sortedInterceptors, s.config.Interceptors)
-	
+
 	// Simple bubble sort by order
 	for i := 0; i < len(sortedInterceptors)-1; i++ {
 		for j := i + 1; j < len(sortedInterceptors); j++ {
@@ -334,12 +334,12 @@ func (s *Server) getInterceptors() []grpc.UnaryServerInterceptor {
 			}
 		}
 	}
-	
+
 	for _, interceptor := range sortedInterceptors {
 		if !interceptor.Enabled {
 			continue
 		}
-		
+
 		switch interceptor.Name {
 		case "logging":
 			interceptors = append(interceptors, s.loggingInterceptor)
@@ -351,17 +351,17 @@ func (s *Server) getInterceptors() []grpc.UnaryServerInterceptor {
 			interceptors = append(interceptors, s.validationInterceptor)
 		}
 	}
-	
+
 	return interceptors
 }
 
 // getStreamInterceptors returns stream interceptors
 func (s *Server) getStreamInterceptors() []grpc.StreamServerInterceptor {
 	var interceptors []grpc.StreamServerInterceptor
-	
+
 	// Add stream interceptors as needed
 	// For now, we'll use the same logic as unary interceptors
-	
+
 	return interceptors
 }
 
@@ -369,20 +369,20 @@ func (s *Server) getStreamInterceptors() []grpc.StreamServerInterceptor {
 func (s *Server) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.started {
 		return ErrServerAlreadyRunning
 	}
-	
+
 	// Create listener
 	address := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", address, err)
 	}
-	
+
 	s.listener = listener
-	
+
 	// Start server in goroutine
 	go func() {
 		s.logger.Info("Starting gRPC server", zap.String("address", address))
@@ -390,12 +390,12 @@ func (s *Server) Start() error {
 			s.logger.Error("gRPC server failed", zap.Error(err))
 		}
 	}()
-	
+
 	s.started = true
 	s.stopped = false
-	
+
 	s.logger.Info("Started gRPC server", zap.String("address", address))
-	
+
 	return nil
 }
 
@@ -403,28 +403,28 @@ func (s *Server) Start() error {
 func (s *Server) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.stopped {
 		return nil
 	}
-	
+
 	if !s.started {
 		return ErrServerNotRunning
 	}
-	
+
 	// Graceful shutdown
 	s.logger.Info("Stopping gRPC server")
-	
+
 	// Signal shutdown
 	close(s.shutdown)
-	
+
 	// Graceful stop with timeout
 	stopped := make(chan struct{})
 	go func() {
 		s.server.GracefulStop()
 		close(stopped)
 	}()
-	
+
 	select {
 	case <-stopped:
 		s.logger.Info("gRPC server stopped gracefully")
@@ -432,10 +432,10 @@ func (s *Server) Stop() error {
 		s.logger.Warn("gRPC server shutdown timeout, forcing stop")
 		s.server.Stop()
 	}
-	
+
 	s.stopped = true
 	s.started = false
-	
+
 	return nil
 }
 
@@ -443,7 +443,7 @@ func (s *Server) Stop() error {
 func (s *Server) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	return s.started && !s.stopped
 }
 
@@ -451,11 +451,11 @@ func (s *Server) IsRunning() bool {
 func (s *Server) GetAddress() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if s.listener == nil {
 		return ""
 	}
-	
+
 	return s.listener.Addr().String()
 }
 
@@ -463,22 +463,22 @@ func (s *Server) GetAddress() string {
 func (s *Server) RegisterService(name string, service interface{}) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.started {
 		return ErrServerNotRunning
 	}
-	
+
 	// Check if service is already registered
 	if _, exists := s.services[name]; exists {
 		return fmt.Errorf("service %s is already registered", name)
 	}
-	
+
 	// Register service (this is a simplified approach)
 	// In a real implementation, you would use the specific registration methods
 	s.services[name] = service
-	
+
 	s.logger.Info("Registered gRPC service", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -486,21 +486,21 @@ func (s *Server) RegisterService(name string, service interface{}) error {
 func (s *Server) UnregisterService(name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.started {
 		return ErrServerNotRunning
 	}
-	
+
 	// Check if service exists
 	if _, exists := s.services[name]; !exists {
 		return fmt.Errorf("service %s is not registered", name)
 	}
-	
+
 	// Unregister service
 	delete(s.services, name)
-	
+
 	s.logger.Info("Unregistered gRPC service", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -508,12 +508,12 @@ func (s *Server) UnregisterService(name string) error {
 func (s *Server) GetRegisteredServices() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	services := make([]string, 0, len(s.services))
 	for name := range s.services {
 		services = append(services, name)
 	}
-	
+
 	return services
 }
 
@@ -521,7 +521,7 @@ func (s *Server) GetRegisteredServices() []string {
 func (s *Server) GetConfig() *ServerConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *s.config
 	return &config
@@ -531,16 +531,16 @@ func (s *Server) GetConfig() *ServerConfig {
 func (s *Server) UpdateConfig(config *ServerConfig) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateServerConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidConfig, err)
 	}
-	
+
 	s.config = config
-	
+
 	s.logger.Info("Updated gRPC server configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -548,19 +548,19 @@ func (s *Server) UpdateConfig(config *ServerConfig) error {
 func (s *Server) Validate() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateServerConfig(s.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
 // Health check implementation
 func (s *Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	service := req.Service
-	
+
 	// If no service specified, check server health
 	if service == "" {
 		if s.IsRunning() {
@@ -572,28 +572,28 @@ func (s *Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckReque
 			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
 		}, nil
 	}
-	
+
 	// Check specific service health
 	s.mu.RLock()
 	_, exists := s.services[service]
 	s.mu.RUnlock()
-	
+
 	if !exists {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("service %s not found", service))
 	}
-	
+
 	// Check service health through health checker
-    if s.health != nil {
-        if status, err := s.health.CheckHealth(ctx, false); err == nil && status != nil && status.Status != "" {
-            return &grpc_health_v1.HealthCheckResponse{
-                Status: grpc_health_v1.HealthCheckResponse_SERVING,
-            }, nil
-        }
-        return &grpc_health_v1.HealthCheckResponse{
-            Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
-        }, nil
-    }
-	
+	if s.health != nil {
+		if status, err := s.health.CheckHealth(ctx, false); err == nil && status != nil && status.Status != "" {
+			return &grpc_health_v1.HealthCheckResponse{
+				Status: grpc_health_v1.HealthCheckResponse_SERVING,
+			}, nil
+		}
+		return &grpc_health_v1.HealthCheckResponse{
+			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+		}, nil
+	}
+
 	// Default to serving if no health checker
 	return &grpc_health_v1.HealthCheckResponse{
 		Status: grpc_health_v1.HealthCheckResponse_SERVING,
@@ -607,34 +607,34 @@ func (s *Server) Watch(req *grpc_health_v1.HealthCheckRequest, stream grpc_healt
 	if err != nil {
 		return err
 	}
-	
+
 	return stream.Send(resp)
 }
 
 // List implements the HealthServer List method introduced in newer grpc-health versions.
 func (s *Server) List(ctx context.Context, req *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
-    s.mu.RLock()
-    defer s.mu.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-    resp := &grpc_health_v1.HealthListResponse{Statuses: make(map[string]*grpc_health_v1.HealthCheckResponse)}
-    for name := range s.services {
-        resp.Statuses[name] = &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}
-    }
-    return resp, nil
+	resp := &grpc_health_v1.HealthListResponse{Statuses: make(map[string]*grpc_health_v1.HealthCheckResponse)}
+	for name := range s.services {
+		resp.Statuses[name] = &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}
+	}
+	return resp, nil
 }
 
 // Interceptor implementations
 func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
-	
+
 	s.logger.Info("gRPC request started",
 		zap.String("method", info.FullMethod),
 		zap.String("request_type", fmt.Sprintf("%T", req)))
-	
+
 	resp, err := handler(ctx, req)
-	
+
 	duration := time.Since(start)
-	
+
 	if err != nil {
 		s.logger.Error("gRPC request failed",
 			zap.String("method", info.FullMethod),
@@ -646,26 +646,26 @@ func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *
 			zap.Duration("duration", duration),
 			zap.String("response_type", fmt.Sprintf("%T", resp)))
 	}
-	
+
 	return resp, err
 }
 
 func (s *Server) metricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
-	
+
 	resp, err := handler(ctx, req)
-	
+
 	duration := time.Since(start)
-	
+
 	// Update metrics
-    if s.metrics != nil {
-        s.metrics.GRPCRequests.Inc("grpc")
-        s.metrics.GRPCLatency.Observe(duration.Seconds())
-        if err != nil {
-            s.metrics.GRPCErrors.Inc("grpc")
-        }
-    }
-	
+	if s.metrics != nil {
+		s.metrics.GRPCRequests.Inc("grpc")
+		s.metrics.GRPCLatency.Observe(duration.Seconds())
+		if err != nil {
+			s.metrics.GRPCErrors.Inc("grpc")
+		}
+	}
+
 	return resp, err
 }
 
@@ -675,11 +675,11 @@ func (s *Server) recoveryInterceptor(ctx context.Context, req interface{}, info 
 			s.logger.Error("gRPC panic recovered",
 				zap.String("method", info.FullMethod),
 				zap.Any("panic", r))
-			
+
 			err = status.Error(codes.Internal, "internal server error")
 		}
 	}()
-	
+
 	return handler(ctx, req)
 }
 
@@ -690,7 +690,7 @@ func (s *Server) validationInterceptor(ctx context.Context, req interface{}, inf
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 	}
-	
+
 	return handler(ctx, req)
 }
 

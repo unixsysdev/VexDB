@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	logging2 "vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	searchconfig "vexdb/internal/search/config"
-	"vexdb/internal/search/server"
-	"vexdb/internal/search/service"
-	"vexdb/internal/storage/search"
+	logging2 "vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	searchconfig "vxdb/internal/search/config"
+	"vxdb/internal/search/server"
+	"vxdb/internal/search/service"
+	"vxdb/internal/storage/search"
 
 	"gopkg.in/yaml.v2"
 
@@ -23,7 +23,7 @@ import (
 
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "configs/vexsearch-production.yaml", "Path to configuration file")
+	flag.StringVar(&configPath, "config", "configs/vxsearch-production.yaml", "Path to configuration file")
 	flag.Parse()
 
 	// Initialize logger
@@ -33,7 +33,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	logger.Info("Starting VexDB Search Service", zap.String("config", configPath))
+	logger.Info("Starting VxDB Search Service", zap.String("config", configPath))
 
 	// Load configuration
 	searchConfig, err := loadConfig(configPath)
@@ -78,7 +78,7 @@ func main() {
 		logger.Fatal("Failed to start services", zap.Error(err))
 	}
 
-	logger.Info("VexDB Search Service started successfully")
+	logger.Info("VxDB Search Service started successfully")
 
 	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
@@ -86,7 +86,7 @@ func main() {
 
 	// Wait for shutdown signal
 	<-sigChan
-	logger.Info("Shutting down VexDB Search Service...")
+	logger.Info("Shutting down VxDB Search Service...")
 
 	// Graceful shutdown
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -96,7 +96,7 @@ func main() {
 		logger.Error("Error during shutdown", zap.Error(err))
 	}
 
-	logger.Info("VexDB Search Service stopped")
+	logger.Info("VxDB Search Service stopped")
 }
 
 // loadConfig loads the search service configuration from a YAML file

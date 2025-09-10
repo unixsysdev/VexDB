@@ -6,178 +6,178 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"vexdb/internal/errors"
+	"vxdb/internal/errors"
 )
 
-// Context keys for VexDB context values
+// Context keys for VxDB context values
 type contextKey string
 
 const (
 	// RequestIDKey is the key for the request ID in the context
 	RequestIDKey contextKey = "request_id"
-	
+
 	// TraceIDKey is the key for the trace ID in the context
 	TraceIDKey contextKey = "trace_id"
-	
+
 	// SpanIDKey is the key for the span ID in the context
 	SpanIDKey contextKey = "span_id"
-	
+
 	// UserIDKey is the key for the user ID in the context
 	UserIDKey contextKey = "user_id"
-	
+
 	// ServiceNameKey is the key for the service name in the context
 	ServiceNameKey contextKey = "service_name"
-	
+
 	// OperationNameKey is the key for the operation name in the context
 	OperationNameKey contextKey = "operation_name"
-	
+
 	// StartTimeKey is the key for the start time in the context
 	StartTimeKey contextKey = "start_time"
-	
+
 	// TimeoutKey is the key for the timeout in the context
 	TimeoutKey contextKey = "timeout"
-	
+
 	// MetadataKey is the key for metadata in the context
 	MetadataKey contextKey = "metadata"
-	
+
 	// ClusterIDKey is the key for the cluster ID in the context
 	ClusterIDKey contextKey = "cluster_id"
-	
+
 	// NodeIDKey is the key for the node ID in the context
 	NodeIDKey contextKey = "node_id"
-	
+
 	// VectorIDKey is the key for the vector ID in the context
 	VectorIDKey contextKey = "vector_id"
-	
+
 	// QueryIDKey is the key for the query ID in the context
 	QueryIDKey contextKey = "query_id"
-	
+
 	// BatchIDKey is the key for the batch ID in the context
 	BatchIDKey contextKey = "batch_id"
-	
+
 	// ReplicationFactorKey is the key for the replication factor in the context
 	ReplicationFactorKey contextKey = "replication_factor"
-	
+
 	// ConsistencyLevelKey is the key for the consistency level in the context
 	ConsistencyLevelKey contextKey = "consistency_level"
-	
+
 	// RetryCountKey is the key for the retry count in the context
 	RetryCountKey contextKey = "retry_count"
-	
+
 	// DeadlineKey is the key for the deadline in the context
 	DeadlineKey contextKey = "deadline"
 )
 
-// Context represents a VexDB context with additional metadata
+// Context represents a VxDB context with additional metadata
 type Context struct {
-	RequestID        string
-	TraceID          string
-	SpanID           string
-	UserID           string
-	ServiceName      string
-	OperationName    string
-	StartTime        time.Time
-	Timeout          time.Duration
-	Metadata         map[string]interface{}
-	ClusterID        string
-	NodeID           string
-	VectorID         string
-	QueryID          string
-	BatchID          string
+	RequestID         string
+	TraceID           string
+	SpanID            string
+	UserID            string
+	ServiceName       string
+	OperationName     string
+	StartTime         time.Time
+	Timeout           time.Duration
+	Metadata          map[string]interface{}
+	ClusterID         string
+	NodeID            string
+	VectorID          string
+	QueryID           string
+	BatchID           string
 	ReplicationFactor int
-	ConsistencyLevel string
-	RetryCount       int
-	Deadline         time.Time
+	ConsistencyLevel  string
+	RetryCount        int
+	Deadline          time.Time
 }
 
-// NewContext creates a new VexDB context
+// NewContext creates a new VxDB context
 func NewContext(ctx context.Context) *Context {
-	vexCtx := &Context{
+	vxCtx := &Context{
 		StartTime: time.Now(),
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	// Extract existing values from context if they exist
 	if requestID := ctx.Value(RequestIDKey); requestID != nil {
-		vexCtx.RequestID = requestID.(string)
+		vxCtx.RequestID = requestID.(string)
 	} else {
-		vexCtx.RequestID = generateID()
+		vxCtx.RequestID = generateID()
 	}
-	
+
 	if traceID := ctx.Value(TraceIDKey); traceID != nil {
-		vexCtx.TraceID = traceID.(string)
+		vxCtx.TraceID = traceID.(string)
 	} else {
-		vexCtx.TraceID = generateID()
+		vxCtx.TraceID = generateID()
 	}
-	
+
 	if spanID := ctx.Value(SpanIDKey); spanID != nil {
-		vexCtx.SpanID = spanID.(string)
+		vxCtx.SpanID = spanID.(string)
 	} else {
-		vexCtx.SpanID = generateID()
+		vxCtx.SpanID = generateID()
 	}
-	
+
 	if userID := ctx.Value(UserIDKey); userID != nil {
-		vexCtx.UserID = userID.(string)
+		vxCtx.UserID = userID.(string)
 	}
-	
+
 	if serviceName := ctx.Value(ServiceNameKey); serviceName != nil {
-		vexCtx.ServiceName = serviceName.(string)
+		vxCtx.ServiceName = serviceName.(string)
 	}
-	
+
 	if operationName := ctx.Value(OperationNameKey); operationName != nil {
-		vexCtx.OperationName = operationName.(string)
+		vxCtx.OperationName = operationName.(string)
 	}
-	
+
 	if timeout := ctx.Value(TimeoutKey); timeout != nil {
-		vexCtx.Timeout = timeout.(time.Duration)
+		vxCtx.Timeout = timeout.(time.Duration)
 	}
-	
+
 	if metadata := ctx.Value(MetadataKey); metadata != nil {
 		if metaMap, ok := metadata.(map[string]interface{}); ok {
-			vexCtx.Metadata = metaMap
+			vxCtx.Metadata = metaMap
 		}
 	}
-	
+
 	if clusterID := ctx.Value(ClusterIDKey); clusterID != nil {
-		vexCtx.ClusterID = clusterID.(string)
+		vxCtx.ClusterID = clusterID.(string)
 	}
-	
+
 	if nodeID := ctx.Value(NodeIDKey); nodeID != nil {
-		vexCtx.NodeID = nodeID.(string)
+		vxCtx.NodeID = nodeID.(string)
 	}
-	
+
 	if vectorID := ctx.Value(VectorIDKey); vectorID != nil {
-		vexCtx.VectorID = vectorID.(string)
+		vxCtx.VectorID = vectorID.(string)
 	}
-	
+
 	if queryID := ctx.Value(QueryIDKey); queryID != nil {
-		vexCtx.QueryID = queryID.(string)
+		vxCtx.QueryID = queryID.(string)
 	}
-	
+
 	if batchID := ctx.Value(BatchIDKey); batchID != nil {
-		vexCtx.BatchID = batchID.(string)
+		vxCtx.BatchID = batchID.(string)
 	}
-	
+
 	if replicationFactor := ctx.Value(ReplicationFactorKey); replicationFactor != nil {
-		vexCtx.ReplicationFactor = replicationFactor.(int)
+		vxCtx.ReplicationFactor = replicationFactor.(int)
 	}
-	
+
 	if consistencyLevel := ctx.Value(ConsistencyLevelKey); consistencyLevel != nil {
-		vexCtx.ConsistencyLevel = consistencyLevel.(string)
+		vxCtx.ConsistencyLevel = consistencyLevel.(string)
 	}
-	
+
 	if retryCount := ctx.Value(RetryCountKey); retryCount != nil {
-		vexCtx.RetryCount = retryCount.(int)
+		vxCtx.RetryCount = retryCount.(int)
 	}
-	
+
 	if deadline, ok := ctx.Deadline(); ok {
-		vexCtx.Deadline = deadline
+		vxCtx.Deadline = deadline
 	}
-	
-	return vexCtx
+
+	return vxCtx
 }
 
-// ToContext converts the VexDB context to a standard context
+// ToContext converts the VxDB context to a standard context
 func (c *Context) ToContext(ctx context.Context) context.Context {
 	ctx = context.WithValue(ctx, RequestIDKey, c.RequestID)
 	ctx = context.WithValue(ctx, TraceIDKey, c.TraceID)
@@ -197,7 +197,7 @@ func (c *Context) ToContext(ctx context.Context) context.Context {
 	ctx = context.WithValue(ctx, ConsistencyLevelKey, c.ConsistencyLevel)
 	ctx = context.WithValue(ctx, RetryCountKey, c.RetryCount)
 	ctx = context.WithValue(ctx, DeadlineKey, c.Deadline)
-	
+
 	return ctx
 }
 
@@ -368,32 +368,32 @@ func (c *Context) Validate() error {
 // Copy creates a copy of the context
 func (c *Context) Copy() *Context {
 	copy := &Context{
-		RequestID:        c.RequestID,
-		TraceID:          c.TraceID,
-		SpanID:           c.SpanID,
-		UserID:           c.UserID,
-		ServiceName:      c.ServiceName,
-		OperationName:    c.OperationName,
-		StartTime:        c.StartTime,
-		Timeout:          c.Timeout,
-		ClusterID:        c.ClusterID,
-		NodeID:           c.NodeID,
-		VectorID:         c.VectorID,
-		QueryID:          c.QueryID,
-		BatchID:          c.BatchID,
+		RequestID:         c.RequestID,
+		TraceID:           c.TraceID,
+		SpanID:            c.SpanID,
+		UserID:            c.UserID,
+		ServiceName:       c.ServiceName,
+		OperationName:     c.OperationName,
+		StartTime:         c.StartTime,
+		Timeout:           c.Timeout,
+		ClusterID:         c.ClusterID,
+		NodeID:            c.NodeID,
+		VectorID:          c.VectorID,
+		QueryID:           c.QueryID,
+		BatchID:           c.BatchID,
 		ReplicationFactor: c.ReplicationFactor,
-		ConsistencyLevel: c.ConsistencyLevel,
-		RetryCount:       c.RetryCount,
-		Deadline:         c.Deadline,
+		ConsistencyLevel:  c.ConsistencyLevel,
+		RetryCount:        c.RetryCount,
+		Deadline:          c.Deadline,
 	}
-	
+
 	if c.Metadata != nil {
 		copy.Metadata = make(map[string]interface{})
 		for k, v := range c.Metadata {
 			copy.Metadata[k] = v
 		}
 	}
-	
+
 	return copy
 }
 

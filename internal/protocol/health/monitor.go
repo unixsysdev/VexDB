@@ -1,4 +1,3 @@
-
 package health
 
 import (
@@ -6,23 +5,23 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
 	"go.uber.org/zap"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 // ConnectionHealthMonitor monitors the health of protocol connections
 type ConnectionHealthMonitor struct {
-	logger          logging.Logger
-	metrics         *metrics.IngestionMetrics
-	checkInterval   time.Duration
-	timeout         time.Duration
-	healthyThreshold int
+	logger             logging.Logger
+	metrics            *metrics.IngestionMetrics
+	checkInterval      time.Duration
+	timeout            time.Duration
+	healthyThreshold   int
 	unhealthyThreshold int
-	mu              sync.RWMutex
-	connections     map[string]*ConnectionHealth
-	shutdown        chan struct{}
-	wg              sync.WaitGroup
+	mu                 sync.RWMutex
+	connections        map[string]*ConnectionHealth
+	shutdown           chan struct{}
+	wg                 sync.WaitGroup
 }
 
 // ConnectionHealth represents the health status of a connection
@@ -69,20 +68,20 @@ func (s ConnectionStatus) String() string {
 // MonitorConfig represents the configuration for the connection health monitor
 type MonitorConfig struct {
 	CheckInterval      time.Duration `yaml:"check_interval" json:"check_interval"`
-	Timeout           time.Duration `yaml:"timeout" json:"timeout"`
-	HealthyThreshold  int           `yaml:"healthy_threshold" json:"healthy_threshold"`
-	UnhealthyThreshold int          `yaml:"unhealthy_threshold" json:"unhealthy_threshold"`
-	EnableMetrics     bool          `yaml:"enable_metrics" json:"enable_metrics"`
+	Timeout            time.Duration `yaml:"timeout" json:"timeout"`
+	HealthyThreshold   int           `yaml:"healthy_threshold" json:"healthy_threshold"`
+	UnhealthyThreshold int           `yaml:"unhealthy_threshold" json:"unhealthy_threshold"`
+	EnableMetrics      bool          `yaml:"enable_metrics" json:"enable_metrics"`
 }
 
 // DefaultMonitorConfig returns the default monitor configuration
 func DefaultMonitorConfig() *MonitorConfig {
 	return &MonitorConfig{
 		CheckInterval:      30 * time.Second,
-		Timeout:           5 * time.Second,
-		HealthyThreshold:  3,
+		Timeout:            5 * time.Second,
+		HealthyThreshold:   3,
 		UnhealthyThreshold: 5,
-		EnableMetrics:     true,
+		EnableMetrics:      true,
 	}
 }
 
@@ -93,14 +92,14 @@ func NewConnectionHealthMonitor(config *MonitorConfig, logger logging.Logger, me
 	}
 
 	monitor := &ConnectionHealthMonitor{
-		logger:            logger,
-		metrics:           metrics,
-		checkInterval:     config.CheckInterval,
-		timeout:           config.Timeout,
-		healthyThreshold:  config.HealthyThreshold,
+		logger:             logger,
+		metrics:            metrics,
+		checkInterval:      config.CheckInterval,
+		timeout:            config.Timeout,
+		healthyThreshold:   config.HealthyThreshold,
 		unhealthyThreshold: config.UnhealthyThreshold,
-		connections:       make(map[string]*ConnectionHealth),
-		shutdown:          make(chan struct{}),
+		connections:        make(map[string]*ConnectionHealth),
+		shutdown:           make(chan struct{}),
 	}
 
 	monitor.logger.Info("Created connection health monitor",
@@ -291,7 +290,6 @@ func (m *ConnectionHealthMonitor) runHealthChecks(ctx context.Context) {
 
 	ticker := time.NewTicker(m.checkInterval)
 	defer ticker.Stop()
-
 
 	for {
 		select {

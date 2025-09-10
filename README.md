@@ -1,6 +1,6 @@
-# VexDB
+# VxDB
 
-VexDB is a distributed, high-throughput streaming vector database designed for real-time similarity search and scalable ingestion. It features a shared-nothing architecture with three core services: ingestion (`vxinsert`), storage (`vxstorage`), and query coordination (`vxsearch`).
+VxDB is a distributed, high-throughput streaming vector database designed for real-time similarity search and scalable ingestion. It features a shared-nothing architecture with three core services: ingestion (`vxinsert`), storage (`vxstorage`), and query coordination (`vxsearch`).
 
 ## Features
 - **Sub-second write latency** and immediate searchability
@@ -15,7 +15,7 @@ VexDB is a distributed, high-throughput streaming vector database designed for r
 ## Architecture
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        VexDB Cluster                        │
+│                        VxDB Cluster                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
 │  │  vxinsert  │  │  vxinsert  │  │  vxinsert  │          │
@@ -65,21 +65,21 @@ VexDB is a distributed, high-throughput streaming vector database designed for r
 ## Deployment
 
 ### Docker Compose
-VexDB provides a `docker-compose.yml` for local development and testing:
+VxDB provides a `docker-compose.yml` for local development and testing:
 
 ```sh
 docker-compose up --build
 ```
 
 This will start:
-- `vexinsert` (ingestion)
-- `vexstorage` (storage/index)
-- `vexsearch` (query)
+- `vxinsert` (ingestion)
+- `vxstorage` (storage/index)
+- `vxsearch` (query)
 - `prometheus`, `grafana`, `jaeger` (monitoring)
 - `redis` (optional), `nginx` (optional)
 
 ### Configuration
-Service configs are in `configs/` (e.g., `vexinsert-production.yaml`).
+Service configs are in `configs/` (e.g., `vxinsert-production.yaml`).
 
 ## API Examples
 
@@ -135,4 +135,4 @@ go test -tags integration ./...
 
 ---
 
-© 2025 VexDB Development Team
+© 2025 VxDB Development Team

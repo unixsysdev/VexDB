@@ -1,27 +1,27 @@
 package hashing
 
 import (
-    "encoding/binary"
-    "errors"
-    "fmt"
-    "hash/fnv"
-    "math"
-    "sync"
-    "time"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"hash/fnv"
+	"math"
+	"sync"
+	"time"
 
-    "vexdb/internal/config"
-    "vexdb/internal/logging"
-    "vexdb/internal/metrics"
-    "vexdb/internal/types"
-    "go.uber.org/zap"
+	"go.uber.org/zap"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 var (
-	ErrInvalidVector      = errors.New("invalid vector")
-	ErrInvalidClusterID   = errors.New("invalid cluster ID")
+	ErrInvalidVector       = errors.New("invalid vector")
+	ErrInvalidClusterID    = errors.New("invalid cluster ID")
 	ErrInvalidClusterCount = errors.New("invalid cluster count")
-	ErrHashingFailed      = errors.New("hashing failed")
-	ErrAssignmentFailed   = errors.New("assignment failed")
+	ErrHashingFailed       = errors.New("hashing failed")
+	ErrAssignmentFailed    = errors.New("assignment failed")
 )
 
 // HashAlgorithm represents a hashing algorithm
@@ -40,21 +40,21 @@ const (
 type AssignmentStrategy string
 
 const (
-	StrategyHash      AssignmentStrategy = "hash"
-	StrategyModulo    AssignmentStrategy = "modulo"
+	StrategyHash       AssignmentStrategy = "hash"
+	StrategyModulo     AssignmentStrategy = "modulo"
 	StrategyConsistent AssignmentStrategy = "consistent"
-	StrategyRange     AssignmentStrategy = "range"
+	StrategyRange      AssignmentStrategy = "range"
 )
 
 // HasherConfig represents the hasher configuration
 type HasherConfig struct {
-	Algorithm        HashAlgorithm        `yaml:"algorithm" json:"algorithm"`
-	Strategy         AssignmentStrategy   `yaml:"strategy" json:"strategy"`
-	ClusterCount     uint32               `yaml:"cluster_count" json:"cluster_count"`
-	Seed             uint64               `yaml:"seed" json:"seed"`
-	EnableCache      bool                 `yaml:"enable_cache" json:"enable_cache"`
-	CacheSize        int                  `yaml:"cache_size" json:"cache_size"`
-	EnableValidation bool                 `yaml:"enable_validation" json:"enable_validation"`
+	Algorithm        HashAlgorithm      `yaml:"algorithm" json:"algorithm"`
+	Strategy         AssignmentStrategy `yaml:"strategy" json:"strategy"`
+	ClusterCount     uint32             `yaml:"cluster_count" json:"cluster_count"`
+	Seed             uint64             `yaml:"seed" json:"seed"`
+	EnableCache      bool               `yaml:"enable_cache" json:"enable_cache"`
+	CacheSize        int                `yaml:"cache_size" json:"cache_size"`
+	EnableValidation bool               `yaml:"enable_validation" json:"enable_validation"`
 }
 
 // DefaultHasherConfig returns the default hasher configuration
@@ -72,11 +72,11 @@ func DefaultHasherConfig() *HasherConfig {
 
 // Hasher represents a vector hasher and cluster assigner
 type Hasher struct {
-    config      *HasherConfig
-    cache       map[uint64]uint32 // hash -> cluster_id
-    mu          sync.RWMutex
-    logger      logging.Logger
-    metrics     *metrics.StorageMetrics
+	config  *HasherConfig
+	cache   map[uint64]uint32 // hash -> cluster_id
+	mu      sync.RWMutex
+	logger  logging.Logger
+	metrics *metrics.StorageMetrics
 }
 
 // HasherStats represents hasher statistics
@@ -90,7 +90,7 @@ type HasherStats struct {
 // NewHasher creates a new hasher
 func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Hasher, error) {
 	hasherConfig := DefaultHasherConfig()
-	
+
 	if cfg != nil {
 		if hasherCfg, ok := cfg.Get("hasher"); ok {
 			if cfgMap, ok := hasherCfg.(map[string]interface{}); ok {
@@ -118,24 +118,24 @@ func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateHasherConfig(hasherConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidClusterCount, err)
 	}
-	
-    hasher := &Hasher{
-        config: hasherConfig,
-        cache:  make(map[uint64]uint32),
-        logger: logger,
-        metrics: metrics,
-    }
-	
+
+	hasher := &Hasher{
+		config:  hasherConfig,
+		cache:   make(map[uint64]uint32),
+		logger:  logger,
+		metrics: metrics,
+	}
+
 	// Pre-allocate cache if enabled
-    if hasherConfig.EnableCache && hasherConfig.CacheSize > 0 {
-        hasher.cache = make(map[uint64]uint32, hasherConfig.CacheSize)
-    }
-	
+	if hasherConfig.EnableCache && hasherConfig.CacheSize > 0 {
+		hasher.cache = make(map[uint64]uint32, hasherConfig.CacheSize)
+	}
+
 	hasher.logger.Info("Created hasher",
 		zap.String("algorithm", string(hasherConfig.Algorithm)),
 		zap.String("strategy", string(hasherConfig.Strategy)),
@@ -143,7 +143,7 @@ func NewHasher(cfg config.Config, logger logging.Logger, metrics *metrics.Storag
 		zap.Uint64("seed", hasherConfig.Seed),
 		zap.Bool("enable_cache", hasherConfig.EnableCache),
 		zap.Int("cache_size", hasherConfig.CacheSize))
-	
+
 	return hasher, nil
 }
 
@@ -157,43 +157,43 @@ func validateHasherConfig(cfg *HasherConfig) error {
 		cfg.Algorithm != AlgorithmSHA256 {
 		return fmt.Errorf("unsupported algorithm: %s", cfg.Algorithm)
 	}
-	
+
 	if cfg.Strategy != StrategyHash &&
 		cfg.Strategy != StrategyModulo &&
 		cfg.Strategy != StrategyConsistent &&
 		cfg.Strategy != StrategyRange {
 		return fmt.Errorf("unsupported strategy: %s", cfg.Strategy)
 	}
-	
+
 	if cfg.ClusterCount == 0 {
 		return errors.New("cluster count must be positive")
 	}
-	
+
 	if cfg.CacheSize < 0 {
 		return errors.New("cache size must be non-negative")
 	}
-	
+
 	return nil
 }
 
 // HashVector computes a hash of the vector data
 func (h *Hasher) HashVector(vector *types.Vector) (uint64, error) {
-    if h.config.EnableValidation {
-        if err := vector.Validate(); err != nil {
-            h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
-            return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
-        }
-    }
-	
+	if h.config.EnableValidation {
+		if err := vector.Validate(); err != nil {
+			h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
+			return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
+		}
+	}
+
 	hash, err := h.hashVectorData(vector.Data)
 	if err != nil {
 		h.metrics.Errors.Add(1, "component", "hashing", "error_type", "hash_failed")
 		return 0, fmt.Errorf("%w: %v", ErrHashingFailed, err)
 	}
-	
+
 	// Update metrics
 	h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "hash_vector")
-	
+
 	return hash, nil
 }
 
@@ -220,42 +220,42 @@ func (h *Hasher) hashVectorData(data []float32) (uint64, error) {
 // hashFNV1a computes FNV-1a hash of vector data
 func (h *Hasher) hashFNV1a(data []float32) (uint64, error) {
 	hash := fnv.New64a()
-	
+
 	// Write seed if provided
 	if h.config.Seed != 0 {
 		seedBytes := make([]byte, 8)
 		binary.LittleEndian.PutUint64(seedBytes, h.config.Seed)
 		hash.Write(seedBytes)
 	}
-	
+
 	// Write vector data
 	for _, value := range data {
 		bytes := make([]byte, 4)
 		binary.LittleEndian.PutUint32(bytes, math.Float32bits(value))
 		hash.Write(bytes)
 	}
-	
+
 	return hash.Sum64(), nil
 }
 
 // hashFNV1 computes FNV-1 hash of vector data
 func (h *Hasher) hashFNV1(data []float32) (uint64, error) {
 	hash := fnv.New64()
-	
+
 	// Write seed if provided
 	if h.config.Seed != 0 {
 		seedBytes := make([]byte, 8)
 		binary.LittleEndian.PutUint64(seedBytes, h.config.Seed)
 		hash.Write(seedBytes)
 	}
-	
+
 	// Write vector data
 	for _, value := range data {
 		bytes := make([]byte, 4)
 		binary.LittleEndian.PutUint32(bytes, math.Float32bits(value))
 		hash.Write(bytes)
 	}
-	
+
 	return hash.Sum64(), nil
 }
 
@@ -299,7 +299,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 			return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
 		}
 	}
-	
+
 	// Check cache first
 	if h.config.EnableCache {
 		// Compute hash for cache lookup
@@ -307,7 +307,7 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
-		
+
 		h.mu.RLock()
 		if clusterID, exists := h.cache[hash]; exists {
 			h.mu.RUnlock()
@@ -317,30 +317,30 @@ func (h *Hasher) AssignCluster(vector *types.Vector) (uint32, error) {
 		h.mu.RUnlock()
 		h.metrics.CacheMisses.Add(1, "component", "hashing", "result", "miss")
 	}
-	
+
 	// Compute hash
 	hash, err := h.HashVector(vector)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	// Assign cluster based on strategy
 	clusterID, err := h.assignClusterFromHash(hash)
 	if err != nil {
 		h.metrics.Errors.Add(1, "component", "hashing", "error_type", "assignment_failed")
 		return 0, fmt.Errorf("%w: %v", ErrAssignmentFailed, err)
 	}
-	
+
 	// Update cache
 	if h.config.EnableCache {
 		h.mu.Lock()
 		h.cache[hash] = clusterID
 		h.mu.Unlock()
 	}
-	
+
 	// Update metrics
 	h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "assign_cluster")
-	
+
 	return clusterID, nil
 }
 
@@ -385,19 +385,19 @@ func (h *Hasher) assignRangeStrategy(hash uint64) (uint32, error) {
 	// Divide the hash space into ranges
 	maxHash := uint64(math.MaxUint64)
 	rangeSize := maxHash / uint64(h.config.ClusterCount)
-	
+
 	clusterID := uint32(hash / rangeSize)
 	if clusterID >= h.config.ClusterCount {
 		clusterID = h.config.ClusterCount - 1
 	}
-	
+
 	return clusterID, nil
 }
 
 // GetClusterDistribution returns the distribution of vectors across clusters
 func (h *Hasher) GetClusterDistribution(vectors []*types.Vector) (map[uint32]int, error) {
 	distribution := make(map[uint32]int)
-	
+
 	for _, vector := range vectors {
 		clusterID, err := h.AssignCluster(vector)
 		if err != nil {
@@ -405,7 +405,7 @@ func (h *Hasher) GetClusterDistribution(vectors []*types.Vector) (map[uint32]int
 		}
 		distribution[clusterID]++
 	}
-	
+
 	return distribution, nil
 }
 
@@ -415,34 +415,34 @@ func (h *Hasher) GetClusterBalance(vectors []*types.Vector) (float64, error) {
 	if err != nil {
 		return 0.0, err
 	}
-	
+
 	if len(distribution) == 0 {
 		return 0.0, nil
 	}
-	
+
 	// Calculate standard deviation
 	var mean float64
 	for _, count := range distribution {
 		mean += float64(count)
 	}
 	mean /= float64(len(distribution))
-	
+
 	var variance float64
 	for _, count := range distribution {
 		diff := float64(count) - mean
 		variance += diff * diff
 	}
 	variance /= float64(len(distribution))
-	
+
 	stdDev := math.Sqrt(variance)
-	
+
 	// Balance factor is 1.0 - (stdDev / mean)
 	// Higher values indicate better balance
 	balance := 1.0 - (stdDev / mean)
 	if balance < 0.0 {
 		balance = 0.0
 	}
-	
+
 	return balance, nil
 }
 
@@ -450,7 +450,7 @@ func (h *Hasher) GetClusterBalance(vectors []*types.Vector) (float64, error) {
 func (h *Hasher) GetStats() *HasherStats {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return &HasherStats{
 		TotalHashes:      0, // Not available in new metrics system
 		CacheHits:        0, // Not available in new metrics system
@@ -463,7 +463,7 @@ func (h *Hasher) GetStats() *HasherStats {
 func (h *Hasher) GetConfig() *HasherConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *h.config
 	return &config
@@ -473,24 +473,24 @@ func (h *Hasher) GetConfig() *HasherConfig {
 func (h *Hasher) UpdateConfig(config *HasherConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateHasherConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidClusterCount, err)
 	}
-	
+
 	// Clear cache if cluster count changed
-    if config.ClusterCount != h.config.ClusterCount {
-        h.cache = make(map[uint64]uint32)
-        if config.EnableCache && config.CacheSize > 0 {
-            h.cache = make(map[uint64]uint32, config.CacheSize)
-        }
-    }
-	
+	if config.ClusterCount != h.config.ClusterCount {
+		h.cache = make(map[uint64]uint32)
+		if config.EnableCache && config.CacheSize > 0 {
+			h.cache = make(map[uint64]uint32, config.CacheSize)
+		}
+	}
+
 	h.config = config
-	
+
 	h.logger.Info("Updated hasher configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -498,12 +498,12 @@ func (h *Hasher) UpdateConfig(config *HasherConfig) error {
 func (h *Hasher) ClearCache() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
-    h.cache = make(map[uint64]uint32)
-    if h.config.EnableCache && h.config.CacheSize > 0 {
-        h.cache = make(map[uint64]uint32, h.config.CacheSize)
-    }
-	
+
+	h.cache = make(map[uint64]uint32)
+	if h.config.EnableCache && h.config.CacheSize > 0 {
+		h.cache = make(map[uint64]uint32, h.config.CacheSize)
+	}
+
 	h.logger.Info("Cleared hasher cache")
 }
 
@@ -511,7 +511,7 @@ func (h *Hasher) ClearCache() {
 func (h *Hasher) GetCacheInfo() map[string]interface{} {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	info := make(map[string]interface{})
 	info["size"] = len(h.cache)
 	info["max_size"] = h.config.CacheSize
@@ -520,7 +520,7 @@ func (h *Hasher) GetCacheInfo() map[string]interface{} {
 	if h.config.CacheSize > 0 {
 		info["usage"] = float64(len(h.cache)) / float64(h.config.CacheSize) * 100
 	}
-	
+
 	return info
 }
 
@@ -528,12 +528,12 @@ func (h *Hasher) GetCacheInfo() map[string]interface{} {
 func (h *Hasher) Validate() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateHasherConfig(h.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Validate cache consistency
 	if h.config.EnableCache {
 		for hash, clusterID := range h.cache {
@@ -542,18 +542,18 @@ func (h *Hasher) Validate() error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // BenchmarkHashing benchmarks hashing performance
 func (h *Hasher) BenchmarkHashing(vectors []*types.Vector) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
-	
+
 	if len(vectors) == 0 {
 		return results, nil
 	}
-	
+
 	// Test all algorithms
 	algorithms := []HashAlgorithm{
 		AlgorithmFNV1a,
@@ -563,12 +563,12 @@ func (h *Hasher) BenchmarkHashing(vectors []*types.Vector) (map[string]interface
 		AlgorithmSHA1,
 		AlgorithmSHA256,
 	}
-	
+
 	for _, algo := range algorithms {
 		// Temporarily set algorithm
 		oldAlgo := h.config.Algorithm
 		h.config.Algorithm = algo
-		
+
 		start := time.Now()
 		for _, vector := range vectors {
 			_, err := h.HashVector(vector)
@@ -580,27 +580,27 @@ func (h *Hasher) BenchmarkHashing(vectors []*types.Vector) (map[string]interface
 			}
 		}
 		duration := time.Since(start)
-		
+
 		results[string(algo)] = map[string]interface{}{
-			"duration": duration.String(),
+			"duration":           duration.String(),
 			"vectors_per_second": float64(len(vectors)) / duration.Seconds(),
 		}
-		
+
 		// Restore original algorithm
 		h.config.Algorithm = oldAlgo
 	}
-	
+
 	return results, nil
 }
 
 // BenchmarkAssignment benchmarks cluster assignment performance
 func (h *Hasher) BenchmarkAssignment(vectors []*types.Vector) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
-	
+
 	if len(vectors) == 0 {
 		return results, nil
 	}
-	
+
 	// Test all strategies
 	strategies := []AssignmentStrategy{
 		StrategyHash,
@@ -608,12 +608,12 @@ func (h *Hasher) BenchmarkAssignment(vectors []*types.Vector) (map[string]interf
 		StrategyConsistent,
 		StrategyRange,
 	}
-	
+
 	for _, strategy := range strategies {
 		// Temporarily set strategy
 		oldStrategy := h.config.Strategy
 		h.config.Strategy = strategy
-		
+
 		start := time.Now()
 		for _, vector := range vectors {
 			_, err := h.AssignCluster(vector)
@@ -625,28 +625,28 @@ func (h *Hasher) BenchmarkAssignment(vectors []*types.Vector) (map[string]interf
 			}
 		}
 		duration := time.Since(start)
-		
+
 		// Calculate distribution balance
 		balance, err := h.GetClusterBalance(vectors)
 		if err != nil {
 			results[string(strategy)] = map[string]interface{}{
-				"duration": duration.String(),
+				"duration":           duration.String(),
 				"vectors_per_second": float64(len(vectors)) / duration.Seconds(),
-				"balance_error": err.Error(),
+				"balance_error":      err.Error(),
 			}
 			continue
 		}
-		
+
 		results[string(strategy)] = map[string]interface{}{
-			"duration": duration.String(),
+			"duration":           duration.String(),
 			"vectors_per_second": float64(len(vectors)) / duration.Seconds(),
-			"balance_factor": balance,
+			"balance_factor":     balance,
 		}
-		
+
 		// Restore original strategy
 		h.config.Strategy = oldStrategy
 	}
-	
+
 	return results, nil
 }
 
@@ -675,7 +675,7 @@ func (h *Hasher) GetSupportedStrategies() []AssignmentStrategy {
 // GetAlgorithmInfo returns information about a hashing algorithm
 func (h *Hasher) GetAlgorithmInfo(algorithm HashAlgorithm) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch algorithm {
 	case AlgorithmFNV1a:
 		info["name"] = "FNV-1a"
@@ -683,42 +683,42 @@ func (h *Hasher) GetAlgorithmInfo(algorithm HashAlgorithm) map[string]interface{
 		info["speed"] = "Very Fast"
 		info["distribution"] = "Good"
 		info["collision_resistance"] = "Medium"
-		
+
 	case AlgorithmFNV1:
 		info["name"] = "FNV-1"
 		info["description"] = "Fowler-Noll-Vo hash function variant 1"
 		info["speed"] = "Very Fast"
 		info["distribution"] = "Good"
 		info["collision_resistance"] = "Medium"
-		
+
 	case AlgorithmXXHash:
 		info["name"] = "XXHash"
 		info["description"] = "Very fast non-cryptographic hash algorithm"
 		info["speed"] = "Extremely Fast"
 		info["distribution"] = "Excellent"
 		info["collision_resistance"] = "Good"
-		
+
 	case AlgorithmMD5:
 		info["name"] = "MD5"
 		info["description"] = "Message Digest Algorithm 5"
 		info["speed"] = "Fast"
 		info["distribution"] = "Excellent"
 		info["collision_resistance"] = "Low (cryptographically broken)"
-		
+
 	case AlgorithmSHA1:
 		info["name"] = "SHA-1"
 		info["description"] = "Secure Hash Algorithm 1"
 		info["speed"] = "Medium"
 		info["distribution"] = "Excellent"
 		info["collision_resistance"] = "Medium (cryptographically weak)"
-		
+
 	case AlgorithmSHA256:
 		info["name"] = "SHA-256"
 		info["description"] = "Secure Hash Algorithm 256-bit"
 		info["speed"] = "Slow"
 		info["distribution"] = "Excellent"
 		info["collision_resistance"] = "Excellent"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown hashing algorithm"
@@ -726,14 +726,14 @@ func (h *Hasher) GetAlgorithmInfo(algorithm HashAlgorithm) map[string]interface{
 		info["distribution"] = "Unknown"
 		info["collision_resistance"] = "Unknown"
 	}
-	
+
 	return info
 }
 
 // GetStrategyInfo returns information about an assignment strategy
 func (h *Hasher) GetStrategyInfo(strategy AssignmentStrategy) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch strategy {
 	case StrategyHash:
 		info["name"] = "Hash"
@@ -741,28 +741,28 @@ func (h *Hasher) GetStrategyInfo(strategy AssignmentStrategy) map[string]interfa
 		info["speed"] = "Very Fast"
 		info["balance"] = "Good"
 		info["scalability"] = "Excellent"
-		
+
 	case StrategyModulo:
 		info["name"] = "Modulo"
 		info["description"] = "Simple modulo-based assignment"
 		info["speed"] = "Extremely Fast"
 		info["balance"] = "Good"
 		info["scalability"] = "Good"
-		
+
 	case StrategyConsistent:
 		info["name"] = "Consistent Hashing"
 		info["description"] = "Consistent hashing for minimal reassignment"
 		info["speed"] = "Fast"
 		info["balance"] = "Excellent"
 		info["scalability"] = "Excellent"
-		
+
 	case StrategyRange:
 		info["name"] = "Range"
 		info["description"] = "Range-based assignment"
 		info["speed"] = "Very Fast"
 		info["balance"] = "Good"
 		info["scalability"] = "Good"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown assignment strategy"
@@ -770,6 +770,6 @@ func (h *Hasher) GetStrategyInfo(strategy AssignmentStrategy) map[string]interfa
 		info["balance"] = "Unknown"
 		info["scalability"] = "Unknown"
 	}
-	
+
 	return info
 }

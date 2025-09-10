@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"vexdb/internal/types"
+	"vxdb/internal/types"
 )
 
 // Formatter handles formatting of search responses

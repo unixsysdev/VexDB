@@ -9,10 +9,10 @@ import (
 	"unsafe"
 
 	"go.uber.org/zap"
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 var (

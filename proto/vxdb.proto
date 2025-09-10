@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package vexdb;
+package vxdb;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/vexdb/vexdb/proto";
+option go_package = "github.com/vxdb/vxdb/proto";
 
 // Vector represents a vector with metadata
 message Vector {

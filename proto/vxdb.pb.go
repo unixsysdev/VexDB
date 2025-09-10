@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.8
 // 	protoc        v3.21.12
-// source: vexdb.proto
+// source: vxdb.proto
 
 package proto
 
@@ -37,7 +37,7 @@ type Vector struct {
 
 func (x *Vector) Reset() {
 	*x = Vector{}
-	mi := &file_vexdb_proto_msgTypes[0]
+	mi := &file_vxdb_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -49,7 +49,7 @@ func (x *Vector) String() string {
 func (*Vector) ProtoMessage() {}
 
 func (x *Vector) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[0]
+	mi := &file_vxdb_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -62,7 +62,7 @@ func (x *Vector) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Vector.ProtoReflect.Descriptor instead.
 func (*Vector) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{0}
+	return file_vxdb_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Vector) GetId() string {
@@ -110,7 +110,7 @@ type VectorBatch struct {
 
 func (x *VectorBatch) Reset() {
 	*x = VectorBatch{}
-	mi := &file_vexdb_proto_msgTypes[1]
+	mi := &file_vxdb_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +122,7 @@ func (x *VectorBatch) String() string {
 func (*VectorBatch) ProtoMessage() {}
 
 func (x *VectorBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[1]
+	mi := &file_vxdb_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -135,7 +135,7 @@ func (x *VectorBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VectorBatch.ProtoReflect.Descriptor instead.
 func (*VectorBatch) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{1}
+	return file_vxdb_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *VectorBatch) GetVectors() []*Vector {
@@ -159,7 +159,7 @@ type InsertRequest struct {
 
 func (x *InsertRequest) Reset() {
 	*x = InsertRequest{}
-	mi := &file_vexdb_proto_msgTypes[2]
+	mi := &file_vxdb_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -171,7 +171,7 @@ func (x *InsertRequest) String() string {
 func (*InsertRequest) ProtoMessage() {}
 
 func (x *InsertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[2]
+	mi := &file_vxdb_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -184,7 +184,7 @@ func (x *InsertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertRequest.ProtoReflect.Descriptor instead.
 func (*InsertRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{2}
+	return file_vxdb_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *InsertRequest) GetRequest() isInsertRequest_Request {
@@ -241,7 +241,7 @@ type InsertResponse struct {
 
 func (x *InsertResponse) Reset() {
 	*x = InsertResponse{}
-	mi := &file_vexdb_proto_msgTypes[3]
+	mi := &file_vxdb_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -253,7 +253,7 @@ func (x *InsertResponse) String() string {
 func (*InsertResponse) ProtoMessage() {}
 
 func (x *InsertResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[3]
+	mi := &file_vxdb_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -266,7 +266,7 @@ func (x *InsertResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertResponse.ProtoReflect.Descriptor instead.
 func (*InsertResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{3}
+	return file_vxdb_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *InsertResponse) GetSuccess() bool {
@@ -312,7 +312,7 @@ type SearchRequest struct {
 
 func (x *SearchRequest) Reset() {
 	*x = SearchRequest{}
-	mi := &file_vexdb_proto_msgTypes[4]
+	mi := &file_vxdb_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +324,7 @@ func (x *SearchRequest) String() string {
 func (*SearchRequest) ProtoMessage() {}
 
 func (x *SearchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[4]
+	mi := &file_vxdb_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +337,7 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
 func (*SearchRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{4}
+	return file_vxdb_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SearchRequest) GetQueryVector() *Vector {
@@ -396,7 +396,7 @@ type SearchResult struct {
 
 func (x *SearchResult) Reset() {
 	*x = SearchResult{}
-	mi := &file_vexdb_proto_msgTypes[5]
+	mi := &file_vxdb_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +408,7 @@ func (x *SearchResult) String() string {
 func (*SearchResult) ProtoMessage() {}
 
 func (x *SearchResult) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[5]
+	mi := &file_vxdb_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +421,7 @@ func (x *SearchResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResult.ProtoReflect.Descriptor instead.
 func (*SearchResult) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{5}
+	return file_vxdb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SearchResult) GetVector() *Vector {
@@ -473,7 +473,7 @@ type SearchResponse struct {
 
 func (x *SearchResponse) Reset() {
 	*x = SearchResponse{}
-	mi := &file_vexdb_proto_msgTypes[6]
+	mi := &file_vxdb_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +485,7 @@ func (x *SearchResponse) String() string {
 func (*SearchResponse) ProtoMessage() {}
 
 func (x *SearchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[6]
+	mi := &file_vxdb_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +498,7 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
 func (*SearchResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{6}
+	return file_vxdb_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SearchResponse) GetSuccess() bool {
@@ -547,7 +547,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_vexdb_proto_msgTypes[7]
+	mi := &file_vxdb_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -559,7 +559,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[7]
+	mi := &file_vxdb_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -572,7 +572,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{7}
+	return file_vxdb_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteRequest) GetVectorIds() []string {
@@ -602,7 +602,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_vexdb_proto_msgTypes[8]
+	mi := &file_vxdb_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +614,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[8]
+	mi := &file_vxdb_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +627,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{8}
+	return file_vxdb_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteResponse) GetSuccess() bool {
@@ -672,7 +672,7 @@ type ClusterInfo struct {
 
 func (x *ClusterInfo) Reset() {
 	*x = ClusterInfo{}
-	mi := &file_vexdb_proto_msgTypes[9]
+	mi := &file_vxdb_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +684,7 @@ func (x *ClusterInfo) String() string {
 func (*ClusterInfo) ProtoMessage() {}
 
 func (x *ClusterInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[9]
+	mi := &file_vxdb_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +697,7 @@ func (x *ClusterInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterInfo.ProtoReflect.Descriptor instead.
 func (*ClusterInfo) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{9}
+	return file_vxdb_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ClusterInfo) GetId() string {
@@ -753,7 +753,7 @@ type NodeInfo struct {
 
 func (x *NodeInfo) Reset() {
 	*x = NodeInfo{}
-	mi := &file_vexdb_proto_msgTypes[10]
+	mi := &file_vxdb_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -765,7 +765,7 @@ func (x *NodeInfo) String() string {
 func (*NodeInfo) ProtoMessage() {}
 
 func (x *NodeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[10]
+	mi := &file_vxdb_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -778,7 +778,7 @@ func (x *NodeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeInfo.ProtoReflect.Descriptor instead.
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{10}
+	return file_vxdb_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *NodeInfo) GetId() string {
@@ -858,7 +858,7 @@ type ClusterStatus struct {
 
 func (x *ClusterStatus) Reset() {
 	*x = ClusterStatus{}
-	mi := &file_vexdb_proto_msgTypes[11]
+	mi := &file_vxdb_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -870,7 +870,7 @@ func (x *ClusterStatus) String() string {
 func (*ClusterStatus) ProtoMessage() {}
 
 func (x *ClusterStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[11]
+	mi := &file_vxdb_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -883,7 +883,7 @@ func (x *ClusterStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterStatus.ProtoReflect.Descriptor instead.
 func (*ClusterStatus) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{11}
+	return file_vxdb_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ClusterStatus) GetClusters() []*ClusterInfo {
@@ -931,7 +931,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_vexdb_proto_msgTypes[12]
+	mi := &file_vxdb_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -943,7 +943,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[12]
+	mi := &file_vxdb_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -956,7 +956,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{12}
+	return file_vxdb_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *HealthCheckRequest) GetDetailed() bool {
@@ -980,7 +980,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_vexdb_proto_msgTypes[13]
+	mi := &file_vxdb_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -992,7 +992,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[13]
+	mi := &file_vxdb_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1005,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{13}
+	return file_vxdb_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *HealthCheckResponse) GetHealthy() bool {
@@ -1055,7 +1055,7 @@ type MetricsRequest struct {
 
 func (x *MetricsRequest) Reset() {
 	*x = MetricsRequest{}
-	mi := &file_vexdb_proto_msgTypes[14]
+	mi := &file_vxdb_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1067,7 +1067,7 @@ func (x *MetricsRequest) String() string {
 func (*MetricsRequest) ProtoMessage() {}
 
 func (x *MetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[14]
+	mi := &file_vxdb_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1080,7 +1080,7 @@ func (x *MetricsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetricsRequest.ProtoReflect.Descriptor instead.
 func (*MetricsRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{14}
+	return file_vxdb_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MetricsRequest) GetMetricType() string {
@@ -1118,7 +1118,7 @@ type MetricsResponse struct {
 
 func (x *MetricsResponse) Reset() {
 	*x = MetricsResponse{}
-	mi := &file_vexdb_proto_msgTypes[15]
+	mi := &file_vxdb_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1130,7 @@ func (x *MetricsResponse) String() string {
 func (*MetricsResponse) ProtoMessage() {}
 
 func (x *MetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[15]
+	mi := &file_vxdb_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1143,7 @@ func (x *MetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetricsResponse.ProtoReflect.Descriptor instead.
 func (*MetricsResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{15}
+	return file_vxdb_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *MetricsResponse) GetSuccess() bool {
@@ -1192,7 +1192,7 @@ type ConfigUpdateRequest struct {
 
 func (x *ConfigUpdateRequest) Reset() {
 	*x = ConfigUpdateRequest{}
-	mi := &file_vexdb_proto_msgTypes[16]
+	mi := &file_vxdb_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1204,7 @@ func (x *ConfigUpdateRequest) String() string {
 func (*ConfigUpdateRequest) ProtoMessage() {}
 
 func (x *ConfigUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[16]
+	mi := &file_vxdb_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1217,7 @@ func (x *ConfigUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigUpdateRequest.ProtoReflect.Descriptor instead.
 func (*ConfigUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{16}
+	return file_vxdb_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ConfigUpdateRequest) GetConfigUpdates() map[string]string {
@@ -1247,7 +1247,7 @@ type ConfigUpdateResponse struct {
 
 func (x *ConfigUpdateResponse) Reset() {
 	*x = ConfigUpdateResponse{}
-	mi := &file_vexdb_proto_msgTypes[17]
+	mi := &file_vxdb_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1259,7 +1259,7 @@ func (x *ConfigUpdateResponse) String() string {
 func (*ConfigUpdateResponse) ProtoMessage() {}
 
 func (x *ConfigUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_vexdb_proto_msgTypes[17]
+	mi := &file_vxdb_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1272,7 +1272,7 @@ func (x *ConfigUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigUpdateResponse.ProtoReflect.Descriptor instead.
 func (*ConfigUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_vexdb_proto_rawDescGZIP(), []int{17}
+	return file_vxdb_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ConfigUpdateResponse) GetSuccess() bool {
@@ -1303,15 +1303,15 @@ func (x *ConfigUpdateResponse) GetFailedUpdates() map[string]string {
 	return nil
 }
 
-var File_vexdb_proto protoreflect.FileDescriptor
+var File_vxdb_proto protoreflect.FileDescriptor
 
-const file_vexdb_proto_rawDesc = "" +
+const file_vxdb_proto_rawDesc = "" +
 	"\n" +
-	"\vvexdb.proto\x12\x05vexdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfb\x01\n" +
+	"\vvxdb.proto\x12\x05vxdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfb\x01\n" +
 	"\x06Vector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04data\x18\x02 \x03(\x02R\x04data\x127\n" +
-	"\bmetadata\x18\x03 \x03(\v2\x1b.vexdb.Vector.MetadataEntryR\bmetadata\x12\x1d\n" +
+	"\bmetadata\x18\x03 \x03(\v2\x1b.vxdb.Vector.MetadataEntryR\bmetadata\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x04 \x01(\rR\tclusterId\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a;\n" +
@@ -1319,33 +1319,33 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
 	"\vVectorBatch\x12'\n" +
-	"\avectors\x18\x01 \x03(\v2\r.vexdb.VectorR\avectors\"o\n" +
+	"\avectors\x18\x01 \x03(\v2\r.vxdb.VectorR\avectors\"o\n" +
 	"\rInsertRequest\x12'\n" +
-	"\x06vector\x18\x01 \x01(\v2\r.vexdb.VectorH\x00R\x06vector\x12*\n" +
-	"\x05batch\x18\x02 \x01(\v2\x12.vexdb.VectorBatchH\x00R\x05batchB\t\n" +
+	"\x06vector\x18\x01 \x01(\v2\r.vxdb.VectorH\x00R\x06vector\x12*\n" +
+	"\x05batch\x18\x02 \x01(\v2\x12.vxdb.VectorBatchH\x00R\x05batchB\t\n" +
 	"\arequest\"\xe1\x01\n" +
 	"\x0eInsertResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +
 	"\n" +
 	"vector_ids\x18\x03 \x03(\tR\tvectorIds\x12?\n" +
-	"\bmetadata\x18\x04 \x03(\v2#.vexdb.InsertResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x04 \x03(\v2#.vxdb.InsertResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe0\x02\n" +
 	"\rSearchRequest\x120\n" +
-	"\fquery_vector\x18\x01 \x01(\v2\r.vexdb.VectorR\vqueryVector\x12\f\n" +
+	"\fquery_vector\x18\x01 \x01(\v2\r.vxdb.VectorR\vqueryVector\x12\f\n" +
 	"\x01k\x18\x02 \x01(\x05R\x01k\x12\x1f\n" +
 	"\vcluster_ids\x18\x03 \x03(\tR\n" +
 	"clusterIds\x12Q\n" +
-	"\x0fmetadata_filter\x18\x04 \x03(\v2(.vexdb.SearchRequest.MetadataFilterEntryR\x0emetadataFilter\x12)\n" +
+	"\x0fmetadata_filter\x18\x04 \x03(\v2(.vxdb.SearchRequest.MetadataFilterEntryR\x0emetadataFilter\x12)\n" +
 	"\x10include_metadata\x18\x05 \x01(\bR\x0fincludeMetadata\x12-\n" +
 	"\x12distance_threshold\x18\x06 \x01(\x02R\x11distanceThreshold\x1aA\n" +
 	"\x13MetadataFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9f\x01\n" +
 	"\fSearchResult\x12%\n" +
-	"\x06vector\x18\x01 \x01(\v2\r.vexdb.VectorR\x06vector\x12\x1a\n" +
+	"\x06vector\x18\x01 \x01(\v2\r.vxdb.VectorR\x06vector\x12\x1a\n" +
 	"\bdistance\x18\x02 \x01(\x02R\bdistance\x12\x14\n" +
 	"\x05score\x18\x03 \x01(\x02R\x05score\x12\x1d\n" +
 	"\n" +
@@ -1354,16 +1354,16 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x0eSearchResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12-\n" +
-	"\aresults\x18\x03 \x03(\v2\x13.vexdb.SearchResultR\aresults\x12#\n" +
+	"\aresults\x18\x03 \x03(\v2\x13.vxdb.SearchResultR\aresults\x12#\n" +
 	"\rtotal_results\x18\x04 \x01(\x03R\ftotalResults\x12?\n" +
-	"\bmetadata\x18\x05 \x03(\v2#.vexdb.SearchResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x05 \x03(\v2#.vxdb.SearchResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc4\x01\n" +
 	"\rDeleteRequest\x12\x1d\n" +
 	"\n" +
 	"vector_ids\x18\x01 \x03(\tR\tvectorIds\x12Q\n" +
-	"\x0fmetadata_filter\x18\x02 \x03(\v2(.vexdb.DeleteRequest.MetadataFilterEntryR\x0emetadataFilter\x1aA\n" +
+	"\x0fmetadata_filter\x18\x02 \x03(\v2(.vxdb.DeleteRequest.MetadataFilterEntryR\x0emetadataFilter\x1aA\n" +
 	"\x13MetadataFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe7\x01\n" +
@@ -1371,7 +1371,7 @@ const file_vexdb_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12#\n" +
 	"\rdeleted_count\x18\x03 \x01(\x03R\fdeletedCount\x12?\n" +
-	"\bmetadata\x18\x04 \x03(\v2#.vexdb.DeleteResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x04 \x03(\v2#.vxdb.DeleteResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf5\x01\n" +
@@ -1381,7 +1381,7 @@ const file_vexdb_proto_rawDesc = "" +
 	"\fvector_count\x18\x03 \x01(\x04R\vvectorCount\x12\x1d\n" +
 	"\n" +
 	"size_bytes\x18\x04 \x01(\x04R\tsizeBytes\x12<\n" +
-	"\bmetadata\x18\x05 \x03(\v2 .vexdb.ClusterInfo.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x05 \x03(\v2 .vxdb.ClusterInfo.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdc\x02\n" +
@@ -1396,16 +1396,16 @@ const file_vexdb_proto_rawDesc = "" +
 	"\fmemory_usage\x18\a \x01(\x04R\vmemoryUsage\x12\x1d\n" +
 	"\n" +
 	"disk_usage\x18\b \x01(\x04R\tdiskUsage\x129\n" +
-	"\bmetadata\x18\t \x03(\v2\x1d.vexdb.NodeInfo.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\t \x03(\v2\x1d.vxdb.NodeInfo.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb9\x02\n" +
 	"\rClusterStatus\x12.\n" +
-	"\bclusters\x18\x01 \x03(\v2\x12.vexdb.ClusterInfoR\bclusters\x12%\n" +
-	"\x05nodes\x18\x02 \x03(\v2\x0f.vexdb.NodeInfoR\x05nodes\x12%\n" +
+	"\bclusters\x18\x01 \x03(\v2\x12.vxdb.ClusterInfoR\bclusters\x12%\n" +
+	"\x05nodes\x18\x02 \x03(\v2\x0f.vxdb.NodeInfoR\x05nodes\x12%\n" +
 	"\x0etotal_clusters\x18\x03 \x01(\rR\rtotalClusters\x12-\n" +
 	"\x12replication_factor\x18\x04 \x01(\rR\x11replicationFactor\x12>\n" +
-	"\bmetadata\x18\x05 \x03(\v2\".vexdb.ClusterStatus.MetadataEntryR\bmetadata\x1a;\n" +
+	"\bmetadata\x18\x05 \x03(\v2\".vxdb.ClusterStatus.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"0\n" +
@@ -1415,7 +1415,7 @@ const file_vexdb_proto_rawDesc = "" +
 	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12A\n" +
-	"\adetails\x18\x04 \x03(\v2'.vexdb.HealthCheckResponse.DetailsEntryR\adetails\x128\n" +
+	"\adetails\x18\x04 \x03(\v2'.vxdb.HealthCheckResponse.DetailsEntryR\adetails\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1429,8 +1429,8 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x0fMetricsResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12=\n" +
-	"\ametrics\x18\x03 \x03(\v2#.vexdb.MetricsResponse.MetricsEntryR\ametrics\x12@\n" +
-	"\bmetadata\x18\x04 \x03(\v2$.vexdb.MetricsResponse.MetadataEntryR\bmetadata\x128\n" +
+	"\ametrics\x18\x03 \x03(\v2#.vxdb.MetricsResponse.MetricsEntryR\ametrics\x12@\n" +
+	"\bmetadata\x18\x04 \x03(\v2$.vxdb.MetricsResponse.MetadataEntryR\bmetadata\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a:\n" +
 	"\fMetricsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1439,7 +1439,7 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd8\x01\n" +
 	"\x13ConfigUpdateRequest\x12T\n" +
-	"\x0econfig_updates\x18\x01 \x03(\v2-.vexdb.ConfigUpdateRequest.ConfigUpdatesEntryR\rconfigUpdates\x12)\n" +
+	"\x0econfig_updates\x18\x01 \x03(\v2-.vxdb.ConfigUpdateRequest.ConfigUpdatesEntryR\rconfigUpdates\x12)\n" +
 	"\x10restart_required\x18\x02 \x01(\bR\x0frestartRequired\x1a@\n" +
 	"\x12ConfigUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1447,8 +1447,8 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x14ConfigUpdateResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12X\n" +
-	"\x0fapplied_updates\x18\x03 \x03(\v2/.vexdb.ConfigUpdateResponse.AppliedUpdatesEntryR\x0eappliedUpdates\x12U\n" +
-	"\x0efailed_updates\x18\x04 \x03(\v2..vexdb.ConfigUpdateResponse.FailedUpdatesEntryR\rfailedUpdates\x1aA\n" +
+	"\x0fapplied_updates\x18\x03 \x03(\v2/.vxdb.ConfigUpdateResponse.AppliedUpdatesEntryR\x0eappliedUpdates\x12U\n" +
+	"\x0efailed_updates\x18\x04 \x03(\v2..vxdb.ConfigUpdateResponse.FailedUpdatesEntryR\rfailedUpdates\x1aA\n" +
 	"\x13AppliedUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
@@ -1456,228 +1456,228 @@ const file_vexdb_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x9c\x06\n" +
 	"\x0eStorageService\x12;\n" +
-	"\fInsertVector\x12\x14.vexdb.InsertRequest\x1a\x15.vexdb.InsertResponse\x12E\n" +
-	"\x12InsertVectorStream\x12\x14.vexdb.InsertRequest\x1a\x15.vexdb.InsertResponse(\x010\x01\x125\n" +
-	"\x06Search\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse\x12?\n" +
-	"\fSearchStream\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse(\x010\x01\x12<\n" +
-	"\rDeleteVectors\x12\x14.vexdb.DeleteRequest\x1a\x15.vexdb.DeleteResponse\x12F\n" +
-	"\x13DeleteVectorsStream\x12\x14.vexdb.DeleteRequest\x1a\x15.vexdb.DeleteResponse(\x010\x01\x128\n" +
-	"\x0eGetClusterInfo\x12\x12.vexdb.ClusterInfo\x1a\x12.vexdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vexdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vexdb.HealthCheckRequest\x1a\x1a.vexdb.HealthCheckResponse\x12;\n" +
+	"\fInsertVector\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse\x12E\n" +
+	"\x12InsertVectorStream\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse(\x010\x01\x125\n" +
+	"\x06Search\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12?\n" +
+	"\fSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x12<\n" +
+	"\rDeleteVectors\x12\x14.vxdb.DeleteRequest\x1a\x15.vxdb.DeleteResponse\x12F\n" +
+	"\x13DeleteVectorsStream\x12\x14.vxdb.DeleteRequest\x1a\x15.vxdb.DeleteResponse(\x010\x01\x128\n" +
+	"\x0eGetClusterInfo\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12@\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
+	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponse2\x9b\x05\n" +
+	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
+	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\x9b\x05\n" +
 	"\rInsertService\x12;\n" +
-	"\fInsertVector\x12\x14.vexdb.InsertRequest\x1a\x15.vexdb.InsertResponse\x12E\n" +
-	"\x12InsertVectorStream\x12\x14.vexdb.InsertRequest\x1a\x15.vexdb.InsertResponse(\x010\x01\x128\n" +
-	"\vInsertBatch\x12\x12.vexdb.VectorBatch\x1a\x15.vexdb.InsertResponse\x12B\n" +
-	"\x11InsertBatchStream\x12\x12.vexdb.VectorBatch\x1a\x15.vexdb.InsertResponse(\x010\x01\x128\n" +
-	"\x13GetClusterForVector\x12\r.vexdb.Vector\x1a\x12.vexdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vexdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vexdb.HealthCheckRequest\x1a\x1a.vexdb.HealthCheckResponse\x12;\n" +
+	"\fInsertVector\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse\x12E\n" +
+	"\x12InsertVectorStream\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse(\x010\x01\x128\n" +
+	"\vInsertBatch\x12\x12.vxdb.VectorBatch\x1a\x15.vxdb.InsertResponse\x12B\n" +
+	"\x11InsertBatchStream\x12\x12.vxdb.VectorBatch\x1a\x15.vxdb.InsertResponse(\x010\x01\x128\n" +
+	"\x13GetClusterForVector\x12\r.vxdb.Vector\x1a\x12.vxdb.ClusterInfo\x12@\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
+	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponse2\xa1\x05\n" +
+	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
+	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\xa1\x05\n" +
 	"\rSearchService\x125\n" +
-	"\x06Search\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse\x12?\n" +
-	"\fSearchStream\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse(\x010\x01\x12A\n" +
-	"\x12MultiClusterSearch\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse\x12K\n" +
-	"\x18MultiClusterSearchStream\x12\x14.vexdb.SearchRequest\x1a\x15.vexdb.SearchResponse(\x010\x01\x128\n" +
-	"\x0eGetClusterInfo\x12\x12.vexdb.ClusterInfo\x1a\x12.vexdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vexdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vexdb.HealthCheckRequest\x1a\x1a.vexdb.HealthCheckResponse\x12;\n" +
+	"\x06Search\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12?\n" +
+	"\fSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x12A\n" +
+	"\x12MultiClusterSearch\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12K\n" +
+	"\x18MultiClusterSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x128\n" +
+	"\x0eGetClusterInfo\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12@\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
+	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponse2\xa2\x06\n" +
+	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
+	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\xa2\x06\n" +
 	"\fAdminService\x12+\n" +
-	"\aAddNode\x12\x0f.vexdb.NodeInfo\x1a\x0f.vexdb.NodeInfo\x125\n" +
+	"\aAddNode\x12\x0f.vxdb.NodeInfo\x1a\x0f.vxdb.NodeInfo\x125\n" +
 	"\n" +
-	"RemoveNode\x12\x0f.vexdb.NodeInfo\x1a\x16.google.protobuf.Empty\x12.\n" +
+	"RemoveNode\x12\x0f.vxdb.NodeInfo\x1a\x16.google.protobuf.Empty\x12.\n" +
 	"\n" +
-	"UpdateNode\x12\x0f.vexdb.NodeInfo\x1a\x0f.vexdb.NodeInfo\x127\n" +
-	"\rCreateCluster\x12\x12.vexdb.ClusterInfo\x1a\x12.vexdb.ClusterInfo\x12;\n" +
-	"\rDeleteCluster\x12\x12.vexdb.ClusterInfo\x1a\x16.google.protobuf.Empty\x127\n" +
-	"\rUpdateCluster\x12\x12.vexdb.ClusterInfo\x1a\x12.vexdb.ClusterInfo\x12>\n" +
+	"UpdateNode\x12\x0f.vxdb.NodeInfo\x1a\x0f.vxdb.NodeInfo\x127\n" +
+	"\rCreateCluster\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12;\n" +
+	"\rDeleteCluster\x12\x12.vxdb.ClusterInfo\x1a\x16.google.protobuf.Empty\x127\n" +
+	"\rUpdateCluster\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12>\n" +
 	"\fBackupSystem\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12?\n" +
 	"\rRestoreSystem\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12@\n" +
 	"\x0eCompactStorage\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12D\n" +
-	"\vHealthCheck\x12\x19.vexdb.HealthCheckRequest\x1a\x1a.vexdb.HealthCheckResponse\x12;\n" +
+	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponseB\x1eZ\x1cgithub.com/vexdb/vexdb/protob\x06proto3"
+	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
+	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponseB\x1eZ\x1cgithub.com/vxdb/vxdb/protob\x06proto3"
 
 var (
-	file_vexdb_proto_rawDescOnce sync.Once
-	file_vexdb_proto_rawDescData []byte
+	file_vxdb_proto_rawDescOnce sync.Once
+	file_vxdb_proto_rawDescData []byte
 )
 
-func file_vexdb_proto_rawDescGZIP() []byte {
-	file_vexdb_proto_rawDescOnce.Do(func() {
-		file_vexdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_vexdb_proto_rawDesc), len(file_vexdb_proto_rawDesc)))
+func file_vxdb_proto_rawDescGZIP() []byte {
+	file_vxdb_proto_rawDescOnce.Do(func() {
+		file_vxdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_vxdb_proto_rawDesc), len(file_vxdb_proto_rawDesc)))
 	})
-	return file_vexdb_proto_rawDescData
+	return file_vxdb_proto_rawDescData
 }
 
-var file_vexdb_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
-var file_vexdb_proto_goTypes = []any{
-	(*Vector)(nil),                // 0: vexdb.Vector
-	(*VectorBatch)(nil),           // 1: vexdb.VectorBatch
-	(*InsertRequest)(nil),         // 2: vexdb.InsertRequest
-	(*InsertResponse)(nil),        // 3: vexdb.InsertResponse
-	(*SearchRequest)(nil),         // 4: vexdb.SearchRequest
-	(*SearchResult)(nil),          // 5: vexdb.SearchResult
-	(*SearchResponse)(nil),        // 6: vexdb.SearchResponse
-	(*DeleteRequest)(nil),         // 7: vexdb.DeleteRequest
-	(*DeleteResponse)(nil),        // 8: vexdb.DeleteResponse
-	(*ClusterInfo)(nil),           // 9: vexdb.ClusterInfo
-	(*NodeInfo)(nil),              // 10: vexdb.NodeInfo
-	(*ClusterStatus)(nil),         // 11: vexdb.ClusterStatus
-	(*HealthCheckRequest)(nil),    // 12: vexdb.HealthCheckRequest
-	(*HealthCheckResponse)(nil),   // 13: vexdb.HealthCheckResponse
-	(*MetricsRequest)(nil),        // 14: vexdb.MetricsRequest
-	(*MetricsResponse)(nil),       // 15: vexdb.MetricsResponse
-	(*ConfigUpdateRequest)(nil),   // 16: vexdb.ConfigUpdateRequest
-	(*ConfigUpdateResponse)(nil),  // 17: vexdb.ConfigUpdateResponse
-	nil,                           // 18: vexdb.Vector.MetadataEntry
-	nil,                           // 19: vexdb.InsertResponse.MetadataEntry
-	nil,                           // 20: vexdb.SearchRequest.MetadataFilterEntry
-	nil,                           // 21: vexdb.SearchResponse.MetadataEntry
-	nil,                           // 22: vexdb.DeleteRequest.MetadataFilterEntry
-	nil,                           // 23: vexdb.DeleteResponse.MetadataEntry
-	nil,                           // 24: vexdb.ClusterInfo.MetadataEntry
-	nil,                           // 25: vexdb.NodeInfo.MetadataEntry
-	nil,                           // 26: vexdb.ClusterStatus.MetadataEntry
-	nil,                           // 27: vexdb.HealthCheckResponse.DetailsEntry
-	nil,                           // 28: vexdb.MetricsResponse.MetricsEntry
-	nil,                           // 29: vexdb.MetricsResponse.MetadataEntry
-	nil,                           // 30: vexdb.ConfigUpdateRequest.ConfigUpdatesEntry
-	nil,                           // 31: vexdb.ConfigUpdateResponse.AppliedUpdatesEntry
-	nil,                           // 32: vexdb.ConfigUpdateResponse.FailedUpdatesEntry
+var file_vxdb_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_vxdb_proto_goTypes = []any{
+	(*Vector)(nil),                // 0: vxdb.Vector
+	(*VectorBatch)(nil),           // 1: vxdb.VectorBatch
+	(*InsertRequest)(nil),         // 2: vxdb.InsertRequest
+	(*InsertResponse)(nil),        // 3: vxdb.InsertResponse
+	(*SearchRequest)(nil),         // 4: vxdb.SearchRequest
+	(*SearchResult)(nil),          // 5: vxdb.SearchResult
+	(*SearchResponse)(nil),        // 6: vxdb.SearchResponse
+	(*DeleteRequest)(nil),         // 7: vxdb.DeleteRequest
+	(*DeleteResponse)(nil),        // 8: vxdb.DeleteResponse
+	(*ClusterInfo)(nil),           // 9: vxdb.ClusterInfo
+	(*NodeInfo)(nil),              // 10: vxdb.NodeInfo
+	(*ClusterStatus)(nil),         // 11: vxdb.ClusterStatus
+	(*HealthCheckRequest)(nil),    // 12: vxdb.HealthCheckRequest
+	(*HealthCheckResponse)(nil),   // 13: vxdb.HealthCheckResponse
+	(*MetricsRequest)(nil),        // 14: vxdb.MetricsRequest
+	(*MetricsResponse)(nil),       // 15: vxdb.MetricsResponse
+	(*ConfigUpdateRequest)(nil),   // 16: vxdb.ConfigUpdateRequest
+	(*ConfigUpdateResponse)(nil),  // 17: vxdb.ConfigUpdateResponse
+	nil,                           // 18: vxdb.Vector.MetadataEntry
+	nil,                           // 19: vxdb.InsertResponse.MetadataEntry
+	nil,                           // 20: vxdb.SearchRequest.MetadataFilterEntry
+	nil,                           // 21: vxdb.SearchResponse.MetadataEntry
+	nil,                           // 22: vxdb.DeleteRequest.MetadataFilterEntry
+	nil,                           // 23: vxdb.DeleteResponse.MetadataEntry
+	nil,                           // 24: vxdb.ClusterInfo.MetadataEntry
+	nil,                           // 25: vxdb.NodeInfo.MetadataEntry
+	nil,                           // 26: vxdb.ClusterStatus.MetadataEntry
+	nil,                           // 27: vxdb.HealthCheckResponse.DetailsEntry
+	nil,                           // 28: vxdb.MetricsResponse.MetricsEntry
+	nil,                           // 29: vxdb.MetricsResponse.MetadataEntry
+	nil,                           // 30: vxdb.ConfigUpdateRequest.ConfigUpdatesEntry
+	nil,                           // 31: vxdb.ConfigUpdateResponse.AppliedUpdatesEntry
+	nil,                           // 32: vxdb.ConfigUpdateResponse.FailedUpdatesEntry
 	(*timestamppb.Timestamp)(nil), // 33: google.protobuf.Timestamp
 	(*emptypb.Empty)(nil),         // 34: google.protobuf.Empty
 }
-var file_vexdb_proto_depIdxs = []int32{
-	18, // 0: vexdb.Vector.metadata:type_name -> vexdb.Vector.MetadataEntry
-	33, // 1: vexdb.Vector.timestamp:type_name -> google.protobuf.Timestamp
-	0,  // 2: vexdb.VectorBatch.vectors:type_name -> vexdb.Vector
-	0,  // 3: vexdb.InsertRequest.vector:type_name -> vexdb.Vector
-	1,  // 4: vexdb.InsertRequest.batch:type_name -> vexdb.VectorBatch
-	19, // 5: vexdb.InsertResponse.metadata:type_name -> vexdb.InsertResponse.MetadataEntry
-	0,  // 6: vexdb.SearchRequest.query_vector:type_name -> vexdb.Vector
-	20, // 7: vexdb.SearchRequest.metadata_filter:type_name -> vexdb.SearchRequest.MetadataFilterEntry
-	0,  // 8: vexdb.SearchResult.vector:type_name -> vexdb.Vector
-	5,  // 9: vexdb.SearchResponse.results:type_name -> vexdb.SearchResult
-	21, // 10: vexdb.SearchResponse.metadata:type_name -> vexdb.SearchResponse.MetadataEntry
-	22, // 11: vexdb.DeleteRequest.metadata_filter:type_name -> vexdb.DeleteRequest.MetadataFilterEntry
-	23, // 12: vexdb.DeleteResponse.metadata:type_name -> vexdb.DeleteResponse.MetadataEntry
-	24, // 13: vexdb.ClusterInfo.metadata:type_name -> vexdb.ClusterInfo.MetadataEntry
-	25, // 14: vexdb.NodeInfo.metadata:type_name -> vexdb.NodeInfo.MetadataEntry
-	9,  // 15: vexdb.ClusterStatus.clusters:type_name -> vexdb.ClusterInfo
-	10, // 16: vexdb.ClusterStatus.nodes:type_name -> vexdb.NodeInfo
-	26, // 17: vexdb.ClusterStatus.metadata:type_name -> vexdb.ClusterStatus.MetadataEntry
-	27, // 18: vexdb.HealthCheckResponse.details:type_name -> vexdb.HealthCheckResponse.DetailsEntry
-	33, // 19: vexdb.HealthCheckResponse.timestamp:type_name -> google.protobuf.Timestamp
-	28, // 20: vexdb.MetricsResponse.metrics:type_name -> vexdb.MetricsResponse.MetricsEntry
-	29, // 21: vexdb.MetricsResponse.metadata:type_name -> vexdb.MetricsResponse.MetadataEntry
-	33, // 22: vexdb.MetricsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	30, // 23: vexdb.ConfigUpdateRequest.config_updates:type_name -> vexdb.ConfigUpdateRequest.ConfigUpdatesEntry
-	31, // 24: vexdb.ConfigUpdateResponse.applied_updates:type_name -> vexdb.ConfigUpdateResponse.AppliedUpdatesEntry
-	32, // 25: vexdb.ConfigUpdateResponse.failed_updates:type_name -> vexdb.ConfigUpdateResponse.FailedUpdatesEntry
-	2,  // 26: vexdb.StorageService.InsertVector:input_type -> vexdb.InsertRequest
-	2,  // 27: vexdb.StorageService.InsertVectorStream:input_type -> vexdb.InsertRequest
-	4,  // 28: vexdb.StorageService.Search:input_type -> vexdb.SearchRequest
-	4,  // 29: vexdb.StorageService.SearchStream:input_type -> vexdb.SearchRequest
-	7,  // 30: vexdb.StorageService.DeleteVectors:input_type -> vexdb.DeleteRequest
-	7,  // 31: vexdb.StorageService.DeleteVectorsStream:input_type -> vexdb.DeleteRequest
-	9,  // 32: vexdb.StorageService.GetClusterInfo:input_type -> vexdb.ClusterInfo
-	34, // 33: vexdb.StorageService.GetClusterStatus:input_type -> google.protobuf.Empty
-	12, // 34: vexdb.StorageService.HealthCheck:input_type -> vexdb.HealthCheckRequest
-	14, // 35: vexdb.StorageService.GetMetrics:input_type -> vexdb.MetricsRequest
-	16, // 36: vexdb.StorageService.UpdateConfig:input_type -> vexdb.ConfigUpdateRequest
-	34, // 37: vexdb.StorageService.GetConfig:input_type -> google.protobuf.Empty
-	2,  // 38: vexdb.InsertService.InsertVector:input_type -> vexdb.InsertRequest
-	2,  // 39: vexdb.InsertService.InsertVectorStream:input_type -> vexdb.InsertRequest
-	1,  // 40: vexdb.InsertService.InsertBatch:input_type -> vexdb.VectorBatch
-	1,  // 41: vexdb.InsertService.InsertBatchStream:input_type -> vexdb.VectorBatch
-	0,  // 42: vexdb.InsertService.GetClusterForVector:input_type -> vexdb.Vector
-	34, // 43: vexdb.InsertService.GetClusterStatus:input_type -> google.protobuf.Empty
-	12, // 44: vexdb.InsertService.HealthCheck:input_type -> vexdb.HealthCheckRequest
-	14, // 45: vexdb.InsertService.GetMetrics:input_type -> vexdb.MetricsRequest
-	16, // 46: vexdb.InsertService.UpdateConfig:input_type -> vexdb.ConfigUpdateRequest
-	34, // 47: vexdb.InsertService.GetConfig:input_type -> google.protobuf.Empty
-	4,  // 48: vexdb.SearchService.Search:input_type -> vexdb.SearchRequest
-	4,  // 49: vexdb.SearchService.SearchStream:input_type -> vexdb.SearchRequest
-	4,  // 50: vexdb.SearchService.MultiClusterSearch:input_type -> vexdb.SearchRequest
-	4,  // 51: vexdb.SearchService.MultiClusterSearchStream:input_type -> vexdb.SearchRequest
-	9,  // 52: vexdb.SearchService.GetClusterInfo:input_type -> vexdb.ClusterInfo
-	34, // 53: vexdb.SearchService.GetClusterStatus:input_type -> google.protobuf.Empty
-	12, // 54: vexdb.SearchService.HealthCheck:input_type -> vexdb.HealthCheckRequest
-	14, // 55: vexdb.SearchService.GetMetrics:input_type -> vexdb.MetricsRequest
-	16, // 56: vexdb.SearchService.UpdateConfig:input_type -> vexdb.ConfigUpdateRequest
-	34, // 57: vexdb.SearchService.GetConfig:input_type -> google.protobuf.Empty
-	10, // 58: vexdb.AdminService.AddNode:input_type -> vexdb.NodeInfo
-	10, // 59: vexdb.AdminService.RemoveNode:input_type -> vexdb.NodeInfo
-	10, // 60: vexdb.AdminService.UpdateNode:input_type -> vexdb.NodeInfo
-	9,  // 61: vexdb.AdminService.CreateCluster:input_type -> vexdb.ClusterInfo
-	9,  // 62: vexdb.AdminService.DeleteCluster:input_type -> vexdb.ClusterInfo
-	9,  // 63: vexdb.AdminService.UpdateCluster:input_type -> vexdb.ClusterInfo
-	34, // 64: vexdb.AdminService.BackupSystem:input_type -> google.protobuf.Empty
-	34, // 65: vexdb.AdminService.RestoreSystem:input_type -> google.protobuf.Empty
-	34, // 66: vexdb.AdminService.CompactStorage:input_type -> google.protobuf.Empty
-	12, // 67: vexdb.AdminService.HealthCheck:input_type -> vexdb.HealthCheckRequest
-	14, // 68: vexdb.AdminService.GetMetrics:input_type -> vexdb.MetricsRequest
-	16, // 69: vexdb.AdminService.UpdateConfig:input_type -> vexdb.ConfigUpdateRequest
-	34, // 70: vexdb.AdminService.GetConfig:input_type -> google.protobuf.Empty
-	3,  // 71: vexdb.StorageService.InsertVector:output_type -> vexdb.InsertResponse
-	3,  // 72: vexdb.StorageService.InsertVectorStream:output_type -> vexdb.InsertResponse
-	6,  // 73: vexdb.StorageService.Search:output_type -> vexdb.SearchResponse
-	6,  // 74: vexdb.StorageService.SearchStream:output_type -> vexdb.SearchResponse
-	8,  // 75: vexdb.StorageService.DeleteVectors:output_type -> vexdb.DeleteResponse
-	8,  // 76: vexdb.StorageService.DeleteVectorsStream:output_type -> vexdb.DeleteResponse
-	9,  // 77: vexdb.StorageService.GetClusterInfo:output_type -> vexdb.ClusterInfo
-	11, // 78: vexdb.StorageService.GetClusterStatus:output_type -> vexdb.ClusterStatus
-	13, // 79: vexdb.StorageService.HealthCheck:output_type -> vexdb.HealthCheckResponse
-	15, // 80: vexdb.StorageService.GetMetrics:output_type -> vexdb.MetricsResponse
-	17, // 81: vexdb.StorageService.UpdateConfig:output_type -> vexdb.ConfigUpdateResponse
-	17, // 82: vexdb.StorageService.GetConfig:output_type -> vexdb.ConfigUpdateResponse
-	3,  // 83: vexdb.InsertService.InsertVector:output_type -> vexdb.InsertResponse
-	3,  // 84: vexdb.InsertService.InsertVectorStream:output_type -> vexdb.InsertResponse
-	3,  // 85: vexdb.InsertService.InsertBatch:output_type -> vexdb.InsertResponse
-	3,  // 86: vexdb.InsertService.InsertBatchStream:output_type -> vexdb.InsertResponse
-	9,  // 87: vexdb.InsertService.GetClusterForVector:output_type -> vexdb.ClusterInfo
-	11, // 88: vexdb.InsertService.GetClusterStatus:output_type -> vexdb.ClusterStatus
-	13, // 89: vexdb.InsertService.HealthCheck:output_type -> vexdb.HealthCheckResponse
-	15, // 90: vexdb.InsertService.GetMetrics:output_type -> vexdb.MetricsResponse
-	17, // 91: vexdb.InsertService.UpdateConfig:output_type -> vexdb.ConfigUpdateResponse
-	17, // 92: vexdb.InsertService.GetConfig:output_type -> vexdb.ConfigUpdateResponse
-	6,  // 93: vexdb.SearchService.Search:output_type -> vexdb.SearchResponse
-	6,  // 94: vexdb.SearchService.SearchStream:output_type -> vexdb.SearchResponse
-	6,  // 95: vexdb.SearchService.MultiClusterSearch:output_type -> vexdb.SearchResponse
-	6,  // 96: vexdb.SearchService.MultiClusterSearchStream:output_type -> vexdb.SearchResponse
-	9,  // 97: vexdb.SearchService.GetClusterInfo:output_type -> vexdb.ClusterInfo
-	11, // 98: vexdb.SearchService.GetClusterStatus:output_type -> vexdb.ClusterStatus
-	13, // 99: vexdb.SearchService.HealthCheck:output_type -> vexdb.HealthCheckResponse
-	15, // 100: vexdb.SearchService.GetMetrics:output_type -> vexdb.MetricsResponse
-	17, // 101: vexdb.SearchService.UpdateConfig:output_type -> vexdb.ConfigUpdateResponse
-	17, // 102: vexdb.SearchService.GetConfig:output_type -> vexdb.ConfigUpdateResponse
-	10, // 103: vexdb.AdminService.AddNode:output_type -> vexdb.NodeInfo
-	34, // 104: vexdb.AdminService.RemoveNode:output_type -> google.protobuf.Empty
-	10, // 105: vexdb.AdminService.UpdateNode:output_type -> vexdb.NodeInfo
-	9,  // 106: vexdb.AdminService.CreateCluster:output_type -> vexdb.ClusterInfo
-	34, // 107: vexdb.AdminService.DeleteCluster:output_type -> google.protobuf.Empty
-	9,  // 108: vexdb.AdminService.UpdateCluster:output_type -> vexdb.ClusterInfo
-	34, // 109: vexdb.AdminService.BackupSystem:output_type -> google.protobuf.Empty
-	34, // 110: vexdb.AdminService.RestoreSystem:output_type -> google.protobuf.Empty
-	34, // 111: vexdb.AdminService.CompactStorage:output_type -> google.protobuf.Empty
-	13, // 112: vexdb.AdminService.HealthCheck:output_type -> vexdb.HealthCheckResponse
-	15, // 113: vexdb.AdminService.GetMetrics:output_type -> vexdb.MetricsResponse
-	17, // 114: vexdb.AdminService.UpdateConfig:output_type -> vexdb.ConfigUpdateResponse
-	17, // 115: vexdb.AdminService.GetConfig:output_type -> vexdb.ConfigUpdateResponse
+var file_vxdb_proto_depIdxs = []int32{
+	18, // 0: vxdb.Vector.metadata:type_name -> vxdb.Vector.MetadataEntry
+	33, // 1: vxdb.Vector.timestamp:type_name -> google.protobuf.Timestamp
+	0,  // 2: vxdb.VectorBatch.vectors:type_name -> vxdb.Vector
+	0,  // 3: vxdb.InsertRequest.vector:type_name -> vxdb.Vector
+	1,  // 4: vxdb.InsertRequest.batch:type_name -> vxdb.VectorBatch
+	19, // 5: vxdb.InsertResponse.metadata:type_name -> vxdb.InsertResponse.MetadataEntry
+	0,  // 6: vxdb.SearchRequest.query_vector:type_name -> vxdb.Vector
+	20, // 7: vxdb.SearchRequest.metadata_filter:type_name -> vxdb.SearchRequest.MetadataFilterEntry
+	0,  // 8: vxdb.SearchResult.vector:type_name -> vxdb.Vector
+	5,  // 9: vxdb.SearchResponse.results:type_name -> vxdb.SearchResult
+	21, // 10: vxdb.SearchResponse.metadata:type_name -> vxdb.SearchResponse.MetadataEntry
+	22, // 11: vxdb.DeleteRequest.metadata_filter:type_name -> vxdb.DeleteRequest.MetadataFilterEntry
+	23, // 12: vxdb.DeleteResponse.metadata:type_name -> vxdb.DeleteResponse.MetadataEntry
+	24, // 13: vxdb.ClusterInfo.metadata:type_name -> vxdb.ClusterInfo.MetadataEntry
+	25, // 14: vxdb.NodeInfo.metadata:type_name -> vxdb.NodeInfo.MetadataEntry
+	9,  // 15: vxdb.ClusterStatus.clusters:type_name -> vxdb.ClusterInfo
+	10, // 16: vxdb.ClusterStatus.nodes:type_name -> vxdb.NodeInfo
+	26, // 17: vxdb.ClusterStatus.metadata:type_name -> vxdb.ClusterStatus.MetadataEntry
+	27, // 18: vxdb.HealthCheckResponse.details:type_name -> vxdb.HealthCheckResponse.DetailsEntry
+	33, // 19: vxdb.HealthCheckResponse.timestamp:type_name -> google.protobuf.Timestamp
+	28, // 20: vxdb.MetricsResponse.metrics:type_name -> vxdb.MetricsResponse.MetricsEntry
+	29, // 21: vxdb.MetricsResponse.metadata:type_name -> vxdb.MetricsResponse.MetadataEntry
+	33, // 22: vxdb.MetricsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	30, // 23: vxdb.ConfigUpdateRequest.config_updates:type_name -> vxdb.ConfigUpdateRequest.ConfigUpdatesEntry
+	31, // 24: vxdb.ConfigUpdateResponse.applied_updates:type_name -> vxdb.ConfigUpdateResponse.AppliedUpdatesEntry
+	32, // 25: vxdb.ConfigUpdateResponse.failed_updates:type_name -> vxdb.ConfigUpdateResponse.FailedUpdatesEntry
+	2,  // 26: vxdb.StorageService.InsertVector:input_type -> vxdb.InsertRequest
+	2,  // 27: vxdb.StorageService.InsertVectorStream:input_type -> vxdb.InsertRequest
+	4,  // 28: vxdb.StorageService.Search:input_type -> vxdb.SearchRequest
+	4,  // 29: vxdb.StorageService.SearchStream:input_type -> vxdb.SearchRequest
+	7,  // 30: vxdb.StorageService.DeleteVectors:input_type -> vxdb.DeleteRequest
+	7,  // 31: vxdb.StorageService.DeleteVectorsStream:input_type -> vxdb.DeleteRequest
+	9,  // 32: vxdb.StorageService.GetClusterInfo:input_type -> vxdb.ClusterInfo
+	34, // 33: vxdb.StorageService.GetClusterStatus:input_type -> google.protobuf.Empty
+	12, // 34: vxdb.StorageService.HealthCheck:input_type -> vxdb.HealthCheckRequest
+	14, // 35: vxdb.StorageService.GetMetrics:input_type -> vxdb.MetricsRequest
+	16, // 36: vxdb.StorageService.UpdateConfig:input_type -> vxdb.ConfigUpdateRequest
+	34, // 37: vxdb.StorageService.GetConfig:input_type -> google.protobuf.Empty
+	2,  // 38: vxdb.InsertService.InsertVector:input_type -> vxdb.InsertRequest
+	2,  // 39: vxdb.InsertService.InsertVectorStream:input_type -> vxdb.InsertRequest
+	1,  // 40: vxdb.InsertService.InsertBatch:input_type -> vxdb.VectorBatch
+	1,  // 41: vxdb.InsertService.InsertBatchStream:input_type -> vxdb.VectorBatch
+	0,  // 42: vxdb.InsertService.GetClusterForVector:input_type -> vxdb.Vector
+	34, // 43: vxdb.InsertService.GetClusterStatus:input_type -> google.protobuf.Empty
+	12, // 44: vxdb.InsertService.HealthCheck:input_type -> vxdb.HealthCheckRequest
+	14, // 45: vxdb.InsertService.GetMetrics:input_type -> vxdb.MetricsRequest
+	16, // 46: vxdb.InsertService.UpdateConfig:input_type -> vxdb.ConfigUpdateRequest
+	34, // 47: vxdb.InsertService.GetConfig:input_type -> google.protobuf.Empty
+	4,  // 48: vxdb.SearchService.Search:input_type -> vxdb.SearchRequest
+	4,  // 49: vxdb.SearchService.SearchStream:input_type -> vxdb.SearchRequest
+	4,  // 50: vxdb.SearchService.MultiClusterSearch:input_type -> vxdb.SearchRequest
+	4,  // 51: vxdb.SearchService.MultiClusterSearchStream:input_type -> vxdb.SearchRequest
+	9,  // 52: vxdb.SearchService.GetClusterInfo:input_type -> vxdb.ClusterInfo
+	34, // 53: vxdb.SearchService.GetClusterStatus:input_type -> google.protobuf.Empty
+	12, // 54: vxdb.SearchService.HealthCheck:input_type -> vxdb.HealthCheckRequest
+	14, // 55: vxdb.SearchService.GetMetrics:input_type -> vxdb.MetricsRequest
+	16, // 56: vxdb.SearchService.UpdateConfig:input_type -> vxdb.ConfigUpdateRequest
+	34, // 57: vxdb.SearchService.GetConfig:input_type -> google.protobuf.Empty
+	10, // 58: vxdb.AdminService.AddNode:input_type -> vxdb.NodeInfo
+	10, // 59: vxdb.AdminService.RemoveNode:input_type -> vxdb.NodeInfo
+	10, // 60: vxdb.AdminService.UpdateNode:input_type -> vxdb.NodeInfo
+	9,  // 61: vxdb.AdminService.CreateCluster:input_type -> vxdb.ClusterInfo
+	9,  // 62: vxdb.AdminService.DeleteCluster:input_type -> vxdb.ClusterInfo
+	9,  // 63: vxdb.AdminService.UpdateCluster:input_type -> vxdb.ClusterInfo
+	34, // 64: vxdb.AdminService.BackupSystem:input_type -> google.protobuf.Empty
+	34, // 65: vxdb.AdminService.RestoreSystem:input_type -> google.protobuf.Empty
+	34, // 66: vxdb.AdminService.CompactStorage:input_type -> google.protobuf.Empty
+	12, // 67: vxdb.AdminService.HealthCheck:input_type -> vxdb.HealthCheckRequest
+	14, // 68: vxdb.AdminService.GetMetrics:input_type -> vxdb.MetricsRequest
+	16, // 69: vxdb.AdminService.UpdateConfig:input_type -> vxdb.ConfigUpdateRequest
+	34, // 70: vxdb.AdminService.GetConfig:input_type -> google.protobuf.Empty
+	3,  // 71: vxdb.StorageService.InsertVector:output_type -> vxdb.InsertResponse
+	3,  // 72: vxdb.StorageService.InsertVectorStream:output_type -> vxdb.InsertResponse
+	6,  // 73: vxdb.StorageService.Search:output_type -> vxdb.SearchResponse
+	6,  // 74: vxdb.StorageService.SearchStream:output_type -> vxdb.SearchResponse
+	8,  // 75: vxdb.StorageService.DeleteVectors:output_type -> vxdb.DeleteResponse
+	8,  // 76: vxdb.StorageService.DeleteVectorsStream:output_type -> vxdb.DeleteResponse
+	9,  // 77: vxdb.StorageService.GetClusterInfo:output_type -> vxdb.ClusterInfo
+	11, // 78: vxdb.StorageService.GetClusterStatus:output_type -> vxdb.ClusterStatus
+	13, // 79: vxdb.StorageService.HealthCheck:output_type -> vxdb.HealthCheckResponse
+	15, // 80: vxdb.StorageService.GetMetrics:output_type -> vxdb.MetricsResponse
+	17, // 81: vxdb.StorageService.UpdateConfig:output_type -> vxdb.ConfigUpdateResponse
+	17, // 82: vxdb.StorageService.GetConfig:output_type -> vxdb.ConfigUpdateResponse
+	3,  // 83: vxdb.InsertService.InsertVector:output_type -> vxdb.InsertResponse
+	3,  // 84: vxdb.InsertService.InsertVectorStream:output_type -> vxdb.InsertResponse
+	3,  // 85: vxdb.InsertService.InsertBatch:output_type -> vxdb.InsertResponse
+	3,  // 86: vxdb.InsertService.InsertBatchStream:output_type -> vxdb.InsertResponse
+	9,  // 87: vxdb.InsertService.GetClusterForVector:output_type -> vxdb.ClusterInfo
+	11, // 88: vxdb.InsertService.GetClusterStatus:output_type -> vxdb.ClusterStatus
+	13, // 89: vxdb.InsertService.HealthCheck:output_type -> vxdb.HealthCheckResponse
+	15, // 90: vxdb.InsertService.GetMetrics:output_type -> vxdb.MetricsResponse
+	17, // 91: vxdb.InsertService.UpdateConfig:output_type -> vxdb.ConfigUpdateResponse
+	17, // 92: vxdb.InsertService.GetConfig:output_type -> vxdb.ConfigUpdateResponse
+	6,  // 93: vxdb.SearchService.Search:output_type -> vxdb.SearchResponse
+	6,  // 94: vxdb.SearchService.SearchStream:output_type -> vxdb.SearchResponse
+	6,  // 95: vxdb.SearchService.MultiClusterSearch:output_type -> vxdb.SearchResponse
+	6,  // 96: vxdb.SearchService.MultiClusterSearchStream:output_type -> vxdb.SearchResponse
+	9,  // 97: vxdb.SearchService.GetClusterInfo:output_type -> vxdb.ClusterInfo
+	11, // 98: vxdb.SearchService.GetClusterStatus:output_type -> vxdb.ClusterStatus
+	13, // 99: vxdb.SearchService.HealthCheck:output_type -> vxdb.HealthCheckResponse
+	15, // 100: vxdb.SearchService.GetMetrics:output_type -> vxdb.MetricsResponse
+	17, // 101: vxdb.SearchService.UpdateConfig:output_type -> vxdb.ConfigUpdateResponse
+	17, // 102: vxdb.SearchService.GetConfig:output_type -> vxdb.ConfigUpdateResponse
+	10, // 103: vxdb.AdminService.AddNode:output_type -> vxdb.NodeInfo
+	34, // 104: vxdb.AdminService.RemoveNode:output_type -> google.protobuf.Empty
+	10, // 105: vxdb.AdminService.UpdateNode:output_type -> vxdb.NodeInfo
+	9,  // 106: vxdb.AdminService.CreateCluster:output_type -> vxdb.ClusterInfo
+	34, // 107: vxdb.AdminService.DeleteCluster:output_type -> google.protobuf.Empty
+	9,  // 108: vxdb.AdminService.UpdateCluster:output_type -> vxdb.ClusterInfo
+	34, // 109: vxdb.AdminService.BackupSystem:output_type -> google.protobuf.Empty
+	34, // 110: vxdb.AdminService.RestoreSystem:output_type -> google.protobuf.Empty
+	34, // 111: vxdb.AdminService.CompactStorage:output_type -> google.protobuf.Empty
+	13, // 112: vxdb.AdminService.HealthCheck:output_type -> vxdb.HealthCheckResponse
+	15, // 113: vxdb.AdminService.GetMetrics:output_type -> vxdb.MetricsResponse
+	17, // 114: vxdb.AdminService.UpdateConfig:output_type -> vxdb.ConfigUpdateResponse
+	17, // 115: vxdb.AdminService.GetConfig:output_type -> vxdb.ConfigUpdateResponse
 	71, // [71:116] is the sub-list for method output_type
 	26, // [26:71] is the sub-list for method input_type
 	26, // [26:26] is the sub-list for extension type_name
@@ -1685,12 +1685,12 @@ var file_vexdb_proto_depIdxs = []int32{
 	0,  // [0:26] is the sub-list for field type_name
 }
 
-func init() { file_vexdb_proto_init() }
-func file_vexdb_proto_init() {
-	if File_vexdb_proto != nil {
+func init() { file_vxdb_proto_init() }
+func file_vxdb_proto_init() {
+	if File_vxdb_proto != nil {
 		return
 	}
-	file_vexdb_proto_msgTypes[2].OneofWrappers = []any{
+	file_vxdb_proto_msgTypes[2].OneofWrappers = []any{
 		(*InsertRequest_Vector)(nil),
 		(*InsertRequest_Batch)(nil),
 	}
@@ -1698,17 +1698,17 @@ func file_vexdb_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vexdb_proto_rawDesc), len(file_vexdb_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vxdb_proto_rawDesc), len(file_vxdb_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   4,
 		},
-		GoTypes:           file_vexdb_proto_goTypes,
-		DependencyIndexes: file_vexdb_proto_depIdxs,
-		MessageInfos:      file_vexdb_proto_msgTypes,
+		GoTypes:           file_vxdb_proto_goTypes,
+		DependencyIndexes: file_vxdb_proto_depIdxs,
+		MessageInfos:      file_vxdb_proto_msgTypes,
 	}.Build()
-	File_vexdb_proto = out.File
-	file_vexdb_proto_goTypes = nil
-	file_vexdb_proto_depIdxs = nil
+	File_vxdb_proto = out.File
+	file_vxdb_proto_goTypes = nil
+	file_vxdb_proto_depIdxs = nil
 }

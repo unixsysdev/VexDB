@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"go.uber.org/zap"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 type mapConfig map[string]interface{}

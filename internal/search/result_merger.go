@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 // ResultMerger handles merging search results from multiple nodes

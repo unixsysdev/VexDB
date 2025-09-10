@@ -189,7 +189,7 @@ func (d *Dashboard) handleDashboard(w http.ResponseWriter, r *http.Request) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Dashboard</title>
+    <title>VxDB Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -202,7 +202,7 @@ func (d *Dashboard) handleDashboard(w http.ResponseWriter, r *http.Request) {
     </style>
 </head>
 <body>
-    <h1>VexDB Dashboard</h1>
+    <h1>VxDB Dashboard</h1>
     <div class="nav">
         <a href="/dashboard/overview">Overview</a>
         <a href="/dashboard/search">Search</a>
@@ -254,7 +254,7 @@ func (d *Dashboard) handleOverview(w http.ResponseWriter, r *http.Request) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Overview</title>
+    <title>VxDB Overview</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -264,7 +264,7 @@ func (d *Dashboard) handleOverview(w http.ResponseWriter, r *http.Request) {
     </style>
 </head>
 <body>
-    <h1>VexDB Overview</h1>
+    <h1>VxDB Overview</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -326,7 +326,7 @@ func (d *Dashboard) handleSearchDashboard(w http.ResponseWriter, r *http.Request
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Search Dashboard</title>
+    <title>VxDB Search Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -336,7 +336,7 @@ func (d *Dashboard) handleSearchDashboard(w http.ResponseWriter, r *http.Request
     </style>
 </head>
 <body>
-    <h1>VexDB Search Dashboard</h1>
+    <h1>VxDB Search Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -376,7 +376,7 @@ func (d *Dashboard) handleStorageDashboard(w http.ResponseWriter, r *http.Reques
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Storage Dashboard</title>
+    <title>VxDB Storage Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -386,7 +386,7 @@ func (d *Dashboard) handleStorageDashboard(w http.ResponseWriter, r *http.Reques
     </style>
 </head>
 <body>
-    <h1>VexDB Storage Dashboard</h1>
+    <h1>VxDB Storage Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -438,7 +438,7 @@ func (d *Dashboard) handleClusterDashboard(w http.ResponseWriter, r *http.Reques
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Cluster Dashboard</title>
+    <title>VxDB Cluster Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -449,7 +449,7 @@ func (d *Dashboard) handleClusterDashboard(w http.ResponseWriter, r *http.Reques
     </style>
 </head>
 <body>
-    <h1>VexDB Cluster Dashboard</h1>
+    <h1>VxDB Cluster Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -504,7 +504,7 @@ func (d *Dashboard) handleSystemDashboard(w http.ResponseWriter, r *http.Request
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB System Dashboard</title>
+    <title>VxDB System Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -514,7 +514,7 @@ func (d *Dashboard) handleSystemDashboard(w http.ResponseWriter, r *http.Request
     </style>
 </head>
 <body>
-    <h1>VexDB System Dashboard</h1>
+    <h1>VxDB System Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -578,7 +578,7 @@ func (d *Dashboard) handleReplicationDashboard(w http.ResponseWriter, r *http.Re
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Replication Dashboard</title>
+    <title>VxDB Replication Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -588,7 +588,7 @@ func (d *Dashboard) handleReplicationDashboard(w http.ResponseWriter, r *http.Re
     </style>
 </head>
 <body>
-    <h1>VexDB Replication Dashboard</h1>
+    <h1>VxDB Replication Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -653,7 +653,7 @@ func (d *Dashboard) handleCacheDashboard(w http.ResponseWriter, r *http.Request)
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Cache Dashboard</title>
+    <title>VxDB Cache Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -663,7 +663,7 @@ func (d *Dashboard) handleCacheDashboard(w http.ResponseWriter, r *http.Request)
     </style>
 </head>
 <body>
-    <h1>VexDB Cache Dashboard</h1>
+    <h1>VxDB Cache Dashboard</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>
@@ -769,7 +769,7 @@ func (d *Dashboard) handleDebug(w http.ResponseWriter, r *http.Request) {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VexDB Debug</title>
+    <title>VxDB Debug</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .nav { margin-bottom: 30px; }
@@ -778,7 +778,7 @@ func (d *Dashboard) handleDebug(w http.ResponseWriter, r *http.Request) {
     </style>
 </head>
 <body>
-    <h1>VexDB Debug</h1>
+    <h1>VxDB Debug</h1>
     <div class="nav">
         <a href="/dashboard">← Back</a>
     </div>

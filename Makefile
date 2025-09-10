@@ -1,11 +1,11 @@
-# VexDB Makefile
-# This Makefile provides convenient commands for building, testing, and deploying VexDB
+# VxDB Makefile
+# This Makefile provides convenient commands for building, testing, and deploying VxDB
 
 # Variables
 GO_VERSION := 1.21
 DOCKER_REGISTRY := ghcr.io
-IMAGE_NAME := vexdb
-NAMESPACE := vexdb
+IMAGE_NAME := vxdb
+NAMESPACE := vxdb
 KUBECONFIG := ~/.kube/config
 
 # Go variables
@@ -31,7 +31,7 @@ NC := \033[0m # No Color
 # Help target
 .PHONY: help
 help: ## Show this help message
-	@echo "$(CYAN)VexDB Development Commands$(NC)"
+	@echo "$(CYAN)VxDB Development Commands$(NC)"
 	@echo ""
 	@echo "$(GREEN)Development:$(NC)"
 	@awk 'BEGIN {FS = ":.*##"; printf "$(YELLOW)%-20s$(NC) %s\n", "Target", "Description"} /^[a-zA-Z_-]+:.*?##/ { printf "$(YELLOW)%-20s$(NC) %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -61,7 +61,7 @@ install: ## Install Go dependencies
 .PHONY: generate
 generate: ## Generate code from proto files
 	@echo "$(BLUE)Generating code from proto files...$(NC)"
-	protoc --go_out=. --go-grpc_out=. proto/vexdb.proto
+	protoc --go_out=. --go-grpc_out=. proto/vxdb.proto
 
 .PHONY: format
 format: ## Format Go code
@@ -88,29 +88,29 @@ security-scan: ## Run security scan
 .PHONY: build
 build: ## Build all services
 	@echo "$(BLUE)Building all services...$(NC)"
-	$(MAKE) build-vexinsert
-	$(MAKE) build-vexstorage
-	$(MAKE) build-vexsearch
+	$(MAKE) build-vxinsert
+	$(MAKE) build-vxstorage
+	$(MAKE) build-vxsearch
 
-.PHONY: build-vexinsert
-build-vexinsert: ## Build vexinsert service
-	@echo "$(BLUE)Building vexinsert service...$(NC)"
-	go build -o bin/vexinsert ./cmd/vexinsert
+.PHONY: build-vxinsert
+build-vxinsert: ## Build vxinsert service
+	@echo "$(BLUE)Building vxinsert service...$(NC)"
+	go build -o bin/vxinsert ./cmd/vxinsert
 
-.PHONY: build-vexstorage
-build-vexstorage: ## Build vexstorage service
-	@echo "$(BLUE)Building vexstorage service...$(NC)"
-	go build -o bin/vexstorage ./cmd/vexstorage
+.PHONY: build-vxstorage
+build-vxstorage: ## Build vxstorage service
+	@echo "$(BLUE)Building vxstorage service...$(NC)"
+	go build -o bin/vxstorage ./cmd/vxstorage
 
-.PHONY: build-vexsearch
-build-vexsearch: ## Build vexsearch service
-	@echo "$(BLUE)Building vexsearch service...$(NC)"
-	go build -o bin/vexsearch ./cmd/vexsearch
+.PHONY: build-vxsearch
+build-vxsearch: ## Build vxsearch service
+	@echo "$(BLUE)Building vxsearch service...$(NC)"
+	go build -o bin/vxsearch ./cmd/vxsearch
 
 .PHONY: build-all-platforms
 build-all-platforms: ## Build all services for all platforms
 	@echo "$(BLUE)Building all services for all platforms...$(NC)"
-	@for service in vexinsert vexstorage vexsearch; do \
+	@for service in vxinsert vxstorage vxsearch; do \
 		for os in linux darwin windows; do \
 			for arch in amd64 arm64; do \
 				if [ "$$os" == "windows" ]; then \
@@ -158,46 +158,46 @@ test-benchmark: ## Run benchmark tests
 .PHONY: docker-build
 docker-build: ## Build Docker images
 	@echo "$(BLUE)Building Docker images...$(NC)"
-	$(MAKE) docker-build-vexinsert
-	$(MAKE) docker-build-vexstorage
-	$(MAKE) docker-build-vexsearch
+	$(MAKE) docker-build-vxinsert
+	$(MAKE) docker-build-vxstorage
+	$(MAKE) docker-build-vxsearch
 
-.PHONY: docker-build-vexinsert
-docker-build-vexinsert: ## Build vexinsert Docker image
-	@echo "$(BLUE)Building vexinsert Docker image...$(NC)"
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexinsert:latest -f cmd/vexinsert/Dockerfile .
+.PHONY: docker-build-vxinsert
+docker-build-vxinsert: ## Build vxinsert Docker image
+	@echo "$(BLUE)Building vxinsert Docker image...$(NC)"
+	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxinsert:latest -f cmd/vxinsert/Dockerfile .
 
-.PHONY: docker-build-vexstorage
-docker-build-vexstorage: ## Build vexstorage Docker image
-	@echo "$(BLUE)Building vexstorage Docker image...$(NC)"
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexstorage:latest -f cmd/vexstorage/Dockerfile .
+.PHONY: docker-build-vxstorage
+docker-build-vxstorage: ## Build vxstorage Docker image
+	@echo "$(BLUE)Building vxstorage Docker image...$(NC)"
+	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxstorage:latest -f cmd/vxstorage/Dockerfile .
 
-.PHONY: docker-build-vexsearch
-docker-build-vexsearch: ## Build vexsearch Docker image
-	@echo "$(BLUE)Building vexsearch Docker image...$(NC)"
-	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexsearch:latest -f cmd/vexsearch/Dockerfile .
+.PHONY: docker-build-vxsearch
+docker-build-vxsearch: ## Build vxsearch Docker image
+	@echo "$(BLUE)Building vxsearch Docker image...$(NC)"
+	docker build -t $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxsearch:latest -f cmd/vxsearch/Dockerfile .
 
 .PHONY: docker-push
 docker-push: ## Push Docker images
 	@echo "$(BLUE)Pushing Docker images...$(NC)"
-	$(MAKE) docker-push-vexinsert
-	$(MAKE) docker-push-vexstorage
-	$(MAKE) docker-push-vexsearch
+	$(MAKE) docker-push-vxinsert
+	$(MAKE) docker-push-vxstorage
+	$(MAKE) docker-push-vxsearch
 
-.PHONY: docker-push-vexinsert
-docker-push-vexinsert: ## Push vexinsert Docker image
-	@echo "$(BLUE)Pushing vexinsert Docker image...$(NC)"
-	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexinsert:latest
+.PHONY: docker-push-vxinsert
+docker-push-vxinsert: ## Push vxinsert Docker image
+	@echo "$(BLUE)Pushing vxinsert Docker image...$(NC)"
+	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxinsert:latest
 
-.PHONY: docker-push-vexstorage
-docker-push-vexstorage: ## Push vexstorage Docker image
-	@echo "$(BLUE)Pushing vexstorage Docker image...$(NC)"
-	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexstorage:latest
+.PHONY: docker-push-vxstorage
+docker-push-vxstorage: ## Push vxstorage Docker image
+	@echo "$(BLUE)Pushing vxstorage Docker image...$(NC)"
+	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxstorage:latest
 
-.PHONY: docker-push-vexsearch
-docker-push-vexsearch: ## Push vexsearch Docker image
-	@echo "$(BLUE)Pushing vexsearch Docker image...$(NC)"
-	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexsearch:latest
+.PHONY: docker-push-vxsearch
+docker-push-vxsearch: ## Push vxsearch Docker image
+	@echo "$(BLUE)Pushing vxsearch Docker image...$(NC)"
+	docker push $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxsearch:latest
 
 .PHONY: docker-compose-up
 docker-compose-up: ## Start services with Docker Compose
@@ -218,24 +218,24 @@ docker-compose-logs: ## Show Docker Compose logs
 .PHONY: k8s-deploy
 k8s-deploy: ## Deploy to Kubernetes
 	@echo "$(BLUE)Deploying to Kubernetes...$(NC)"
-	kubectl apply -f kubernetes/vexdb-deployment.yaml
+	kubectl apply -f kubernetes/vxdb-deployment.yaml
 
 .PHONY: k8s-delete
 k8s-delete: ## Delete from Kubernetes
 	@echo "$(BLUE)Deleting from Kubernetes...$(NC)"
-	kubectl delete -f kubernetes/vexdb-deployment.yaml
+	kubectl delete -f kubernetes/vxdb-deployment.yaml
 
 .PHONY: k8s-logs
 k8s-logs: ## Show Kubernetes logs
 	@echo "$(BLUE)Showing Kubernetes logs...$(NC)"
-	kubectl logs -f -n $(NAMESPACE) deployment/vexinsert-deployment
+	kubectl logs -f -n $(NAMESPACE) deployment/vxinsert-deployment
 
 .PHONY: k8s-port-forward
 k8s-port-forward: ## Port forward Kubernetes services
 	@echo "$(BLUE)Port forwarding Kubernetes services...$(NC)"
-	kubectl port-forward -n $(NAMESPACE) service/vexinsert-service 8080:8080 &
-	kubectl port-forward -n $(NAMESPACE) service/vexstorage-service 8082:8082 &
-	kubectl port-forward -n $(NAMESPACE) service/vexsearch-service 8083:8083 &
+	kubectl port-forward -n $(NAMESPACE) service/vxinsert-service 8080:8080 &
+	kubectl port-forward -n $(NAMESPACE) service/vxstorage-service 8082:8082 &
+	kubectl port-forward -n $(NAMESPACE) service/vxsearch-service 8083:8083 &
 
 .PHONY: k8s-status
 k8s-status: ## Show Kubernetes status
@@ -266,9 +266,9 @@ clean: ## Clean build artifacts
 .PHONY: clean-docker
 clean-docker: ## Clean Docker images
 	@echo "$(BLUE)Cleaning Docker images...$(NC)"
-	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexinsert:latest || true
-	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexstorage:latest || true
-	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vexsearch:latest || true
+	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxinsert:latest || true
+	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxstorage:latest || true
+	docker rmi $(DOCKER_REGISTRY)/$(IMAGE_NAME)-vxsearch:latest || true
 
 .PHONY: clean-k8s
 clean-k8s: ## Clean Kubernetes resources
@@ -288,9 +288,9 @@ dev-up: ## Start development environment
 	@echo "$(BLUE)Starting development environment...$(NC)"
 	$(MAKE) docker-compose-up
 	@echo "$(GREEN)Development environment started!$(NC)"
-	@echo "$(YELLOW)VexInsert API: http://localhost:8080$(NC)"
-	@echo "$(YELLOW)VexStorage API: http://localhost:8082$(NC)"
-	@echo "$(YELLOW)VexSearch API: http://localhost:8083$(NC)"
+	@echo "$(YELLOW)VxInsert API: http://localhost:8080$(NC)"
+	@echo "$(YELLOW)VxStorage API: http://localhost:8082$(NC)"
+	@echo "$(YELLOW)VxSearch API: http://localhost:8083$(NC)"
 	@echo "$(YELLOW)Metrics: http://localhost:9090$(NC)"
 	@echo "$(YELLOW)Grafana: http://localhost:3000$(NC)"
 	@echo "$(YELLOW)Jaeger: http://localhost:16686$(NC)"
@@ -339,7 +339,7 @@ release: ## Create a new release
 # Utility targets
 .PHONY: version
 version: ## Show version information
-	@echo "$(BLUE)VexDB Version Information$(NC)"
+	@echo "$(BLUE)VxDB Version Information$(NC)"
 	@echo "$(YELLOW)Go Version:$(NC) $(shell go version)"
 	@echo "$(YELLOW)Git Commit:$(NC) $(shell git rev-parse HEAD)"
 	@echo "$(YELLOW)Git Branch:$(NC) $(shell git rev-parse --abbrev-ref HEAD)"

@@ -1,14 +1,14 @@
-# VexDB: Streaming Vector Database System Specification
+# VxDB: Streaming Vector Database System Specification
 **Version:** 1.0  
 **Status:** Draft  
-**Authors:** VexDB Development Team  
+**Authors:** VxDB Development Team  
 **Date:** January 2025
 
 ---
 
 ## Abstract
 
-VexDB is a distributed vector database system optimized for high-throughput streaming ingestion and low-latency similarity search. The system employs a shared-nothing architecture with three independent services: vxinsert (ingestion), vxsearch (query coordination), and vxstorage (storage and indexing). VexDB prioritizes write performance through append-only segment storage and maintains search quality via unified IVF (Inverted File) indices with hybrid update strategies.
+VxDB is a distributed vector database system optimized for high-throughput streaming ingestion and low-latency similarity search. The system employs a shared-nothing architecture with three independent services: vxinsert (ingestion), vxsearch (query coordination), and vxstorage (storage and indexing). VxDB prioritizes write performance through append-only segment storage and maintains search quality via unified IVF (Inverted File) indices with hybrid update strategies.
 
 Key design principles include protocol compatibility for seamless integration with existing data infrastructure, deterministic replication for operational simplicity, and configurable performance tuning to accommodate diverse workload requirements.
 
@@ -37,7 +37,7 @@ The demand for real-time vector similarity search in applications such as recomm
 
 ### 1.3 System Overview
 
-VexDB implements a three-tier architecture where each service operates independently:
+VxDB implements a three-tier architecture where each service operates independently:
 
 - **vxinsert**: Multi-protocol ingestion layer with streaming optimization
 - **vxstorage**: Distributed storage engine with unified vector indexing
@@ -53,7 +53,7 @@ The system employs fixed cluster assignment for predictable routing, determinist
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        VexDB Cluster                        │
+│                        VxDB Cluster                        │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
 │  │  vxinsert  │  │  vxinsert  │  │  vxinsert  │          │
@@ -136,7 +136,7 @@ Content-Type: application/json
 
 **Kafka Connect Compatibility:**
 ```
-connector.class=VexDBSinkConnector
+connector.class=VxDBSinkConnector
 topics=embeddings
 vector.field=embedding
 metadata.fields=id,timestamp,source
@@ -216,9 +216,9 @@ vxinsert:
 ```
 /data/node_id/
 ├── segments/
-│   ├── cluster_001_seg_001.vex
-│   ├── cluster_001_seg_002.vex
-│   └── cluster_002_seg_001.vex
+│   ├── cluster_001_seg_001.vx
+│   ├── cluster_001_seg_002.vx
+│   └── cluster_002_seg_001.vx
 ├── indices/
 │   ├── ivf_snapshot_v123.idx
 │   └── ivf_wal.log
@@ -290,7 +290,7 @@ Query Vector Input
 ```yaml
 vxstorage:
   storage:
-    data_directory: "/var/lib/vexdb"
+    data_directory: "/var/lib/vxdb"
     vectors_per_segment: 10000
     memory_buffer_size: "8MB"
     
@@ -422,7 +422,7 @@ service VectorSearch {
 **Binary Layout:**
 ```
 Segment Header (256 bytes)
-├── Magic Number (8 bytes): "VEXSEG01"
+├── Magic Number (8 bytes): "VXSEG01"
 ├── Vector Count (8 bytes)
 ├── Vector Dimension (4 bytes)
 ├── Metadata Size (8 bytes)
@@ -499,7 +499,7 @@ message SearchRequest {
 **WebSocket Protocol:**
 ```
 Connection: ws://vxinsert:8080/stream
-Subprotocol: vexdb-v1
+Subprotocol: vxdb-v1
 
 Message Types:
 - vector_insert: Single vector ingestion
@@ -515,14 +515,14 @@ Error Handling:
 **Kafka Connect Integration:**
 ```json
 {
-  "connector.class": "io.vexdb.connect.VexDBSinkConnector",
+  "connector.class": "io.vxdb.connect.VxDBSinkConnector",
   "tasks.max": "1",
   "topics": "vectors",
-  "vexdb.endpoints": "vxinsert-1:8080,vxinsert-2:8080",
-  "vexdb.vector.field": "embedding",
-  "vexdb.metadata.fields": "id,timestamp,category",
-  "vexdb.batch.size": "1000",
-  "vexdb.retry.attempts": "3"
+  "vxdb.endpoints": "vxinsert-1:8080,vxinsert-2:8080",
+  "vxdb.vector.field": "embedding",
+  "vxdb.metadata.fields": "id,timestamp,category",
+  "vxdb.batch.size": "1000",
+  "vxdb.retry.attempts": "3"
 }
 ```
 
@@ -535,7 +535,7 @@ Error Handling:
 **Static Topology Definition:**
 ```yaml
 cluster:
-  name: "vexdb-production"
+  name: "vxdb-production"
   total_clusters: 1024
   replication_factor: 2
   
@@ -555,12 +555,12 @@ services:
         host: "10.0.2.10"
         port: 8090
         cluster_ranges: ["0-255", "512-767"]    # Primary + replica
-        data_directory: "/var/lib/vexdb"
+        data_directory: "/var/lib/vxdb"
       - id: "storage-2"
         host: "10.0.2.11"
         port: 8090  
         cluster_ranges: ["256-511", "768-1023"]
-        data_directory: "/var/lib/vexdb"
+        data_directory: "/var/lib/vxdb"
         
   vxsearch:
     instances:
@@ -609,12 +609,12 @@ vxinsert:
 GET /metrics (Prometheus format)
 
 Key Metrics:
-- vexdb_vectors_ingested_total
-- vexdb_queries_executed_total  
-- vexdb_query_duration_seconds
-- vexdb_memory_buffer_utilization
-- vexdb_segment_count_total
-- vexdb_ivf_rebuild_duration_seconds
+- vxdb_vectors_ingested_total
+- vxdb_queries_executed_total  
+- vxdb_query_duration_seconds
+- vxdb_memory_buffer_utilization
+- vxdb_segment_count_total
+- vxdb_ivf_rebuild_duration_seconds
 ```
 
 **Health Checks:**
@@ -711,4 +711,4 @@ Response: {"ready": true|false}
 - OAuth 2.0 Authorization Framework (RFC 6749)
 - Advanced Encryption Standard (AES) (FIPS 197)
 
---. For the latest version, consult the official VexDB documentation repository.*
+--. For the latest version, consult the official VxDB documentation repository.*

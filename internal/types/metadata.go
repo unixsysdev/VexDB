@@ -13,19 +13,19 @@ import (
 type Metadata struct {
 	Fields    map[string]interface{} `json:"fields" yaml:"fields"`
 	Schema    *MetadataSchema        `json:"schema,omitempty" yaml:"schema,omitempty"`
-	Timestamp int64                 `json:"timestamp" yaml:"timestamp"`
-	Version   int32                 `json:"version" yaml:"version"`
+	Timestamp int64                  `json:"timestamp" yaml:"timestamp"`
+	Version   int32                  `json:"version" yaml:"version"`
 }
 
 // MetadataSchema defines the schema for metadata validation
 type MetadataSchema struct {
 	Fields map[string]MetadataField `json:"fields" yaml:"fields"`
-	Strict bool                    `json:"strict" yaml:"strict"` // Strict validation mode
+	Strict bool                     `json:"strict" yaml:"strict"` // Strict validation mode
 }
 
 // MetadataField defines a single field in the metadata schema
 type MetadataField struct {
-	Type        string      `json:"type" yaml:"type"`        // "string", "int", "float", "bool", "datetime", "array", "object"
+	Type        string      `json:"type" yaml:"type"` // "string", "int", "float", "bool", "datetime", "array", "object"
 	Required    bool        `json:"required" yaml:"required"`
 	Default     interface{} `json:"default,omitempty" yaml:"default,omitempty"`
 	Min         interface{} `json:"min,omitempty" yaml:"min,omitempty"`
@@ -36,33 +36,33 @@ type MetadataField struct {
 
 // MetadataFilter represents a filter for metadata queries
 type MetadataFilter struct {
-    // Backward-compatible flexible structure used by validators and handlers
-    // When Conditions is non-nil, it contains either typed MetadataCondition
-    // or map[string]interface{} entries with keys: key, operator, value/values.
-    Conditions []interface{} `json:"conditions,omitempty" yaml:"conditions,omitempty"`
+	// Backward-compatible flexible structure used by validators and handlers
+	// When Conditions is non-nil, it contains either typed MetadataCondition
+	// or map[string]interface{} entries with keys: key, operator, value/values.
+	Conditions []interface{} `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 
-    // Simple single-field filter (legacy)
-    Field    string      `json:"field,omitempty" yaml:"field,omitempty"`
-    Operator string      `json:"operator,omitempty" yaml:"operator,omitempty"` // "=", "!=", ">", "<", ">=", "<=", "in", "contains", "startswith", "endswith"
-    Value    interface{} `json:"value,omitempty" yaml:"value,omitempty"`
+	// Simple single-field filter (legacy)
+	Field    string      `json:"field,omitempty" yaml:"field,omitempty"`
+	Operator string      `json:"operator,omitempty" yaml:"operator,omitempty"` // "=", "!=", ">", "<", ">=", "<=", "in", "contains", "startswith", "endswith"
+	Value    interface{} `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 // MetadataCondition is a typed representation of a filter condition
 type MetadataCondition struct {
-    Key      string   `json:"key" yaml:"key"`
-    Operator string   `json:"operator" yaml:"operator"`
-    Value    string   `json:"value,omitempty" yaml:"value,omitempty"`
-    Values   []string `json:"values,omitempty" yaml:"values,omitempty"`
+	Key      string   `json:"key" yaml:"key"`
+	Operator string   `json:"operator" yaml:"operator"`
+	Value    string   `json:"value,omitempty" yaml:"value,omitempty"`
+	Values   []string `json:"values,omitempty" yaml:"values,omitempty"`
 }
 
 // MetadataQuery represents a complex metadata query
 type MetadataQuery struct {
-	Filters    []MetadataFilter `json:"filters" yaml:"filters"`
-	Logic      string           `json:"logic" yaml:"logic"` // "AND", "OR"
-	Limit      int              `json:"limit,omitempty" yaml:"limit,omitempty"`
-	Offset     int              `json:"offset,omitempty" yaml:"offset,omitempty"`
-	SortBy     string           `json:"sort_by,omitempty" yaml:"sort_by,omitempty"`
-	SortOrder  string           `json:"sort_order,omitempty" yaml:"sort_order,omitempty"` // "asc", "desc"
+	Filters   []MetadataFilter `json:"filters" yaml:"filters"`
+	Logic     string           `json:"logic" yaml:"logic"` // "AND", "OR"
+	Limit     int              `json:"limit,omitempty" yaml:"limit,omitempty"`
+	Offset    int              `json:"offset,omitempty" yaml:"offset,omitempty"`
+	SortBy    string           `json:"sort_by,omitempty" yaml:"sort_by,omitempty"`
+	SortOrder string           `json:"sort_order,omitempty" yaml:"sort_order,omitempty"` // "asc", "desc"
 }
 
 // NewMetadata creates a new metadata instance
@@ -89,22 +89,22 @@ func (m *Metadata) Set(key string, value interface{}) error {
 	if m == nil {
 		return errors.New("metadata cannot be nil")
 	}
-	
+
 	if key == "" {
 		return errors.New("metadata key cannot be empty")
 	}
-	
+
 	// Validate against schema if present
 	if m.Schema != nil {
 		if err := m.validateField(key, value); err != nil {
 			return err
 		}
 	}
-	
+
 	m.Fields[key] = value
 	m.Timestamp = time.Now().Unix()
 	m.Version++
-	
+
 	return nil
 }
 
@@ -113,7 +113,7 @@ func (m *Metadata) Get(key string) (interface{}, bool) {
 	if m == nil || m.Fields == nil {
 		return nil, false
 	}
-	
+
 	value, exists := m.Fields[key]
 	return value, exists
 }
@@ -124,11 +124,11 @@ func (m *Metadata) GetString(key string) (string, bool) {
 	if !exists {
 		return "", false
 	}
-	
+
 	if str, ok := value.(string); ok {
 		return str, true
 	}
-	
+
 	return "", false
 }
 
@@ -138,7 +138,7 @@ func (m *Metadata) GetInt(key string) (int64, bool) {
 	if !exists {
 		return 0, false
 	}
-	
+
 	switch v := value.(type) {
 	case int:
 		return int64(v), true
@@ -159,7 +159,7 @@ func (m *Metadata) GetFloat(key string) (float64, bool) {
 	if !exists {
 		return 0, false
 	}
-	
+
 	switch v := value.(type) {
 	case float64:
 		return v, true
@@ -180,11 +180,11 @@ func (m *Metadata) GetBool(key string) (bool, bool) {
 	if !exists {
 		return false, false
 	}
-	
+
 	if b, ok := value.(bool); ok {
 		return b, true
 	}
-	
+
 	return false, false
 }
 
@@ -193,7 +193,7 @@ func (m *Metadata) Delete(key string) {
 	if m == nil || m.Fields == nil {
 		return
 	}
-	
+
 	delete(m.Fields, key)
 	m.Timestamp = time.Now().Unix()
 	m.Version++
@@ -204,7 +204,7 @@ func (m *Metadata) validateField(key string, value interface{}) error {
 	if m.Schema == nil {
 		return nil
 	}
-	
+
 	field, exists := m.Schema.Fields[key]
 	if !exists {
 		if m.Schema.Strict {
@@ -212,22 +212,22 @@ func (m *Metadata) validateField(key string, value interface{}) error {
 		}
 		return nil
 	}
-	
+
 	// Type validation
 	if err := m.validateType(field.Type, value); err != nil {
 		return fmt.Errorf("field '%s' type validation failed: %v", key, err)
 	}
-	
+
 	// Range validation
 	if err := m.validateRange(field, value); err != nil {
 		return fmt.Errorf("field '%s' range validation failed: %v", key, err)
 	}
-	
+
 	// Enum validation
 	if err := m.validateEnum(field, value); err != nil {
 		return fmt.Errorf("field '%s' enum validation failed: %v", key, err)
 	}
-	
+
 	return nil
 }
 
@@ -236,7 +236,7 @@ func (m *Metadata) validateType(expectedType string, value interface{}) error {
 	if value == nil {
 		return nil // Nil values are allowed (will use default if required)
 	}
-	
+
 	switch expectedType {
 	case "string":
 		if _, ok := value.(string); !ok {
@@ -269,7 +269,7 @@ func (m *Metadata) validateType(expectedType string, value interface{}) error {
 	default:
 		return fmt.Errorf("unknown field type: %s", expectedType)
 	}
-	
+
 	return nil
 }
 
@@ -278,37 +278,37 @@ func (m *Metadata) validateRange(field MetadataField, value interface{}) error {
 	if value == nil {
 		return nil
 	}
-	
+
 	switch field.Type {
 	case "string":
 		str, ok := value.(string)
 		if !ok {
 			return nil
 		}
-		
+
 		if min, ok := field.Min.(int); ok && len(str) < min {
 			return fmt.Errorf("string length %d less than minimum %d", len(str), min)
 		}
-		
+
 		if max, ok := field.Max.(int); ok && len(str) > max {
 			return fmt.Errorf("string length %d greater than maximum %d", len(str), max)
 		}
-		
+
 	case "int", "float":
 		num, err := m.toFloat64(value)
 		if err != nil {
 			return nil
 		}
-		
+
 		if min, ok := field.Min.(float64); ok && num < min {
 			return fmt.Errorf("value %f less than minimum %f", num, min)
 		}
-		
+
 		if max, ok := field.Max.(float64); ok && num > max {
 			return fmt.Errorf("value %f greater than maximum %f", num, max)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -317,14 +317,14 @@ func (m *Metadata) validateEnum(field MetadataField, value interface{}) error {
 	if len(field.Enum) == 0 {
 		return nil
 	}
-	
+
 	valueStr := fmt.Sprintf("%v", value)
 	for _, enumVal := range field.Enum {
 		if enumVal == valueStr {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("value '%v' not in enum values: %v", value, field.Enum)
 }
 
@@ -386,12 +386,12 @@ func (m *Metadata) Matches(filter MetadataFilter) (bool, error) {
 	if m == nil {
 		return false, errors.New("metadata cannot be nil")
 	}
-	
+
 	value, exists := m.Get(filter.Field)
 	if !exists {
 		return false, nil
 	}
-	
+
 	return m.compareValues(value, filter.Operator, filter.Value)
 }
 
@@ -423,12 +423,12 @@ func (m *Metadata) compareNumeric(value interface{}, operator string, filterValu
 	if err != nil {
 		return false, err
 	}
-	
+
 	val2, err := m.toFloat64(filterValue)
 	if err != nil {
 		return false, err
 	}
-	
+
 	switch operator {
 	case ">":
 		return val1 > val2, nil
@@ -449,13 +449,13 @@ func (m *Metadata) compareIn(value interface{}, filterValue interface{}) (bool, 
 	if reflectValue.Kind() != reflect.Slice && reflectValue.Kind() != reflect.Array {
 		return false, fmt.Errorf("filter value for 'in' operator must be an array")
 	}
-	
+
 	for i := 0; i < reflectValue.Len(); i++ {
 		if reflect.DeepEqual(value, reflectValue.Index(i).Interface()) {
 			return true, nil
 		}
 	}
-	
+
 	return false, nil
 }
 
@@ -465,12 +465,12 @@ func (m *Metadata) compareContains(value interface{}, filterValue interface{}) (
 	if !ok {
 		return false, fmt.Errorf("value for 'contains' operator must be a string")
 	}
-	
+
 	filterStr, ok := filterValue.(string)
 	if !ok {
 		return false, fmt.Errorf("filter value for 'contains' operator must be a string")
 	}
-	
+
 	return strings.Contains(valStr, filterStr), nil
 }
 
@@ -480,12 +480,12 @@ func (m *Metadata) compareStartsWith(value interface{}, filterValue interface{})
 	if !ok {
 		return false, fmt.Errorf("value for 'startswith' operator must be a string")
 	}
-	
+
 	filterStr, ok := filterValue.(string)
 	if !ok {
 		return false, fmt.Errorf("filter value for 'startswith' operator must be a string")
 	}
-	
+
 	return strings.HasPrefix(valStr, filterStr), nil
 }
 
@@ -495,12 +495,12 @@ func (m *Metadata) compareEndsWith(value interface{}, filterValue interface{}) (
 	if !ok {
 		return false, fmt.Errorf("value for 'endswith' operator must be a string")
 	}
-	
+
 	filterStr, ok := filterValue.(string)
 	if !ok {
 		return false, fmt.Errorf("filter value for 'endswith' operator must be a string")
 	}
-	
+
 	return strings.HasSuffix(valStr, filterStr), nil
 }
 
@@ -509,7 +509,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 	if m == nil {
 		return nil, errors.New("cannot serialize nil metadata")
 	}
-	
+
 	return json.Marshal(m)
 }
 
@@ -518,12 +518,12 @@ func DeserializeMetadata(data []byte) (*Metadata, error) {
 	if len(data) == 0 {
 		return NewMetadata(), nil
 	}
-	
+
 	var metadata Metadata
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to deserialize metadata: %v", err)
 	}
-	
+
 	return &metadata, nil
 }
 
@@ -532,12 +532,12 @@ func (m *Metadata) Clone() (*Metadata, error) {
 	if m == nil {
 		return nil, errors.New("cannot clone nil metadata")
 	}
-	
+
 	data, err := m.Serialize()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return DeserializeMetadata(data)
 }
 
@@ -546,12 +546,12 @@ func (m *Metadata) Merge(other *Metadata) error {
 	if m == nil || other == nil {
 		return errors.New("cannot merge nil metadata")
 	}
-	
+
 	for key, value := range other.Fields {
 		if err := m.Set(key, value); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }

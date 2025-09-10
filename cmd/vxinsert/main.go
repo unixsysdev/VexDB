@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/storage"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/storage"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )
@@ -43,7 +43,7 @@ func (s *insertServer) handleInsert(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "configs/vexinsert-production.yaml", "Path to configuration file")
+	flag.StringVar(&configPath, "config", "configs/vxinsert-production.yaml", "Path to configuration file")
 	flag.Parse()
 
 	logger, err := logging.NewLogger()

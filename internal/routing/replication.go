@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 // ReplicationManager handles replication of vectors across multiple nodes
@@ -28,11 +28,11 @@ type ReplicationManager struct {
 
 // ReplicationPool manages a pool of workers for concurrent replication
 type ReplicationPool struct {
-        workers    []*ReplicationWorker
-        taskQueue  chan *ReplicationTask
-        resultChan chan *ReplicationResult
-        logger     logging.Logger
-        mu         sync.RWMutex
+	workers    []*ReplicationWorker
+	taskQueue  chan *ReplicationTask
+	resultChan chan *ReplicationResult
+	logger     logging.Logger
+	mu         sync.RWMutex
 }
 
 // ReplicationWorker represents a worker that handles replication tasks
@@ -327,11 +327,11 @@ func (m *ReplicationManager) monitorCircuitBreakers() {
 
 // NewReplicationPool creates a new replication pool
 func NewReplicationPool(workerCount int, logger logging.Logger, metrics *metrics.IngestionMetrics) *ReplicationPool {
-        pool := &ReplicationPool{
-                taskQueue:  make(chan *ReplicationTask, 1000),
-                resultChan: make(chan *ReplicationResult, 1000),
-                logger:     logger,
-        }
+	pool := &ReplicationPool{
+		taskQueue:  make(chan *ReplicationTask, 1000),
+		resultChan: make(chan *ReplicationResult, 1000),
+		logger:     logger,
+	}
 
 	// Create workers
 	for i := 0; i < workerCount; i++ {

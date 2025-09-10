@@ -1,24 +1,24 @@
 package segment
 
 import (
-       "fmt"
-       "vexdb/internal/types"
+	"fmt"
+	"vxdb/internal/types"
 )
 
 // Segment magic number and version
 const (
-	SegmentMagic   = 0x56455844 // "VEXD" in hex
+	SegmentMagic   = 0x56455844 // "VXD" in hex
 	SegmentVersion = 1
 )
 
 // SegmentHeader represents the header of a segment file
 type SegmentHeader struct {
-	Magic      uint32    `json:"magic" yaml:"magic"`
-	Version    uint32    `json:"version" yaml:"version"`
-	ClusterID  uint32    `json:"cluster_id" yaml:"cluster_id"`
-	SegmentID  string    `json:"segment_id" yaml:"segment_id"`
-	Status     string    `json:"status" yaml:"status"`
-	VectorSize uint32    `json:"vector_size" yaml:"vector_size"`
+	Magic      uint32          `json:"magic" yaml:"magic"`
+	Version    uint32          `json:"version" yaml:"version"`
+	ClusterID  uint32          `json:"cluster_id" yaml:"cluster_id"`
+	SegmentID  string          `json:"segment_id" yaml:"segment_id"`
+	Status     string          `json:"status" yaml:"status"`
+	VectorSize uint32          `json:"vector_size" yaml:"vector_size"`
 	CreatedAt  types.Timestamp `json:"created_at" yaml:"created_at"`
 	UpdatedAt  types.Timestamp `json:"updated_at" yaml:"updated_at"`
 }
@@ -27,25 +27,25 @@ type SegmentHeader struct {
 type SegmentStatus string
 
 const (
-	SegmentStatusActive    SegmentStatus = "active"
-	SegmentStatusSealed    SegmentStatus = "sealed"
+	SegmentStatusActive     SegmentStatus = "active"
+	SegmentStatusSealed     SegmentStatus = "sealed"
 	SegmentStatusCompacting SegmentStatus = "compacting"
-	SegmentStatusDeleted   SegmentStatus = "deleted"
+	SegmentStatusDeleted    SegmentStatus = "deleted"
 )
 
 // SegmentInfo represents information about a segment
 type SegmentInfo struct {
-	ID          string        `json:"id" yaml:"id"`
-	ClusterID   uint32        `json:"cluster_id" yaml:"cluster_id"`
-	Status      SegmentStatus `json:"status" yaml:"status"`
-	VectorCount uint64        `json:"vector_count" yaml:"vector_count"`
+	ID          string          `json:"id" yaml:"id"`
+	ClusterID   uint32          `json:"cluster_id" yaml:"cluster_id"`
+	Status      SegmentStatus   `json:"status" yaml:"status"`
+	VectorCount uint64          `json:"vector_count" yaml:"vector_count"`
 	CreatedAt   types.Timestamp `json:"created_at" yaml:"created_at"`
 	UpdatedAt   types.Timestamp `json:"updated_at" yaml:"updated_at"`
 }
 
 // ClusterIDString returns a string representation of the cluster ID
 func (si *SegmentInfo) ClusterIDString() string {
-       return fmt.Sprintf("%d", si.ClusterID)
+	return fmt.Sprintf("%d", si.ClusterID)
 }
 
 // IsValid checks if the segment info is valid
@@ -92,12 +92,12 @@ func (si *SegmentInfo) IsDeleted() bool {
 func NewSegmentInfo(id string, clusterID uint32) *SegmentInfo {
 	now := types.NowTimestamp()
 	return &SegmentInfo{
-		ID:         id,
-		ClusterID:  clusterID,
-		Status:     SegmentStatusActive,
+		ID:          id,
+		ClusterID:   clusterID,
+		Status:      SegmentStatusActive,
 		VectorCount: 0,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 }
 

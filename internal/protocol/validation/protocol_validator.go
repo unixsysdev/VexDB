@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"vexdb/internal/types"
+	"vxdb/internal/types"
 )
 
 // ProtocolValidator handles protocol-specific validation
@@ -59,7 +59,7 @@ func NewProtocolValidator() *ProtocolValidator {
 		websocketRules: &WebSocketValidationRules{
 			MaxMessageSize:       10 << 20, // 10MB
 			AllowedOrigins:       []string{"*"},
-			RequiredSubprotocols: []string{"vexdb-v1"},
+			RequiredSubprotocols: []string{"vxdb-v1"},
 		},
 		grpcRules: &GRPCValidationRules{
 			MaxMessageSize:  4 << 20, // 4MB

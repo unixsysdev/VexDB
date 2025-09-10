@@ -1,9 +1,9 @@
-# VexDB Implementation Task List
+# VxDB Implementation Task List
 
 ## Phase 1: Core Infrastructure (4-6 weeks)
 
 ### 1.1 Project Setup and Foundations
-- [ ] **Initialize Go modules** for each service (vexinsert, vexstorage, vexsearch)
+- [ ] **Initialize Go modules** for each service (vxinsert, vxstorage, vxsearch)
 - [ ] **Setup project structure** with shared libraries for common types
 - [ ] **Define core data structures** (Vector, Metadata, ClusterConfig)
 - [ ] **Implement configuration management** using YAML/JSON config files
@@ -33,7 +33,7 @@ type ClusterConfig struct {
 - [ ] **Build configuration validation** and error handling
 - [ ] **Setup configuration hot-reload** (optional, for development)
 
-## Phase 2: vexstorage - Storage Engine (6-8 weeks)
+## Phase 2: vxstorage - Storage Engine (6-8 weeks)
 
 ### 2.1 Segment Storage Implementation
 - [ ] **Design segment file format** with binary layout specification
@@ -101,7 +101,7 @@ type ClusterConfig struct {
 - [ ] **Build graceful shutdown** with connection draining
 - [ ] **Create storage service main application**
 
-## Phase 3: vexinsert - Ingestion Service (4-5 weeks)
+## Phase 3: vxinsert - Ingestion Service (4-5 weeks)
 
 ### 3.1 Multi-Protocol Framework
 - [ ] **Design protocol adapter interface**
@@ -152,7 +152,7 @@ type ProtocolAdapter interface {
 - [ ] **Create Redis command handlers** (VECTOR.ADD, VECTOR.MADD)
 - [ ] **Add Redis-compatible error responses**
 
-## Phase 4: vexsearch - Query Coordination (3-4 weeks)
+## Phase 4: vxsearch - Query Coordination (3-4 weeks)
 
 ### 4.1 Query Planning Engine
 - [ ] **Implement query vector analysis** for cluster determination
@@ -276,7 +276,7 @@ type ProtocolAdapter interface {
 4. Integration testing and performance validation
 
 **Parallel Development Opportunities**:
-- vexinsert and vexsearch can be developed concurrently after vexstorage core is complete
+- vxinsert and vxsearch can be developed concurrently after vxstorage core is complete
 - Protocol adapters can be implemented independently
 - Testing and tooling can be developed alongside core features
 

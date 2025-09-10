@@ -1,15 +1,15 @@
-// Package search provides dual search functionality for VexDB
+// Package search provides dual search functionality for VxDB
 package search
 
 import (
 	"context"
 	"sync"
 
-	"vexdb/internal/config"
-	"vexdb/internal/metrics"
-	"vexdb/internal/storage/buffer"
-	"vexdb/internal/storage/segment"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/metrics"
+	"vxdb/internal/storage/buffer"
+	"vxdb/internal/storage/segment"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )

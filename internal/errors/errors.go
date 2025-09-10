@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// VexError represents a custom error type for VexDB
-type VexError struct {
+// VxError represents a custom error type for VxDB
+type VxError struct {
 	Code      ErrorCode
 	Message   string
 	Details   map[string]interface{}
@@ -35,28 +35,28 @@ const (
 	ErrorCodeInternal
 	ErrorCodeUnavailable
 	ErrorCodeDeadlineExceeded
-	
+
 	// Vector-specific errors
 	ErrorCodeInvalidVector
 	ErrorCodeVectorNotFound
 	ErrorCodeVectorDimensionMismatch
 	ErrorCodeVectorTooLarge
 	ErrorCodeVectorCorrupted
-	
+
 	// Cluster-specific errors
 	ErrorCodeClusterNotFound
 	ErrorCodeClusterNotReady
 	ErrorCodeClusterFull
 	ErrorCodeClusterInconsistent
 	ErrorCodeClusterRebalanceFailed
-	
+
 	// Node-specific errors
 	ErrorCodeNodeNotFound
 	ErrorCodeNodeUnhealthy
 	ErrorCodeNodeOverloaded
 	ErrorCodeNodeDisconnected
 	ErrorCodeNodeRecoveryFailed
-	
+
 	// Storage-specific errors
 	ErrorCodeStorageFull
 	ErrorCodeStorageCorrupted
@@ -64,7 +64,7 @@ const (
 	ErrorCodeStorageWriteFailed
 	ErrorCodeStorageReadFailed
 	ErrorCodeStorageCompactionFailed
-	
+
 	// Search-specific errors
 	ErrorCodeSearchFailed
 	ErrorCodeQueryInvalid
@@ -72,41 +72,41 @@ const (
 	ErrorCodeQueryCancelled
 	ErrorCodeSearchIndexCorrupted
 	ErrorCodeSearchNotAvailable
-	
+
 	// Network-specific errors
 	ErrorCodeNetworkUnavailable
 	ErrorCodeConnectionFailed
 	ErrorCodeConnectionTimeout
 	ErrorCodeConnectionRefused
 	ErrorCodeNetworkPartition
-	
+
 	// Configuration-specific errors
 	ErrorCodeConfigInvalid
 	ErrorCodeConfigNotFound
 	ErrorCodeConfigParseFailed
 	ErrorCodeConfigValidationFailed
 	ErrorCodeConfigUpdateFailed
-	
+
 	// Protocol-specific errors
 	ErrorCodeProtocolError
 	ErrorCodeProtocolNotSupported
 	ErrorCodeProtocolVersionMismatch
 	ErrorCodeProtocolMessageInvalid
 	ErrorCodeProtocolMessageTooLarge
-	
+
 	// Replication-specific errors
 	ErrorCodeReplicationFailed
 	ErrorCodeReplicationTimeout
 	ErrorCodeReplicationInconsistent
 	ErrorCodeReplicationQuorumNotReached
 	ErrorCodeReplicationConflict
-	
+
 	// Metrics-specific errors
 	ErrorCodeMetricsCollectionFailed
 	ErrorCodeMetricsExportFailed
 	ErrorCodeMetricsInvalid
 	ErrorCodeMetricsTimeout
-	
+
 	// Health-specific errors
 	ErrorCodeHealthCheckFailed
 	ErrorCodeHealthCheckTimeout
@@ -115,7 +115,7 @@ const (
 )
 
 // Error returns the error message
-func (e *VexError) Error() string {
+func (e *VxError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("%s: %s (caused by: %v)", e.Code.String(), e.Message, e.Cause)
 	}
@@ -123,13 +123,13 @@ func (e *VexError) Error() string {
 }
 
 // Unwrap returns the underlying error
-func (e *VexError) Unwrap() error {
+func (e *VxError) Unwrap() error {
 	return e.Cause
 }
 
 // Is checks if the error matches the target error
-func (e *VexError) Is(target error) bool {
-	var other *VexError
+func (e *VxError) Is(target error) bool {
+	var other *VxError
 	if errors.As(target, &other) {
 		return e.Code == other.Code
 	}
@@ -282,9 +282,9 @@ func (c ErrorCode) String() string {
 	}
 }
 
-// New creates a new VexError
-func New(code ErrorCode, message string) *VexError {
-	return &VexError{
+// New creates a new VxError
+func New(code ErrorCode, message string) *VxError {
+	return &VxError{
 		Code:      code,
 		Message:   message,
 		Details:   make(map[string]interface{}),
@@ -293,8 +293,8 @@ func New(code ErrorCode, message string) *VexError {
 }
 
 // Wrap wraps an existing error with additional context
-func Wrap(err error, code ErrorCode, message string) *VexError {
-	return &VexError{
+func Wrap(err error, code ErrorCode, message string) *VxError {
+	return &VxError{
 		Code:      code,
 		Message:   message,
 		Details:   make(map[string]interface{}),
@@ -304,7 +304,7 @@ func Wrap(err error, code ErrorCode, message string) *VexError {
 }
 
 // WithDetails adds details to the error
-func (e *VexError) WithDetails(details map[string]interface{}) *VexError {
+func (e *VxError) WithDetails(details map[string]interface{}) *VxError {
 	for k, v := range details {
 		e.Details[k] = v
 	}
@@ -312,37 +312,37 @@ func (e *VexError) WithDetails(details map[string]interface{}) *VexError {
 }
 
 // WithDetail adds a single detail to the error
-func (e *VexError) WithDetail(key string, value interface{}) *VexError {
+func (e *VxError) WithDetail(key string, value interface{}) *VxError {
 	e.Details[key] = value
 	return e
 }
 
 // WithStack adds stack trace information
-func (e *VexError) WithStack(stack string) *VexError {
+func (e *VxError) WithStack(stack string) *VxError {
 	e.Stack = stack
 	return e
 }
 
-// IsErrorCode checks if the error is a VexError with the specific error code
+// IsErrorCode checks if the error is a VxError with the specific error code
 func IsErrorCode(err error, code ErrorCode) bool {
-	var vexErr *VexError
-	return errors.As(err, &vexErr) && vexErr.Code == code
+	var vxErr *VxError
+	return errors.As(err, &vxErr) && vxErr.Code == code
 }
 
-// GetErrorCode returns the error code from a VexError
+// GetErrorCode returns the error code from a VxError
 func GetErrorCode(err error) ErrorCode {
-	var vexErr *VexError
-	if errors.As(err, &vexErr) {
-		return vexErr.Code
+	var vxErr *VxError
+	if errors.As(err, &vxErr) {
+		return vxErr.Code
 	}
 	return ErrorCodeUnknown
 }
 
-// GetErrorDetails returns the details from a VexError
+// GetErrorDetails returns the details from a VxError
 func GetErrorDetails(err error) map[string]interface{} {
-	var vexErr *VexError
-	if errors.As(err, &vexErr) {
-		return vexErr.Details
+	var vxErr *VxError
+	if errors.As(err, &vxErr) {
+		return vxErr.Details
 	}
 	return nil
 }
@@ -350,144 +350,144 @@ func GetErrorDetails(err error) map[string]interface{} {
 // Predefined error constructors
 
 // Vector errors
-func NewInvalidVectorError(message string) *VexError {
+func NewInvalidVectorError(message string) *VxError {
 	return New(ErrorCodeInvalidVector, message)
 }
 
-func NewVectorNotFoundError(vectorID string) *VexError {
+func NewVectorNotFoundError(vectorID string) *VxError {
 	return New(ErrorCodeVectorNotFound, fmt.Sprintf("vector not found: %s", vectorID)).
 		WithDetail("vector_id", vectorID)
 }
 
-func NewVectorDimensionMismatchError(expected, actual int) *VexError {
+func NewVectorDimensionMismatchError(expected, actual int) *VxError {
 	return New(ErrorCodeVectorDimensionMismatch, fmt.Sprintf("vector dimension mismatch: expected %d, got %d", expected, actual)).
 		WithDetail("expected_dimension", expected).
 		WithDetail("actual_dimension", actual)
 }
 
-func NewVectorTooLargeError(size int64, maxSize int64) *VexError {
+func NewVectorTooLargeError(size int64, maxSize int64) *VxError {
 	return New(ErrorCodeVectorTooLarge, fmt.Sprintf("vector too large: size %d exceeds max size %d", size, maxSize)).
 		WithDetail("size", size).
 		WithDetail("max_size", maxSize)
 }
 
 // Cluster errors
-func NewClusterNotFoundError(clusterID string) *VexError {
+func NewClusterNotFoundError(clusterID string) *VxError {
 	return New(ErrorCodeClusterNotFound, fmt.Sprintf("cluster not found: %s", clusterID)).
 		WithDetail("cluster_id", clusterID)
 }
 
-func NewClusterNotReadyError(clusterID string) *VexError {
+func NewClusterNotReadyError(clusterID string) *VxError {
 	return New(ErrorCodeClusterNotReady, fmt.Sprintf("cluster not ready: %s", clusterID)).
 		WithDetail("cluster_id", clusterID)
 }
 
-func NewClusterFullError(clusterID string) *VexError {
+func NewClusterFullError(clusterID string) *VxError {
 	return New(ErrorCodeClusterFull, fmt.Sprintf("cluster is full: %s", clusterID)).
 		WithDetail("cluster_id", clusterID)
 }
 
 // Node errors
-func NewNodeNotFoundError(nodeID string) *VexError {
+func NewNodeNotFoundError(nodeID string) *VxError {
 	return New(ErrorCodeNodeNotFound, fmt.Sprintf("node not found: %s", nodeID)).
 		WithDetail("node_id", nodeID)
 }
 
-func NewNodeUnhealthyError(nodeID string) *VexError {
+func NewNodeUnhealthyError(nodeID string) *VxError {
 	return New(ErrorCodeNodeUnhealthy, fmt.Sprintf("node is unhealthy: %s", nodeID)).
 		WithDetail("node_id", nodeID)
 }
 
-func NewNodeOverloadedError(nodeID string) *VexError {
+func NewNodeOverloadedError(nodeID string) *VxError {
 	return New(ErrorCodeNodeOverloaded, fmt.Sprintf("node is overloaded: %s", nodeID)).
 		WithDetail("node_id", nodeID)
 }
 
 // Storage errors
-func NewStorageFullError() *VexError {
+func NewStorageFullError() *VxError {
 	return New(ErrorCodeStorageFull, "storage is full")
 }
 
-func NewStorageCorruptedError(path string) *VexError {
+func NewStorageCorruptedError(path string) *VxError {
 	return New(ErrorCodeStorageCorrupted, fmt.Sprintf("storage corrupted: %s", path)).
 		WithDetail("path", path)
 }
 
-func NewStorageUnavailableError() *VexError {
+func NewStorageUnavailableError() *VxError {
 	return New(ErrorCodeStorageUnavailable, "storage is unavailable")
 }
 
 // Search errors
-func NewSearchFailedError(message string) *VexError {
+func NewSearchFailedError(message string) *VxError {
 	return New(ErrorCodeSearchFailed, message)
 }
 
-func NewQueryInvalidError(message string) *VexError {
+func NewQueryInvalidError(message string) *VxError {
 	return New(ErrorCodeQueryInvalid, message)
 }
 
-func NewQueryTimeoutError(queryID string) *VexError {
+func NewQueryTimeoutError(queryID string) *VxError {
 	return New(ErrorCodeQueryTimeout, fmt.Sprintf("query timeout: %s", queryID)).
 		WithDetail("query_id", queryID)
 }
 
 // Network errors
-func NewNetworkUnavailableError() *VexError {
+func NewNetworkUnavailableError() *VxError {
 	return New(ErrorCodeNetworkUnavailable, "network is unavailable")
 }
 
-func NewConnectionFailedError(address string) *VexError {
+func NewConnectionFailedError(address string) *VxError {
 	return New(ErrorCodeConnectionFailed, fmt.Sprintf("connection failed: %s", address)).
 		WithDetail("address", address)
 }
 
-func NewConnectionTimeoutError(address string) *VexError {
+func NewConnectionTimeoutError(address string) *VxError {
 	return New(ErrorCodeConnectionTimeout, fmt.Sprintf("connection timeout: %s", address)).
 		WithDetail("address", address)
 }
 
 // Configuration errors
-func NewConfigInvalidError(message string) *VexError {
+func NewConfigInvalidError(message string) *VxError {
 	return New(ErrorCodeConfigInvalid, message)
 }
 
-func NewConfigNotFoundError(path string) *VexError {
+func NewConfigNotFoundError(path string) *VxError {
 	return New(ErrorCodeConfigNotFound, fmt.Sprintf("config not found: %s", path)).
 		WithDetail("path", path)
 }
 
-func NewConfigParseFailedError(path string, err error) *VexError {
+func NewConfigParseFailedError(path string, err error) *VxError {
 	return Wrap(err, ErrorCodeConfigParseFailed, fmt.Sprintf("config parse failed: %s", path)).
 		WithDetail("path", path)
 }
 
 // Replication errors
-func NewReplicationFailedError(message string) *VexError {
+func NewReplicationFailedError(message string) *VxError {
 	return New(ErrorCodeReplicationFailed, message)
 }
 
-func NewReplicationTimeoutError() *VexError {
+func NewReplicationTimeoutError() *VxError {
 	return New(ErrorCodeReplicationTimeout, "replication timeout")
 }
 
-func NewReplicationQuorumNotReachedError(required, actual int) *VexError {
+func NewReplicationQuorumNotReachedError(required, actual int) *VxError {
 	return New(ErrorCodeReplicationQuorumNotReached, fmt.Sprintf("replication quorum not reached: required %d, got %d", required, actual)).
 		WithDetail("required", required).
 		WithDetail("actual", actual)
 }
 
 // Health check errors
-func NewHealthCheckFailedError(service string) *VexError {
+func NewHealthCheckFailedError(service string) *VxError {
 	return New(ErrorCodeHealthCheckFailed, fmt.Sprintf("health check failed: %s", service)).
 		WithDetail("service", service)
 }
 
-func NewHealthCheckTimeoutError(service string) *VexError {
+func NewHealthCheckTimeoutError(service string) *VxError {
 	return New(ErrorCodeHealthCheckTimeout, fmt.Sprintf("health check timeout: %s", service)).
 		WithDetail("service", service)
 }
 
 // NewInvalidArgumentError creates a new invalid argument error
-func NewInvalidArgumentError(message string) *VexError {
+func NewInvalidArgumentError(message string) *VxError {
 	return New(ErrorCodeInvalidArgument, message)
 }

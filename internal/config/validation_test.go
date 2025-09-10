@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	cfg "vexdb/internal/config"
+	cfg "vxdb/internal/config"
 )
 
 type simple struct {
@@ -14,13 +14,13 @@ type simple struct {
 func TestConfigValidator(t *testing.T) {
 	v := cfg.NewConfigValidator()
 	v.AddSchema("port", &cfg.Schema{Type: "int", Required: true, Rules: []cfg.ValidationRule{cfg.Port()}})
-	v.AddSchema("name", &cfg.Schema{Type: "string", Default: "vex"})
+	v.AddSchema("name", &cfg.Schema{Type: "string", Default: "vx"})
 
 	s := &simple{Port: 8080}
 	if err := v.Validate(s); err != nil {
 		t.Fatalf("validate: %v", err)
 	}
-	if s.Name != "vex" {
+	if s.Name != "vx" {
 		t.Fatalf("expected default name applied, got %s", s.Name)
 	}
 

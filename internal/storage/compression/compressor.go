@@ -1,22 +1,22 @@
 package compression
 
 import (
-    "bytes"
-    "compress/flate"
-    "compress/gzip"
-    "compress/lzw"
-    "compress/zlib"
+	"bytes"
+	"compress/flate"
+	"compress/gzip"
+	"compress/lzw"
+	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 
-    "github.com/pierrec/lz4/v4"
-    "vexdb/internal/config"
-    "vexdb/internal/logging"
-    "vexdb/internal/metrics"
-    "go.uber.org/zap"
+	"github.com/pierrec/lz4/v4"
+	"go.uber.org/zap"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 var (
@@ -64,7 +64,7 @@ func DefaultCompressionConfig() *CompressionConfig {
 		Algorithm: AlgorithmLZ4,
 		Level:     LevelDefault,
 		Enabled:   true,
-		Threshold: 1024,  // 1KB
+		Threshold: 1024,     // 1KB
 		MaxSize:   10485760, // 10MB
 	}
 }
@@ -80,21 +80,21 @@ type CompressionStats struct {
 
 // Compressor represents a compression engine
 type Compressor struct {
-    config      *CompressionConfig
-    stats       *CompressionStats
-    mu          sync.RWMutex
-    logger      logging.Logger
-    metrics     *metrics.StorageMetrics
-    pool        *sync.Pool
+	config  *CompressionConfig
+	stats   *CompressionStats
+	mu      sync.RWMutex
+	logger  logging.Logger
+	metrics *metrics.StorageMetrics
+	pool    *sync.Pool
 }
 
 // NewCompressor creates a new compressor
 func NewCompressor(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*Compressor, error) {
-    compressionConfig := DefaultCompressionConfig()
-    
-    if cfg != nil {
-        if compressionCfg, ok := cfg.Get("compression"); ok {
-            if cfgMap, ok := compressionCfg.(map[string]interface{}); ok {
+	compressionConfig := DefaultCompressionConfig()
+
+	if cfg != nil {
+		if compressionCfg, ok := cfg.Get("compression"); ok {
+			if cfgMap, ok := compressionCfg.(map[string]interface{}); ok {
 				if algorithm, ok := cfgMap["algorithm"].(string); ok {
 					compressionConfig.Algorithm = CompressionAlgorithm(algorithm)
 				}
@@ -113,31 +113,31 @@ func NewCompressor(cfg config.Config, logger logging.Logger, metrics *metrics.St
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateCompressionConfig(compressionConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidAlgorithm, err)
 	}
-	
-    compressor := &Compressor{
-        config:  compressionConfig,
-        stats:   &CompressionStats{},
-        logger:  logger,
-        metrics: metrics,
-        pool: &sync.Pool{
+
+	compressor := &Compressor{
+		config:  compressionConfig,
+		stats:   &CompressionStats{},
+		logger:  logger,
+		metrics: metrics,
+		pool: &sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
 		},
 	}
-	
-    compressor.logger.Info("Created compressor",
-        zap.String("algorithm", string(compressionConfig.Algorithm)),
-        zap.Int("level", int(compressionConfig.Level)),
-        zap.Bool("enabled", compressionConfig.Enabled),
-        zap.Int("threshold", compressionConfig.Threshold),
-        zap.Int("max_size", compressionConfig.MaxSize))
-	
+
+	compressor.logger.Info("Created compressor",
+		zap.String("algorithm", string(compressionConfig.Algorithm)),
+		zap.Int("level", int(compressionConfig.Level)),
+		zap.Bool("enabled", compressionConfig.Enabled),
+		zap.Int("threshold", compressionConfig.Threshold),
+		zap.Int("max_size", compressionConfig.MaxSize))
+
 	return compressor, nil
 }
 
@@ -151,19 +151,19 @@ func validateCompressionConfig(cfg *CompressionConfig) error {
 		cfg.Algorithm != AlgorithmLZW {
 		return fmt.Errorf("unsupported algorithm: %s", cfg.Algorithm)
 	}
-	
+
 	if cfg.Level < LevelNoCompression || cfg.Level > LevelBest {
 		return fmt.Errorf("invalid compression level: %d", cfg.Level)
 	}
-	
+
 	if cfg.Threshold < 0 {
 		return fmt.Errorf("invalid threshold: %d", cfg.Threshold)
 	}
-	
+
 	if cfg.MaxSize < 0 {
 		return fmt.Errorf("invalid max_size: %d", cfg.MaxSize)
 	}
-	
+
 	return nil
 }
 
@@ -172,20 +172,20 @@ func (c *Compressor) ShouldCompress(data []byte) bool {
 	if !c.config.Enabled {
 		return false
 	}
-	
+
 	if c.config.Algorithm == AlgorithmNone {
 		return false
 	}
-	
+
 	size := len(data)
 	if size < c.config.Threshold {
 		return false
 	}
-	
+
 	if c.config.MaxSize > 0 && size > c.config.MaxSize {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -194,28 +194,28 @@ func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	if !c.ShouldCompress(data) {
 		return data, nil
 	}
-	
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	compressed, err := c.compress(data)
 	if err != nil {
 		c.stats.FailureCount++
 		c.metrics.Errors.Inc("compression", "compress_failed")
 		return nil, fmt.Errorf("%w: %v", ErrCompressionFailed, err)
 	}
-	
+
 	// Update stats
 	c.stats.TotalCompressions++
 	if len(data) > 0 {
 		ratio := float64(len(compressed)) / float64(len(data))
 		c.stats.CompressionRatio = (c.stats.CompressionRatio*float64(c.stats.TotalCompressions-1) + ratio) / float64(c.stats.TotalCompressions)
 	}
-	
+
 	// Update metrics
-    c.metrics.CompressionOperations.Inc("compression", "compress")
-    c.metrics.CompressionRatio.Set(c.stats.CompressionRatio)
-	
+	c.metrics.CompressionOperations.Inc("compression", "compress")
+	c.metrics.CompressionRatio.Set(c.stats.CompressionRatio)
+
 	return compressed, nil
 }
 
@@ -242,17 +242,17 @@ func (c *Compressor) compressLZ4(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
-    writer := lz4.NewWriter(buf)
-	
+
+	writer := lz4.NewWriter(buf)
+
 	if _, err := writer.Write(data); err != nil {
 		return nil, err
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -261,21 +261,21 @@ func (c *Compressor) compressGzip(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	writer, err := gzip.NewWriterLevel(buf, int(c.config.Level))
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if _, err := writer.Write(data); err != nil {
 		writer.Close()
 		return nil, err
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -284,21 +284,21 @@ func (c *Compressor) compressZlib(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	writer, err := zlib.NewWriterLevel(buf, int(c.config.Level))
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if _, err := writer.Write(data); err != nil {
 		writer.Close()
 		return nil, err
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -307,21 +307,21 @@ func (c *Compressor) compressFlate(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	writer, err := flate.NewWriter(buf, int(c.config.Level))
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if _, err := writer.Write(data); err != nil {
 		writer.Close()
 		return nil, err
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -330,18 +330,18 @@ func (c *Compressor) compressLZW(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	writer := lzw.NewWriter(buf, lzw.LSB, 8)
-	
+
 	if _, err := writer.Write(data); err != nil {
 		writer.Close()
 		return nil, err
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -349,20 +349,20 @@ func (c *Compressor) compressLZW(data []byte) ([]byte, error) {
 func (c *Compressor) Decompress(data []byte) ([]byte, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	decompressed, err := c.decompress(data)
 	if err != nil {
 		c.stats.FailureCount++
 		c.metrics.Errors.Inc("compression", "decompress_failed")
 		return nil, fmt.Errorf("%w: %v", ErrDecompressionFailed, err)
 	}
-	
+
 	// Update stats
 	c.stats.TotalDecompressions++
-	
+
 	// Update metrics
-    c.metrics.CompressionOperations.Inc("compression", "decompress")
-	
+	c.metrics.CompressionOperations.Inc("compression", "decompress")
+
 	return decompressed, nil
 }
 
@@ -391,13 +391,13 @@ func (c *Compressor) decompressLZ4(data []byte) ([]byte, error) {
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	reader := lz4.NewReader(bytes.NewReader(data))
-	
+
 	if _, err := io.Copy(buf, reader); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -408,15 +408,15 @@ func (c *Compressor) decompressGzip(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer reader.Close()
-	
+
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	if _, err := io.Copy(buf, reader); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -427,15 +427,15 @@ func (c *Compressor) decompressZlib(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer reader.Close()
-	
+
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	if _, err := io.Copy(buf, reader); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -443,15 +443,15 @@ func (c *Compressor) decompressZlib(data []byte) ([]byte, error) {
 func (c *Compressor) decompressFlate(data []byte) ([]byte, error) {
 	reader := flate.NewReader(bytes.NewReader(data))
 	defer reader.Close()
-	
+
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	if _, err := io.Copy(buf, reader); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -459,15 +459,15 @@ func (c *Compressor) decompressFlate(data []byte) ([]byte, error) {
 func (c *Compressor) decompressLZW(data []byte) ([]byte, error) {
 	reader := lzw.NewReader(bytes.NewReader(data), lzw.LSB, 8)
 	defer reader.Close()
-	
+
 	buf := c.pool.Get().(*bytes.Buffer)
 	buf.Reset()
 	defer c.pool.Put(buf)
-	
+
 	if _, err := io.Copy(buf, reader); err != nil {
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -475,7 +475,7 @@ func (c *Compressor) decompressLZW(data []byte) ([]byte, error) {
 func (c *Compressor) GetStats() *CompressionStats {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Return a copy of stats
 	stats := *c.stats
 	return &stats
@@ -485,7 +485,7 @@ func (c *Compressor) GetStats() *CompressionStats {
 func (c *Compressor) GetConfig() *CompressionConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *c.config
 	return &config
@@ -495,16 +495,16 @@ func (c *Compressor) GetConfig() *CompressionConfig {
 func (c *Compressor) UpdateConfig(config *CompressionConfig) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateCompressionConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidAlgorithm, err)
 	}
-	
+
 	c.config = config
-	
-    c.logger.Info("Updated compression configuration", zap.Any("config", config))
-	
+
+	c.logger.Info("Updated compression configuration", zap.Any("config", config))
+
 	return nil
 }
 
@@ -513,26 +513,26 @@ func (c *Compressor) EstimateCompressionRatio(data []byte) (float64, error) {
 	if !c.ShouldCompress(data) {
 		return 1.0, nil
 	}
-	
+
 	compressed, err := c.compress(data)
 	if err != nil {
 		return 0.0, err
 	}
-	
+
 	if len(data) == 0 {
 		return 1.0, nil
 	}
-	
+
 	return float64(len(compressed)) / float64(len(data)), nil
 }
 
 // BenchmarkCompression benchmarks compression performance
 func (c *Compressor) BenchmarkCompression(data []byte) (map[string]interface{}, error) {
 	results := make(map[string]interface{})
-	
+
 	originalSize := len(data)
 	results["original_size"] = originalSize
-	
+
 	// Test all algorithms
 	algorithms := []CompressionAlgorithm{
 		AlgorithmNone,
@@ -542,65 +542,65 @@ func (c *Compressor) BenchmarkCompression(data []byte) (map[string]interface{}, 
 		AlgorithmFlate,
 		AlgorithmLZW,
 	}
-	
+
 	for _, algo := range algorithms {
 		// Temporarily set algorithm
 		oldAlgo := c.config.Algorithm
 		c.config.Algorithm = algo
-		
+
 		start := time.Now()
 		compressed, err := c.compress(data)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			results[string(algo)] = map[string]interface{}{
 				"error": err.Error(),
 			}
 			continue
 		}
-		
+
 		compressedSize := len(compressed)
 		ratio := float64(compressedSize) / float64(originalSize)
-		
+
 		// Test decompression
 		start = time.Now()
 		decompressed, err := c.decompress(compressed)
 		decompressDuration := time.Since(start)
-		
+
 		if err != nil {
 			results[string(algo)] = map[string]interface{}{
-				"compressed_size": compressedSize,
+				"compressed_size":   compressedSize,
 				"compression_ratio": ratio,
-				"compression_time": duration.String(),
-				"decompress_error": err.Error(),
+				"compression_time":  duration.String(),
+				"decompress_error":  err.Error(),
 			}
 			continue
 		}
-		
+
 		// Verify decompression
 		if !bytes.Equal(data, decompressed) {
 			results[string(algo)] = map[string]interface{}{
-				"compressed_size": compressedSize,
+				"compressed_size":   compressedSize,
 				"compression_ratio": ratio,
-				"compression_time": duration.String(),
-				"decompress_time": decompressDuration.String(),
-				"verification": "failed",
+				"compression_time":  duration.String(),
+				"decompress_time":   decompressDuration.String(),
+				"verification":      "failed",
 			}
 			continue
 		}
-		
+
 		results[string(algo)] = map[string]interface{}{
-			"compressed_size": compressedSize,
+			"compressed_size":   compressedSize,
 			"compression_ratio": ratio,
-			"compression_time": duration.String(),
-			"decompress_time": decompressDuration.String(),
-			"verification": "passed",
+			"compression_time":  duration.String(),
+			"decompress_time":   decompressDuration.String(),
+			"verification":      "passed",
 		}
-		
+
 		// Restore original algorithm
 		c.config.Algorithm = oldAlgo
 	}
-	
+
 	return results, nil
 }
 
@@ -608,12 +608,12 @@ func (c *Compressor) BenchmarkCompression(data []byte) (map[string]interface{}, 
 func (c *Compressor) Validate() error {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateCompressionConfig(c.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -621,17 +621,17 @@ func (c *Compressor) Validate() error {
 func (c *Compressor) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.stats = &CompressionStats{}
-	
-    c.logger.Info("Reset compressor statistics")
+
+	c.logger.Info("Reset compressor statistics")
 }
 
 // IsEnabled returns true if compression is enabled
 func (c *Compressor) IsEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	return c.config.Enabled
 }
 
@@ -639,7 +639,7 @@ func (c *Compressor) IsEnabled() bool {
 func (c *Compressor) GetAlgorithm() CompressionAlgorithm {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	return c.config.Algorithm
 }
 
@@ -647,7 +647,7 @@ func (c *Compressor) GetAlgorithm() CompressionAlgorithm {
 func (c *Compressor) GetLevel() CompressionLevel {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	return c.config.Level
 }
 
@@ -655,7 +655,7 @@ func (c *Compressor) GetLevel() CompressionLevel {
 func (c *Compressor) SetAlgorithm(algorithm CompressionAlgorithm) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Validate algorithm
 	if algorithm != AlgorithmNone &&
 		algorithm != AlgorithmLZ4 &&
@@ -665,11 +665,11 @@ func (c *Compressor) SetAlgorithm(algorithm CompressionAlgorithm) error {
 		algorithm != AlgorithmLZW {
 		return fmt.Errorf("%w: %s", ErrInvalidAlgorithm, algorithm)
 	}
-	
+
 	c.config.Algorithm = algorithm
-	
-    c.logger.Info("Set compression algorithm", zap.String("algorithm", string(algorithm)))
-	
+
+	c.logger.Info("Set compression algorithm", zap.String("algorithm", string(algorithm)))
+
 	return nil
 }
 
@@ -677,16 +677,16 @@ func (c *Compressor) SetAlgorithm(algorithm CompressionAlgorithm) error {
 func (c *Compressor) SetLevel(level CompressionLevel) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Validate level
 	if level < LevelNoCompression || level > LevelBest {
 		return fmt.Errorf("invalid compression level: %d", level)
 	}
-	
+
 	c.config.Level = level
-	
-    c.logger.Info("Set compression level", zap.Int("level", int(level)))
-	
+
+	c.logger.Info("Set compression level", zap.Int("level", int(level)))
+
 	return nil
 }
 
@@ -694,10 +694,10 @@ func (c *Compressor) SetLevel(level CompressionLevel) error {
 func (c *Compressor) SetEnabled(enabled bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.config.Enabled = enabled
-	
-    c.logger.Info("Set compression enabled", zap.Bool("enabled", enabled))
+
+	c.logger.Info("Set compression enabled", zap.Bool("enabled", enabled))
 }
 
 // GetSupportedAlgorithms returns a list of supported compression algorithms
@@ -715,7 +715,7 @@ func (c *Compressor) GetSupportedAlgorithms() []CompressionAlgorithm {
 // GetAlgorithmInfo returns information about a compression algorithm
 func (c *Compressor) GetAlgorithmInfo(algorithm CompressionAlgorithm) map[string]interface{} {
 	info := make(map[string]interface{})
-	
+
 	switch algorithm {
 	case AlgorithmNone:
 		info["name"] = "None"
@@ -723,42 +723,42 @@ func (c *Compressor) GetAlgorithmInfo(algorithm CompressionAlgorithm) map[string
 		info["speed"] = "Fastest"
 		info["ratio"] = "1:1"
 		info["cpu_usage"] = "Lowest"
-		
+
 	case AlgorithmLZ4:
 		info["name"] = "LZ4"
 		info["description"] = "LZ4 compression algorithm"
 		info["speed"] = "Very Fast"
 		info["ratio"] = "Good"
 		info["cpu_usage"] = "Low"
-		
+
 	case AlgorithmGzip:
 		info["name"] = "Gzip"
 		info["description"] = "Gzip compression algorithm"
 		info["speed"] = "Medium"
 		info["ratio"] = "Very Good"
 		info["cpu_usage"] = "Medium"
-		
+
 	case AlgorithmZlib:
 		info["name"] = "Zlib"
 		info["description"] = "Zlib compression algorithm"
 		info["speed"] = "Medium"
 		info["ratio"] = "Very Good"
 		info["cpu_usage"] = "Medium"
-		
+
 	case AlgorithmFlate:
 		info["name"] = "Flate"
 		info["description"] = "Flate compression algorithm"
 		info["speed"] = "Medium"
 		info["ratio"] = "Very Good"
 		info["cpu_usage"] = "Medium"
-		
+
 	case AlgorithmLZW:
 		info["name"] = "LZW"
 		info["description"] = "Lempel-Ziv-Welch compression algorithm"
 		info["speed"] = "Slow"
 		info["ratio"] = "Good"
 		info["cpu_usage"] = "High"
-		
+
 	default:
 		info["name"] = "Unknown"
 		info["description"] = "Unknown compression algorithm"
@@ -766,6 +766,6 @@ func (c *Compressor) GetAlgorithmInfo(algorithm CompressionAlgorithm) map[string
 		info["ratio"] = "Unknown"
 		info["cpu_usage"] = "Unknown"
 	}
-	
+
 	return info
 }

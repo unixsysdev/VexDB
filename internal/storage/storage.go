@@ -1,4 +1,4 @@
-// Package storage provides the core storage engine functionality for VexDB
+// Package storage provides the core storage engine functionality for VxDB
 package storage
 
 import (
@@ -7,15 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/metrics"
-	"vexdb/internal/storage/buffer"
-	"vexdb/internal/storage/clusterrange"
-	"vexdb/internal/storage/compression"
-	"vexdb/internal/storage/hashing"
-	"vexdb/internal/storage/search"
-	"vexdb/internal/storage/segment"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/metrics"
+	"vxdb/internal/storage/buffer"
+	"vxdb/internal/storage/clusterrange"
+	"vxdb/internal/storage/compression"
+	"vxdb/internal/storage/hashing"
+	"vxdb/internal/storage/search"
+	"vxdb/internal/storage/segment"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )

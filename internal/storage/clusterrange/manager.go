@@ -8,21 +8,21 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
 	"go.uber.org/zap"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 var (
-	ErrInvalidRange      = errors.New("invalid range")
-	ErrRangeNotFound     = errors.New("range not found")
-	ErrRangeOverlap      = errors.New("range overlap detected")
-	ErrRangeGap          = errors.New("range gap detected")
-	ErrInvalidNodeID     = errors.New("invalid node ID")
-	ErrNodeNotFound      = errors.New("node not found")
-	ErrAssignmentFailed  = errors.New("assignment failed")
-	ErrConfigInvalid     = errors.New("invalid configuration")
+	ErrInvalidRange     = errors.New("invalid range")
+	ErrRangeNotFound    = errors.New("range not found")
+	ErrRangeOverlap     = errors.New("range overlap detected")
+	ErrRangeGap         = errors.New("range gap detected")
+	ErrInvalidNodeID    = errors.New("invalid node ID")
+	ErrNodeNotFound     = errors.New("node not found")
+	ErrAssignmentFailed = errors.New("assignment failed")
+	ErrConfigInvalid    = errors.New("invalid configuration")
 )
 
 // Range represents a cluster range
@@ -39,14 +39,14 @@ type Range struct {
 
 // RangeConfig represents the range management configuration
 type RangeConfig struct {
-	ClusterCount      uint32          `yaml:"cluster_count" json:"cluster_count"`
-	ReplicationFactor int             `yaml:"replication_factor" json:"replication_factor"`
-	RangeSize         uint32          `yaml:"range_size" json:"range_size"`
-	EnableAutoBalance bool            `yaml:"enable_auto_balance" json:"enable_auto_balance"`
-	BalanceThreshold  float64         `yaml:"balance_threshold" json:"balance_threshold"`
-	Nodes             []string        `yaml:"nodes" json:"nodes"`
-	Strategy          string          `yaml:"strategy" json:"strategy"` // uniform, custom, dynamic
-	EnableValidation  bool            `yaml:"enable_validation" json:"enable_validation"`
+	ClusterCount      uint32   `yaml:"cluster_count" json:"cluster_count"`
+	ReplicationFactor int      `yaml:"replication_factor" json:"replication_factor"`
+	RangeSize         uint32   `yaml:"range_size" json:"range_size"`
+	EnableAutoBalance bool     `yaml:"enable_auto_balance" json:"enable_auto_balance"`
+	BalanceThreshold  float64  `yaml:"balance_threshold" json:"balance_threshold"`
+	Nodes             []string `yaml:"nodes" json:"nodes"`
+	Strategy          string   `yaml:"strategy" json:"strategy"` // uniform, custom, dynamic
+	EnableValidation  bool     `yaml:"enable_validation" json:"enable_validation"`
 }
 
 // DefaultRangeConfig returns the default range configuration
@@ -65,31 +65,31 @@ func DefaultRangeConfig() *RangeConfig {
 
 // RangeManager represents a cluster range manager
 type RangeManager struct {
-	config      *RangeConfig
-	ranges      []*Range
-	nodeRanges  map[string][]*Range // node_id -> ranges
-	mu          sync.RWMutex
-	logger      logging.Logger
-	metrics     *metrics.StorageMetrics
+	config     *RangeConfig
+	ranges     []*Range
+	nodeRanges map[string][]*Range // node_id -> ranges
+	mu         sync.RWMutex
+	logger     logging.Logger
+	metrics    *metrics.StorageMetrics
 }
 
 // RangeStats represents range management statistics
 type RangeStats struct {
-	TotalRanges       int64     `json:"total_ranges"`
-	ActiveRanges      int64     `json:"active_ranges"`
-	ReadOnlyRanges    int64     `json:"readonly_ranges"`
-	DrainingRanges    int64     `json:"draining_ranges"`
-	OfflineRanges     int64     `json:"offline_ranges"`
-	TotalNodes        int64     `json:"total_nodes"`
-	BalanceFactor     float64   `json:"balance_factor"`
-	LastBalanceAt     time.Time `json:"last_balance_at"`
-	RebalanceCount    int64     `json:"rebalance_count"`
+	TotalRanges    int64     `json:"total_ranges"`
+	ActiveRanges   int64     `json:"active_ranges"`
+	ReadOnlyRanges int64     `json:"readonly_ranges"`
+	DrainingRanges int64     `json:"draining_ranges"`
+	OfflineRanges  int64     `json:"offline_ranges"`
+	TotalNodes     int64     `json:"total_nodes"`
+	BalanceFactor  float64   `json:"balance_factor"`
+	LastBalanceAt  time.Time `json:"last_balance_at"`
+	RebalanceCount int64     `json:"rebalance_count"`
 }
 
 // NewRangeManager creates a new range manager
 func NewRangeManager(cfg config.Config, logger logging.Logger, metrics *metrics.StorageMetrics) (*RangeManager, error) {
 	rangeConfig := DefaultRangeConfig()
-	
+
 	if cfg != nil {
 		if rangeCfg, ok := cfg.Get("range"); ok {
 			if cfgMap, ok := rangeCfg.(map[string]interface{}); ok {
@@ -125,12 +125,12 @@ func NewRangeManager(cfg config.Config, logger logging.Logger, metrics *metrics.
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateRangeConfig(rangeConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrConfigInvalid, err)
 	}
-	
+
 	manager := &RangeManager{
 		config:     rangeConfig,
 		ranges:     make([]*Range, 0),
@@ -138,19 +138,19 @@ func NewRangeManager(cfg config.Config, logger logging.Logger, metrics *metrics.
 		logger:     logger,
 		metrics:    metrics,
 	}
-	
+
 	// Initialize ranges based on strategy
 	if err := manager.initializeRanges(); err != nil {
 		return nil, fmt.Errorf("failed to initialize ranges: %w", err)
 	}
-	
+
 	manager.logger.Info("Created range manager",
 		zap.Uint32("cluster_count", rangeConfig.ClusterCount),
 		zap.Int("replication_factor", rangeConfig.ReplicationFactor),
 		zap.Uint32("range_size", rangeConfig.RangeSize),
 		zap.Strings("nodes", rangeConfig.Nodes),
 		zap.String("strategy", rangeConfig.Strategy))
-	
+
 	return manager, nil
 }
 
@@ -159,27 +159,27 @@ func validateRangeConfig(cfg *RangeConfig) error {
 	if cfg.ClusterCount == 0 {
 		return errors.New("cluster count must be positive")
 	}
-	
+
 	if cfg.ReplicationFactor < 1 {
 		return errors.New("replication factor must be at least 1")
 	}
-	
+
 	if cfg.RangeSize == 0 {
 		return errors.New("range size must be positive")
 	}
-	
+
 	if cfg.BalanceThreshold < 0 || cfg.BalanceThreshold > 1 {
 		return errors.New("balance threshold must be between 0 and 1")
 	}
-	
+
 	if len(cfg.Nodes) == 0 {
 		return errors.New("at least one node must be specified")
 	}
-	
+
 	if cfg.Strategy != "uniform" && cfg.Strategy != "custom" && cfg.Strategy != "dynamic" {
 		return errors.New("strategy must be uniform, custom, or dynamic")
 	}
-	
+
 	return nil
 }
 
@@ -201,17 +201,17 @@ func (m *RangeManager) initializeRanges() error {
 func (m *RangeManager) initializeUniformRanges() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Clear existing ranges
 	m.ranges = make([]*Range, 0)
 	m.nodeRanges = make(map[string][]*Range)
-	
+
 	// Calculate ranges per node
 	rangesPerNode := int(m.config.ClusterCount / m.config.RangeSize)
 	if rangesPerNode == 0 {
 		rangesPerNode = 1
 	}
-	
+
 	// Distribute ranges evenly across nodes
 	nodeIndex := 0
 	for i := uint32(0); i < m.config.ClusterCount; i += m.config.RangeSize {
@@ -219,9 +219,9 @@ func (m *RangeManager) initializeUniformRanges() error {
 		if end >= m.config.ClusterCount {
 			end = m.config.ClusterCount - 1
 		}
-		
+
 		nodeID := m.config.Nodes[nodeIndex%len(m.config.Nodes)]
-		
+
 		rng := &Range{
 			Start:      i,
 			End:        end,
@@ -231,13 +231,13 @@ func (m *RangeManager) initializeUniformRanges() error {
 			CreatedAt:  time.Now(),
 			ModifiedAt: time.Now(),
 		}
-		
+
 		m.ranges = append(m.ranges, rng)
 		m.nodeRanges[nodeID] = append(m.nodeRanges[nodeID], rng)
-		
+
 		nodeIndex++
 	}
-	
+
 	return nil
 }
 
@@ -260,9 +260,9 @@ func (m *RangeManager) getReplicas(primaryNode string) []string {
 	if m.config.ReplicationFactor <= 1 {
 		return nil
 	}
-	
+
 	replicas := make([]string, 0, m.config.ReplicationFactor-1)
-	
+
 	// Find other nodes to use as replicas
 	for _, node := range m.config.Nodes {
 		if node != primaryNode {
@@ -272,7 +272,7 @@ func (m *RangeManager) getReplicas(primaryNode string) []string {
 			}
 		}
 	}
-	
+
 	return replicas
 }
 
@@ -280,13 +280,13 @@ func (m *RangeManager) getReplicas(primaryNode string) []string {
 func (m *RangeManager) GetRange(clusterID uint32) (*Range, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	for _, rng := range m.ranges {
 		if clusterID >= rng.Start && clusterID <= rng.End {
 			return rng, nil
 		}
 	}
-	
+
 	return nil, ErrRangeNotFound
 }
 
@@ -294,7 +294,7 @@ func (m *RangeManager) GetRange(clusterID uint32) (*Range, error) {
 func (m *RangeManager) GetRanges() []*Range {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy of ranges
 	ranges := make([]*Range, len(m.ranges))
 	copy(ranges, m.ranges)
@@ -305,12 +305,12 @@ func (m *RangeManager) GetRanges() []*Range {
 func (m *RangeManager) GetNodeRanges(nodeID string) ([]*Range, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	ranges, exists := m.nodeRanges[nodeID]
 	if !exists {
 		return nil, ErrNodeNotFound
 	}
-	
+
 	// Return a copy of ranges
 	result := make([]*Range, len(ranges))
 	copy(result, ranges)
@@ -321,29 +321,29 @@ func (m *RangeManager) GetNodeRanges(nodeID string) ([]*Range, error) {
 func (m *RangeManager) AddNode(nodeID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Check if node already exists
 	for _, existingNode := range m.config.Nodes {
 		if existingNode == nodeID {
 			return fmt.Errorf("node %s already exists", nodeID)
 		}
 	}
-	
+
 	// Add node to configuration
 	m.config.Nodes = append(m.config.Nodes, nodeID)
-	
+
 	// Initialize node ranges
 	m.nodeRanges[nodeID] = make([]*Range, 0)
-	
+
 	// Rebalance ranges if auto-balance is enabled
 	if m.config.EnableAutoBalance {
 		if err := m.rebalanceRanges(); err != nil {
 			m.logger.Error("Failed to rebalance ranges after adding node", zap.String("node_id", nodeID), zap.Error(err))
 		}
 	}
-	
+
 	m.logger.Info("Added node to range manager", zap.String("node_id", nodeID))
-	
+
 	return nil
 }
 
@@ -351,7 +351,7 @@ func (m *RangeManager) AddNode(nodeID string) error {
 func (m *RangeManager) RemoveNode(nodeID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Check if node exists
 	nodeExists := false
 	for i, existingNode := range m.config.Nodes {
@@ -362,26 +362,26 @@ func (m *RangeManager) RemoveNode(nodeID string) error {
 			break
 		}
 	}
-	
+
 	if !nodeExists {
 		return ErrNodeNotFound
 	}
-	
+
 	// Mark ranges as draining
 	for _, rng := range m.nodeRanges[nodeID] {
 		rng.Status = "draining"
 		rng.ModifiedAt = time.Now()
 	}
-	
+
 	// Rebalance ranges if auto-balance is enabled
 	if m.config.EnableAutoBalance {
 		if err := m.rebalanceRanges(); err != nil {
 			m.logger.Error("Failed to rebalance ranges after removing node", zap.String("node_id", nodeID), zap.Error(err))
 		}
 	}
-	
+
 	m.logger.Info("Removed node from range manager", zap.String("node_id", nodeID))
-	
+
 	return nil
 }
 
@@ -389,7 +389,7 @@ func (m *RangeManager) RemoveNode(nodeID string) error {
 func (m *RangeManager) UpdateRangeStatus(start, end uint32, status string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	for _, rng := range m.ranges {
 		if rng.Start == start && rng.End == end {
 			rng.Status = status
@@ -397,7 +397,7 @@ func (m *RangeManager) UpdateRangeStatus(start, end uint32, status string) error
 			return nil
 		}
 	}
-	
+
 	return ErrRangeNotFound
 }
 
@@ -405,7 +405,7 @@ func (m *RangeManager) UpdateRangeStatus(start, end uint32, status string) error
 func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Find the range
 	var rng *Range
 	var rngIndex int
@@ -419,11 +419,11 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 
 	// suppress unused variable warning if not used elsewhere
 	_ = rngIndex
-	
+
 	if rng == nil {
 		return ErrRangeNotFound
 	}
-	
+
 	// Validate new node
 	nodeExists := false
 	for _, node := range m.config.Nodes {
@@ -432,11 +432,11 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 			break
 		}
 	}
-	
+
 	if !nodeExists {
 		return ErrNodeNotFound
 	}
-	
+
 	// Remove from old node ranges
 	oldNodeRanges := m.nodeRanges[rng.NodeID]
 	for i, r := range oldNodeRanges {
@@ -445,22 +445,22 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 			break
 		}
 	}
-	
+
 	// Update range
 	oldNodeID := rng.NodeID
 	rng.NodeID = newNodeID
 	rng.Replicas = m.getReplicas(newNodeID)
 	rng.ModifiedAt = time.Now()
-	
+
 	// Add to new node ranges
 	m.nodeRanges[newNodeID] = append(m.nodeRanges[newNodeID], rng)
-	
+
 	m.logger.Info("Moved range",
 		zap.Uint32("start", start),
 		zap.Uint32("end", end),
 		zap.String("old_node", oldNodeID),
 		zap.String("new_node", newNodeID))
-	
+
 	return nil
 }
 
@@ -468,12 +468,12 @@ func (m *RangeManager) MoveRange(start, end uint32, newNodeID string) error {
 func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Validate split point
 	if splitPoint <= start || splitPoint >= end {
 		return ErrInvalidRange
 	}
-	
+
 	// Find the range
 	var rng *Range
 	var rngIndex int
@@ -484,11 +484,11 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 			break
 		}
 	}
-	
+
 	if rng == nil {
 		return ErrRangeNotFound
 	}
-	
+
 	// Create two new ranges
 	range1 := &Range{
 		Start:      start,
@@ -499,7 +499,7 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 		CreatedAt:  time.Now(),
 		ModifiedAt: time.Now(),
 	}
-	
+
 	range2 := &Range{
 		Start:      splitPoint + 1,
 		End:        end,
@@ -509,7 +509,7 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 		CreatedAt:  time.Now(),
 		ModifiedAt: time.Now(),
 	}
-	
+
 	// Remove old range from node ranges
 	nodeRanges := m.nodeRanges[rng.NodeID]
 	for i, r := range nodeRanges {
@@ -518,14 +518,14 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 			break
 		}
 	}
-	
+
 	// Replace old range with new ranges
 	m.ranges = append(m.ranges[:rngIndex], m.ranges[rngIndex+1:]...)
 	m.ranges = append(m.ranges, range1, range2)
-	
+
 	// Add new ranges to node ranges
 	m.nodeRanges[rng.NodeID] = append(m.nodeRanges[rng.NodeID], range1, range2)
-	
+
 	m.logger.Info("Split range",
 		zap.Uint32("original_start", start),
 		zap.Uint32("original_end", end),
@@ -534,7 +534,7 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 		zap.Uint32("new_range1_end", range1.End),
 		zap.Uint32("new_range2_start", range2.Start),
 		zap.Uint32("new_range2_end", range2.End))
-	
+
 	return nil
 }
 
@@ -542,16 +542,16 @@ func (m *RangeManager) SplitRange(start, end uint32, splitPoint uint32) error {
 func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Validate ranges are adjacent
 	if end1+1 != start2 {
 		return ErrInvalidRange
 	}
-	
+
 	// Find the ranges
 	var range1, range2 *Range
 	var range1Index, range2Index int
-	
+
 	for i, r := range m.ranges {
 		if r.Start == start1 && r.End == end1 {
 			range1 = r
@@ -562,16 +562,16 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 			range2Index = i
 		}
 	}
-	
+
 	if range1 == nil || range2 == nil {
 		return ErrRangeNotFound
 	}
-	
+
 	// Validate ranges are on the same node
 	if range1.NodeID != range2.NodeID {
 		return ErrInvalidRange
 	}
-	
+
 	// Create merged range
 	mergedRange := &Range{
 		Start:      start1,
@@ -582,7 +582,7 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 		CreatedAt:  time.Now(),
 		ModifiedAt: time.Now(),
 	}
-	
+
 	// Remove old ranges from node ranges
 	nodeRanges := m.nodeRanges[range1.NodeID]
 	newNodeRanges := make([]*Range, 0, len(nodeRanges))
@@ -592,7 +592,7 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 		}
 	}
 	m.nodeRanges[range1.NodeID] = newNodeRanges
-	
+
 	// Replace old ranges with merged range
 	// Remove ranges (higher index first to avoid index shifting)
 	if range1Index > range2Index {
@@ -603,10 +603,10 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 		m.ranges = append(m.ranges[:range1Index], m.ranges[range1Index+1:]...)
 	}
 	m.ranges = append(m.ranges, mergedRange)
-	
+
 	// Add merged range to node ranges
 	m.nodeRanges[range1.NodeID] = append(m.nodeRanges[range1.NodeID], mergedRange)
-	
+
 	m.logger.Info("Merged ranges",
 		zap.Uint32("range1_start", start1),
 		zap.Uint32("range1_end", end1),
@@ -614,7 +614,7 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 		zap.Uint32("range2_end", end2),
 		zap.Uint32("merged_start", mergedRange.Start),
 		zap.Uint32("merged_end", mergedRange.End))
-	
+
 	return nil
 }
 
@@ -622,17 +622,17 @@ func (m *RangeManager) MergeRanges(start1, end1, start2, end2 uint32) error {
 func (m *RangeManager) rebalanceRanges() error {
 	// Calculate ideal ranges per node
 	idealRanges := len(m.ranges) / len(m.config.Nodes)
-	
+
 	// Get current ranges per node
 	currentRanges := make(map[string]int)
 	for _, node := range m.config.Nodes {
 		currentRanges[node] = len(m.nodeRanges[node])
 	}
-	
+
 	// Find nodes that need more ranges and nodes that have too many
 	underloaded := make([]string, 0)
 	overloaded := make([]string, 0)
-	
+
 	for _, node := range m.config.Nodes {
 		if currentRanges[node] < idealRanges {
 			underloaded = append(underloaded, node)
@@ -640,26 +640,26 @@ func (m *RangeManager) rebalanceRanges() error {
 			overloaded = append(overloaded, node)
 		}
 	}
-	
+
 	// Move ranges from overloaded to underloaded nodes
 	for len(overloaded) > 0 && len(underloaded) > 0 {
 		overloadedNode := overloaded[0]
 		underloadedNode := underloaded[0]
-		
+
 		// Find a range to move
 		ranges := m.nodeRanges[overloadedNode]
 		if len(ranges) > 0 {
 			rng := ranges[0]
-			
+
 			// Move range
 			if err := m.MoveRange(rng.Start, rng.End, underloadedNode); err != nil {
 				return err
 			}
-			
+
 			// Update counts
 			currentRanges[overloadedNode]--
 			currentRanges[underloadedNode]++
-			
+
 			// Update lists
 			if currentRanges[overloadedNode] <= idealRanges {
 				overloaded = overloaded[1:]
@@ -671,7 +671,7 @@ func (m *RangeManager) rebalanceRanges() error {
 			overloaded = overloaded[1:]
 		}
 	}
-	
+
 	return nil
 }
 
@@ -679,14 +679,14 @@ func (m *RangeManager) rebalanceRanges() error {
 func (m *RangeManager) GetBalanceFactor() float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if len(m.config.Nodes) == 0 {
 		return 0.0
 	}
-	
+
 	// Calculate ideal ranges per node
 	idealRanges := float64(len(m.ranges)) / float64(len(m.config.Nodes))
-	
+
 	// Calculate variance
 	var variance float64
 	for _, node := range m.config.Nodes {
@@ -695,14 +695,14 @@ func (m *RangeManager) GetBalanceFactor() float64 {
 		variance += diff * diff
 	}
 	variance /= float64(len(m.config.Nodes))
-	
+
 	// Calculate balance factor
 	stdDev := math.Sqrt(variance)
 	balanceFactor := 1.0 - (stdDev / idealRanges)
 	if balanceFactor < 0.0 {
 		balanceFactor = 0.0
 	}
-	
+
 	return balanceFactor
 }
 
@@ -710,13 +710,13 @@ func (m *RangeManager) GetBalanceFactor() float64 {
 func (m *RangeManager) GetStats() *RangeStats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	stats := &RangeStats{
-		TotalRanges:    int64(len(m.ranges)),
-		TotalNodes:     int64(len(m.config.Nodes)),
-		BalanceFactor:  m.GetBalanceFactor(),
+		TotalRanges:   int64(len(m.ranges)),
+		TotalNodes:    int64(len(m.config.Nodes)),
+		BalanceFactor: m.GetBalanceFactor(),
 	}
-	
+
 	// Count ranges by status
 	for _, rng := range m.ranges {
 		switch rng.Status {
@@ -730,7 +730,7 @@ func (m *RangeManager) GetStats() *RangeStats {
 			stats.OfflineRanges++
 		}
 	}
-	
+
 	return stats
 }
 
@@ -738,7 +738,7 @@ func (m *RangeManager) GetStats() *RangeStats {
 func (m *RangeManager) GetConfig() *RangeConfig {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *m.config
 	return &config
@@ -748,12 +748,12 @@ func (m *RangeManager) GetConfig() *RangeConfig {
 func (m *RangeManager) UpdateConfig(config *RangeConfig) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateRangeConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrConfigInvalid, err)
 	}
-	
+
 	// Check if cluster count changed
 	if config.ClusterCount != m.config.ClusterCount {
 		// Reinitialize ranges
@@ -764,9 +764,9 @@ func (m *RangeManager) UpdateConfig(config *RangeConfig) error {
 	} else {
 		m.config = config
 	}
-	
+
 	m.logger.Info("Updated range configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -774,18 +774,18 @@ func (m *RangeManager) UpdateConfig(config *RangeConfig) error {
 func (m *RangeManager) Validate() error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateRangeConfig(m.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Validate ranges
 	for i, rng := range m.ranges {
 		if rng.Start > rng.End {
 			return fmt.Errorf("%w: range %d has start > end", ErrInvalidRange, i)
 		}
-		
+
 		// Check for overlaps
 		for j, other := range m.ranges {
 			if i != j {
@@ -798,7 +798,7 @@ func (m *RangeManager) Validate() error {
 			}
 		}
 	}
-	
+
 	// Validate node ranges
 	for nodeID, ranges := range m.nodeRanges {
 		nodeExists := false
@@ -811,7 +811,7 @@ func (m *RangeManager) Validate() error {
 		if !nodeExists {
 			return fmt.Errorf("%w: node %s not in configuration", ErrNodeNotFound, nodeID)
 		}
-		
+
 		// Validate all ranges belong to this node
 		for _, rng := range ranges {
 			if rng.NodeID != nodeID {
@@ -820,7 +820,7 @@ func (m *RangeManager) Validate() error {
 			}
 		}
 	}
-	
+
 	// Check for gaps in ranges
 	if len(m.ranges) > 0 {
 		// Sort ranges by start
@@ -829,7 +829,7 @@ func (m *RangeManager) Validate() error {
 		sort.Slice(sortedRanges, func(i, j int) bool {
 			return sortedRanges[i].Start < sortedRanges[j].Start
 		})
-		
+
 		// Check for gaps
 		for i := 1; i < len(sortedRanges); i++ {
 			if sortedRanges[i].Start > sortedRanges[i-1].End+1 {
@@ -839,7 +839,7 @@ func (m *RangeManager) Validate() error {
 					sortedRanges[i].Start, sortedRanges[i].End)
 			}
 		}
-		
+
 		// Check coverage
 		if sortedRanges[0].Start != 0 {
 			return fmt.Errorf("%w: ranges don't start at 0", ErrRangeGap)
@@ -848,7 +848,7 @@ func (m *RangeManager) Validate() error {
 			return fmt.Errorf("%w: ranges don't end at %d", ErrRangeGap, m.config.ClusterCount-1)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -856,23 +856,23 @@ func (m *RangeManager) Validate() error {
 func (m *RangeManager) GetNodeInfo(nodeID string) (map[string]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	ranges, exists := m.nodeRanges[nodeID]
 	if !exists {
 		return nil, ErrNodeNotFound
 	}
-	
+
 	info := make(map[string]interface{})
 	info["node_id"] = nodeID
 	info["range_count"] = len(ranges)
-	
+
 	// Count ranges by status
 	statusCounts := make(map[string]int)
 	for _, rng := range ranges {
 		statusCounts[rng.Status]++
 	}
 	info["status_counts"] = statusCounts
-	
+
 	// Calculate total clusters
 	var totalClusters uint32
 	for _, rng := range ranges {
@@ -880,7 +880,7 @@ func (m *RangeManager) GetNodeInfo(nodeID string) (map[string]interface{}, error
 	}
 	info["total_clusters"] = totalClusters
 	info["cluster_percentage"] = float64(totalClusters) / float64(m.config.ClusterCount) * 100
-	
+
 	return info, nil
 }
 
@@ -888,7 +888,7 @@ func (m *RangeManager) GetNodeInfo(nodeID string) (map[string]interface{}, error
 func (m *RangeManager) GetClusterDistribution() map[string]uint32 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	distribution := make(map[string]uint32)
 	for nodeID, ranges := range m.nodeRanges {
 		var total uint32
@@ -897,6 +897,6 @@ func (m *RangeManager) GetClusterDistribution() map[string]uint32 {
 		}
 		distribution[nodeID] = total
 	}
-	
+
 	return distribution
 }
