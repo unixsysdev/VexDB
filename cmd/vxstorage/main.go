@@ -80,15 +80,27 @@ type storageServer struct {
 }
 
 func (s *storageServer) InsertVector(ctx context.Context, req *pb.InsertRequest) (*pb.InsertResponse, error) {
-	v := req.GetVector()
-	if v == nil {
-		return &pb.InsertResponse{Success: false, Message: "vector required"}, nil
+	if v := req.GetVector(); v != nil {
+		vec := &types.Vector{ID: v.Id, Data: v.Data, Metadata: convertMetadata(v.Metadata), ClusterID: v.ClusterId, Timestamp: v.Timestamp.AsTime().UnixNano()}
+		if err := s.store.StoreVector(ctx, vec); err != nil {
+			return &pb.InsertResponse{Success: false, Message: err.Error()}, nil
+		}
+		return &pb.InsertResponse{Success: true, VectorIds: []string{vec.ID}}, nil
 	}
-	vec := &types.Vector{ID: v.Id, Data: v.Data}
-	if err := s.store.StoreVector(ctx, vec); err != nil {
-		return &pb.InsertResponse{Success: false, Message: err.Error()}, nil
+
+	if batch := req.GetBatch(); batch != nil {
+		ids := make([]string, 0, len(batch.Vectors))
+		for _, v := range batch.Vectors {
+			vec := &types.Vector{ID: v.Id, Data: v.Data, Metadata: convertMetadata(v.Metadata), ClusterID: v.ClusterId, Timestamp: v.Timestamp.AsTime().UnixNano()}
+			if err := s.store.StoreVector(ctx, vec); err != nil {
+				return &pb.InsertResponse{Success: false, Message: err.Error()}, nil
+			}
+			ids = append(ids, vec.ID)
+		}
+		return &pb.InsertResponse{Success: true, VectorIds: ids}, nil
 	}
-	return &pb.InsertResponse{Success: true, VectorIds: []string{vec.ID}}, nil
+
+	return &pb.InsertResponse{Success: false, Message: "vector or batch required"}, nil
 }
 
 func (s *storageServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
@@ -106,4 +118,15 @@ func (s *storageServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.
 		pbRes = append(pbRes, &pb.SearchResult{Vector: &pb.Vector{Id: r.Vector.ID, Data: r.Vector.Data}, Distance: float32(r.Distance), Score: r.Score})
 	}
 	return &pb.SearchResponse{Success: true, Results: pbRes, TotalResults: int64(len(pbRes))}, nil
+}
+
+func convertMetadata(m map[string]string) map[string]interface{} {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
