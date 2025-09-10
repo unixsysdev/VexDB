@@ -1,10 +1,11 @@
 package config_test
 
 import (
-	"os"
-	"testing"
+        "os"
+        "testing"
+        "time"
 
-	cfg "vxdb/internal/config"
+        cfg "vxdb/internal/config"
 )
 
 func TestLoadConfigUnknownService(t *testing.T) {
@@ -37,7 +38,7 @@ func TestInsertConfigValidateErrors(t *testing.T) {
 }
 
 func TestLoadInsertConfig(t *testing.T) {
-	data := []byte("server:\n  host: example\n  port: 9000\n")
+        data := []byte("server:\n  host: example\n  port: 9000\n  read_timeout: 30s\n  write_timeout: 40s\n")
 	f, err := os.CreateTemp(t.TempDir(), "cfg-*.yaml")
 	if err != nil {
 		t.Fatalf("temp file: %v", err)
@@ -51,7 +52,10 @@ func TestLoadInsertConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load insert config: %v", err)
 	}
-	if conf.Server.Host != "example" || conf.Server.Port != 9000 {
-		t.Fatalf("unexpected config: %#v", conf.Server)
-	}
+        if conf.Server.Host != "example" || conf.Server.Port != 9000 {
+                t.Fatalf("unexpected config: %#v", conf.Server)
+        }
+        if conf.Server.ReadTimeout != 30*time.Second || conf.Server.WriteTimeout != 40*time.Second {
+                t.Fatalf("unexpected timeouts: %#v", conf.Server)
+        }
 }

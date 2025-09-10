@@ -1,10 +1,11 @@
 package config
 
 import (
-	"fmt"
-	"os"
+        "fmt"
+        "os"
+        "time"
 
-	"gopkg.in/yaml.v2"
+        "gopkg.in/yaml.v2"
 )
 
 // Config is a generic interface for all configuration types
@@ -50,10 +51,10 @@ type SearchConfig struct {
 
 // ServerConfig holds HTTP/gRPC server configuration
 type ServerConfig struct {
-	Host         string `yaml:"host"`
-	Port         int    `yaml:"port"`
-	ReadTimeout  int    `yaml:"read_timeout"`
-	WriteTimeout int    `yaml:"write_timeout"`
+        Host         string        `yaml:"host"`
+        Port         int           `yaml:"port"`
+        ReadTimeout  time.Duration `yaml:"read_timeout"`
+        WriteTimeout time.Duration `yaml:"write_timeout"`
 }
 
 // ClusterConfig holds cluster-wide configuration

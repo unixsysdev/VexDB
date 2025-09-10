@@ -180,19 +180,25 @@ func validateHasherConfig(cfg *HasherConfig) error {
 func (h *Hasher) HashVector(vector *types.Vector) (uint64, error) {
 	if h.config.EnableValidation {
 		if err := vector.Validate(); err != nil {
-			h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
+			if h.metrics != nil && h.metrics.Errors != nil {
+				h.metrics.Errors.Add(1, "component", "hashing", "error_type", "validation_failed")
+			}
 			return 0, fmt.Errorf("%w: %v", ErrInvalidVector, err)
 		}
 	}
 
 	hash, err := h.hashVectorData(vector.Data)
 	if err != nil {
-		h.metrics.Errors.Add(1, "component", "hashing", "error_type", "hash_failed")
+		if h.metrics != nil && h.metrics.Errors != nil {
+			h.metrics.Errors.Add(1, "component", "hashing", "error_type", "hash_failed")
+		}
 		return 0, fmt.Errorf("%w: %v", ErrHashingFailed, err)
 	}
 
 	// Update metrics
-	h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "hash_vector")
+	if h.metrics != nil && h.metrics.HashingOperations != nil {
+		h.metrics.HashingOperations.Add(1, "component", "hashing", "operation", "hash_vector")
+	}
 
 	return hash, nil
 }
