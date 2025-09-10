@@ -112,3 +112,79 @@ func TestRateLimiterAllow(t *testing.T) {
 		t.Fatalf("expected request to be rate limited")
 	}
 }
+
+// TestRateLimiterBurst verifies burst tokens allow temporary exceeding of the limit.
+func TestRateLimiterBurst(t *testing.T) {
+	rl := newTestLimiter(t)
+	rl.config.EnableBurst = true
+	rl.config.BurstMultiplier = 2.0
+
+	if err := rl.Start(); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer rl.Stop()
+
+	ctx := context.Background()
+	// With limit 2 and burst multiplier 2, first four requests succeed.
+	for i := 0; i < 4; i++ {
+		allowed, _, err := rl.Allow(ctx, "client", 0, 0)
+		if err != nil {
+			t.Fatalf("Allow returned error: %v", err)
+		}
+		if !allowed {
+			t.Fatalf("request %d unexpectedly rejected", i)
+		}
+	}
+
+	// Fifth request should be rejected as burst tokens are exhausted.
+	allowed, _, err := rl.Allow(ctx, "client", 0, 0)
+	if err != nil {
+		t.Fatalf("Allow returned error: %v", err)
+	}
+	if allowed {
+		t.Fatalf("expected request to be rate limited after burst tokens")
+	}
+}
+
+// TestRateLimiterSlidingWindow ensures sliding window algorithm drops expired timestamps.
+func TestRateLimiterSlidingWindow(t *testing.T) {
+	rl := newTestLimiter(t)
+	rl.config.EnableSliding = true
+	rl.config.DefaultWindow = 50 * time.Millisecond
+
+	if err := rl.Start(); err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer rl.Stop()
+
+	ctx := context.Background()
+	// First two requests within window allowed.
+	for i := 0; i < 2; i++ {
+		allowed, _, err := rl.Allow(ctx, "client", 0, 0)
+		if err != nil {
+			t.Fatalf("Allow returned error: %v", err)
+		}
+		if !allowed {
+			t.Fatalf("request %d unexpectedly rejected", i)
+		}
+	}
+
+	// Third request should be rejected.
+	allowed, _, err := rl.Allow(ctx, "client", 0, 0)
+	if err != nil {
+		t.Fatalf("Allow returned error: %v", err)
+	}
+	if allowed {
+		t.Fatalf("expected third request to be rate limited")
+	}
+
+	// After window passes, request should be allowed again.
+	time.Sleep(60 * time.Millisecond)
+	allowed, _, err = rl.Allow(ctx, "client", 0, 0)
+	if err != nil {
+		t.Fatalf("Allow returned error: %v", err)
+	}
+	if !allowed {
+		t.Fatalf("expected request after window to be allowed")
+	}
+}
