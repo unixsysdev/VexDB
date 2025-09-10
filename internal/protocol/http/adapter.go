@@ -12,11 +12,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/protocol/adapter"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/protocol/adapter"
+	"vxdb/internal/types"
 )
 
 // HTTPAdapter implements the ProtocolAdapter interface for HTTP REST API

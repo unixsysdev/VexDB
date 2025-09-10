@@ -16,7 +16,7 @@ func TestNewMetrics_DefaultConfig(t *testing.T) {
 		t.Fatal("registry should not be nil")
 	}
 	cfg := m.GetConfig()
-	if cfg.Path != "/metrics" || cfg.Namespace != "vexdb" {
+	if cfg.Path != "/metrics" || cfg.Namespace != "vxdb" {
 		t.Fatalf("unexpected default config: %#v", cfg)
 	}
 }

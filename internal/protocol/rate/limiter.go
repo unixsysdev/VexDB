@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/protocol/adapter"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/protocol/adapter"
 
 	"go.uber.org/zap"
 )

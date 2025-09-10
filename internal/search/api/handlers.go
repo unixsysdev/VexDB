@@ -1,21 +1,21 @@
 package api
 
 import (
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "time"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
 
-    "vexdb/internal/metrics"
-    "vexdb/internal/search/config"
-    "vexdb/internal/search/response"
-    "vexdb/internal/search/validation"
-    "vexdb/internal/service"
-    "vexdb/internal/types"
+	"vxdb/internal/metrics"
+	"vxdb/internal/search/config"
+	"vxdb/internal/search/response"
+	"vxdb/internal/search/validation"
+	"vxdb/internal/service"
+	"vxdb/internal/types"
 
-    "github.com/gorilla/mux"
-    "go.uber.org/zap"
+	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 )
 
 // SearchHandler handles HTTP search requests
@@ -36,7 +36,7 @@ func NewSearchHandler(cfg *config.SearchServiceConfig, logger *zap.Logger, metri
 		cfg.Engine.MaxResults,
 		100, // maxMetadataFilters
 	)
-	
+
 	formatter := response.NewFormatter(&response.ResponseConfig{
 		IncludeQueryVector: cfg.API.Response.IncludeQueryVector,
 		IncludeMetadata:    cfg.API.Response.IncludeMetadata,
@@ -107,11 +107,11 @@ func (h *SearchHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert to internal types
-    queryVector := &types.Vector{
-        ID:       request.VectorID,
-        Data:     toFloat32(request.Vector),
-        Metadata: toMetadata(request.Metadata),
-    }
+	queryVector := &types.Vector{
+		ID:       request.VectorID,
+		Data:     toFloat32(request.Vector),
+		Metadata: toMetadata(request.Metadata),
+	}
 
 	// Set default k if not provided
 	k := request.K
@@ -161,21 +161,21 @@ func (h *SearchHandler) handleSimilaritySearch(w http.ResponseWriter, r *http.Re
 	}
 
 	// Convert to internal types
-    queryVector := &types.Vector{
-        ID:       request.VectorID,
-        Data:     toFloat32(request.Vector),
-        Metadata: toMetadata(request.Metadata),
-    }
+	queryVector := &types.Vector{
+		ID:       request.VectorID,
+		Data:     toFloat32(request.Vector),
+		Metadata: toMetadata(request.Metadata),
+	}
 
 	// Build metadata filter if provided
-    var filter *types.MetadataFilter
-    if len(request.Filters) > 0 {
-        filter = &types.MetadataFilter{Conditions: make([]interface{}, 0, len(request.Filters))}
-        for _, f := range request.Filters {
-            cond := &types.MetadataCondition{Key: f.Key, Operator: f.Operator, Value: f.Value, Values: f.Values}
-            filter.Conditions = append(filter.Conditions, cond)
-        }
-    }
+	var filter *types.MetadataFilter
+	if len(request.Filters) > 0 {
+		filter = &types.MetadataFilter{Conditions: make([]interface{}, 0, len(request.Filters))}
+		for _, f := range request.Filters {
+			cond := &types.MetadataCondition{Key: f.Key, Operator: f.Operator, Value: f.Value, Values: f.Values}
+			filter.Conditions = append(filter.Conditions, cond)
+		}
+	}
 
 	// Set default k if not provided
 	k := request.K
@@ -235,11 +235,11 @@ func (h *SearchHandler) handleBatchSearch(w http.ResponseWriter, r *http.Request
 	var stats []*response.SearchStats
 
 	for i, query := range request.Queries {
-        queryVector := &types.Vector{
-            ID:       query.VectorID,
-            Data:     toFloat32(query.Vector),
-            Metadata: toMetadata(query.Metadata),
-        }
+		queryVector := &types.Vector{
+			ID:       query.VectorID,
+			Data:     toFloat32(query.Vector),
+			Metadata: toMetadata(query.Metadata),
+		}
 
 		k := query.K
 		if k <= 0 {
@@ -255,7 +255,7 @@ func (h *SearchHandler) handleBatchSearch(w http.ResponseWriter, r *http.Request
 
 		allResults = append(allResults, results)
 		queryIDs = append(queryIDs, fmt.Sprintf("%s_%d", queryID, i))
-		
+
 		stats = append(stats, &response.SearchStats{
 			TotalResults:    len(results),
 			ReturnedResults: len(results),
@@ -292,11 +292,11 @@ func (h *SearchHandler) handleMultiClusterSearch(w http.ResponseWriter, r *http.
 	}
 
 	// Convert to internal types
-    queryVector := &types.Vector{
-        ID:       request.VectorID,
-        Data:     toFloat32(request.Vector),
-        Metadata: toMetadata(request.Metadata),
-    }
+	queryVector := &types.Vector{
+		ID:       request.VectorID,
+		Data:     toFloat32(request.Vector),
+		Metadata: toMetadata(request.Metadata),
+	}
 
 	// Set default k if not provided
 	k := request.K
@@ -366,7 +366,7 @@ func (h *SearchHandler) handleListClusters(w http.ResponseWriter, r *http.Reques
 // handleGetCluster handles get cluster requests
 func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request) {
 	queryID := generateQueryID()
-    _ = mux.Vars(r)["id"]
+	_ = mux.Vars(r)["id"]
 
 	// For now, return not implemented
 	h.handleError(w, r, fmt.Errorf("get cluster not implemented"), queryID, "NOT_IMPLEMENTED")
@@ -375,7 +375,7 @@ func (h *SearchHandler) handleGetCluster(w http.ResponseWriter, r *http.Request)
 // handleClusterSearch handles cluster-specific search requests
 func (h *SearchHandler) handleClusterSearch(w http.ResponseWriter, r *http.Request) {
 	queryID := generateQueryID()
-    _ = mux.Vars(r)["id"]
+	_ = mux.Vars(r)["id"]
 
 	// For now, return not implemented
 	h.handleError(w, r, fmt.Errorf("cluster search not implemented"), queryID, "NOT_IMPLEMENTED")
@@ -393,8 +393,8 @@ func (h *SearchHandler) handleHealthCheck(w http.ResponseWriter, r *http.Request
 	}
 
 	response := h.formatter.FormatHealthResponse(health.Status == "healthy", health.Status, map[string]interface{}{
-		"message": health.Message,
-		"details": health.Details,
+		"message":   health.Message,
+		"details":   health.Details,
 		"timestamp": health.Timestamp,
 	})
 	h.sendJSONResponse(w, http.StatusOK, response)
@@ -412,10 +412,10 @@ func (h *SearchHandler) handleDetailedHealthCheck(w http.ResponseWriter, r *http
 	}
 
 	response := h.formatter.FormatHealthResponse(health.Status == "healthy", health.Status, map[string]interface{}{
-		"message": health.Message,
-		"details": health.Details,
+		"message":   health.Message,
+		"details":   health.Details,
 		"timestamp": health.Timestamp,
-		"checks": health.Checks,
+		"checks":    health.Checks,
 	})
 	h.sendJSONResponse(w, http.StatusOK, response)
 }
@@ -431,16 +431,18 @@ func (h *SearchHandler) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		metricType = "system"
 	}
 
-    mvals, err := h.service.GetMetrics(ctx, metricType, "", "")
+	mvals, err := h.service.GetMetrics(ctx, metricType, "", "")
 	if err != nil {
 		h.handleError(w, r, err, queryID, "METRICS_ERROR")
 		return
 	}
 
-    // Convert to map[string]interface{}
-    imap := make(map[string]interface{}, len(mvals))
-    for k, v := range mvals { imap[k] = v }
-    response := h.formatter.FormatMetricsResponse(imap)
+	// Convert to map[string]interface{}
+	imap := make(map[string]interface{}, len(mvals))
+	for k, v := range mvals {
+		imap[k] = v
+	}
+	response := h.formatter.FormatMetricsResponse(imap)
 	h.sendJSONResponse(w, http.StatusOK, response)
 }
 
@@ -483,21 +485,21 @@ func (h *SearchHandler) handleUpdateConfig(w http.ResponseWriter, r *http.Reques
 // Request types
 
 type SearchRequest struct {
-	Vector   []float64         `json:"vector"`
-	VectorID string            `json:"vector_id,omitempty"`
-	K        int               `json:"k,omitempty"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	Vector         []float64         `json:"vector"`
+	VectorID       string            `json:"vector_id,omitempty"`
+	K              int               `json:"k,omitempty"`
+	Metadata       map[string]string `json:"metadata,omitempty"`
 	MetadataFilter map[string]string `json:"metadata_filter,omitempty"`
 }
 
 type SimilaritySearchRequest struct {
-	Vector           []float64         `json:"vector"`
-	VectorID         string            `json:"vector_id,omitempty"`
-	K                int               `json:"k,omitempty"`
-	Metadata         map[string]string `json:"metadata,omitempty"`
-	MetadataFilter   map[string]string `json:"metadata_filter,omitempty"`
-	Filters          []MetadataFilter  `json:"filters,omitempty"`
-	DistanceThreshold float64          `json:"distance_threshold,omitempty"`
+	Vector            []float64         `json:"vector"`
+	VectorID          string            `json:"vector_id,omitempty"`
+	K                 int               `json:"k,omitempty"`
+	Metadata          map[string]string `json:"metadata,omitempty"`
+	MetadataFilter    map[string]string `json:"metadata_filter,omitempty"`
+	Filters           []MetadataFilter  `json:"filters,omitempty"`
+	DistanceThreshold float64           `json:"distance_threshold,omitempty"`
 }
 
 type MetadataFilter struct {
@@ -508,9 +510,9 @@ type MetadataFilter struct {
 }
 
 type BatchSearchRequest struct {
-	Queries          []SearchRequest `json:"queries"`
-	MetadataFilter   map[string]string `json:"metadata_filter,omitempty"`
-	K                int               `json:"k,omitempty"`
+	Queries        []SearchRequest   `json:"queries"`
+	MetadataFilter map[string]string `json:"metadata_filter,omitempty"`
+	K              int               `json:"k,omitempty"`
 }
 
 type MultiClusterSearchRequest struct {
@@ -618,14 +620,14 @@ func (h *SearchHandler) filterByDistance(results []*types.SearchResult, threshol
 
 func (h *SearchHandler) handleError(w http.ResponseWriter, r *http.Request, err error, queryID string, code string) {
 	h.logger.Error("Request failed", zap.String("query_id", queryID), zap.Error(err))
-	
+
 	errorResponse := h.formatter.FormatErrorResponse(err, queryID, code, nil)
 	h.sendJSONResponse(w, h.getHTTPStatusCode(code), errorResponse)
 }
 
 func (h *SearchHandler) handleValidationError(w http.ResponseWriter, r *http.Request, err error, queryID string) {
 	h.logger.Warn("Validation failed", zap.String("query_id", queryID), zap.Error(err))
-	
+
 	// Convert error to validation errors
 	validationErrors := []response.ValidationError{
 		{
@@ -633,7 +635,7 @@ func (h *SearchHandler) handleValidationError(w http.ResponseWriter, r *http.Req
 			Message: err.Error(),
 		},
 	}
-	
+
 	errorResponse := h.formatter.FormatValidationErrorResponse(validationErrors, queryID)
 	h.sendJSONResponse(w, http.StatusBadRequest, errorResponse)
 }
@@ -679,7 +681,7 @@ func (h *SearchHandler) recordMetrics(operation string, duration time.Duration, 
 }
 
 func generateQueryID() string {
-    return fmt.Sprintf("query_%d", time.Now().UnixNano())
+	return fmt.Sprintf("query_%d", time.Now().UnixNano())
 }
 
 func getStatusLabel(err error) string {
@@ -691,16 +693,24 @@ func getStatusLabel(err error) string {
 
 // toFloat32 converts []float64 to []float32 safely
 func toFloat32(in []float64) []float32 {
-    if len(in) == 0 { return nil }
-    out := make([]float32, len(in))
-    for i, v := range in { out[i] = float32(v) }
-    return out
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]float32, len(in))
+	for i, v := range in {
+		out[i] = float32(v)
+	}
+	return out
 }
 
 // toMetadata converts map[string]string to map[string]interface{}
 func toMetadata(in map[string]string) map[string]interface{} {
-    if in == nil { return nil }
-    out := make(map[string]interface{}, len(in))
-    for k, v := range in { out[k] = v }
-    return out
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

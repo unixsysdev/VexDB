@@ -3,7 +3,7 @@ package logging_test
 import (
 	"testing"
 
-	"vexdb/internal/logging"
+	"vxdb/internal/logging"
 )
 
 func TestNewLogger(t *testing.T) {

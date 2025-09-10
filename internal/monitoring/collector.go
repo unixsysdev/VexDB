@@ -148,7 +148,7 @@ func NewCollector(logger *zap.Logger, config *Config) *Collector {
 func DefaultConfig() *Config {
 	return &Config{
 		Enabled:             true,
-		Namespace:           "vexdb",
+		Namespace:           "vxdb",
 		Subsystem:           "",
 		CollectInterval:     15 * time.Second,
 		HealthCheckInterval: 30 * time.Second,
@@ -156,7 +156,7 @@ func DefaultConfig() *Config {
 		ProfilingPort:       6060,
 		EnableTracing:       false,
 		TracingEndpoint:     "",
-		ServiceName:         "vexdb",
+		ServiceName:         "vxdb",
 		ServiceVersion:      "1.0.0",
 		ServiceInstance:     "default",
 	}

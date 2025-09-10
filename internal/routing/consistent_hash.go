@@ -1,4 +1,3 @@
-
 package routing
 
 import (
@@ -145,10 +144,10 @@ func (r *ConsistentHashRing) GetNodes(key string, count int) []string {
 
 // GetNodeCount returns the number of nodes in the ring
 func (r *ConsistentHashRing) GetNodeCount() int {
-    r.mu.RLock()
-    defer r.mu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-    return len(r.nodeMap)
+	return len(r.nodeMap)
 }
 
 // GetAllNodes returns all nodes in the ring

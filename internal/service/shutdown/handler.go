@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 var (
-	ErrShutdownTimeout    = errors.New("shutdown timeout")
-	ErrShutdownFailed     = errors.New("shutdown failed")
+	ErrShutdownTimeout       = errors.New("shutdown timeout")
+	ErrShutdownFailed        = errors.New("shutdown failed")
 	ErrInvalidShutdownConfig = errors.New("invalid shutdown configuration")
-	ErrHandlerNotRunning  = errors.New("shutdown handler not running")
+	ErrHandlerNotRunning     = errors.New("shutdown handler not running")
 )
 
 // ShutdownConfig represents the shutdown handler configuration
@@ -56,75 +56,75 @@ type ShutdownHook func(ctx context.Context) error
 
 // ShutdownHookConfig represents a shutdown hook configuration
 type ShutdownHookConfig struct {
-	Name        string        `yaml:"name" json:"name"`
-	Order       int           `yaml:"order" json:"order"`
-	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
-	Critical    bool          `yaml:"critical" json:"critical"`
-	RetryCount  int           `yaml:"retry_count" json:"retry_count"`
-	RetryDelay  time.Duration `yaml:"retry_delay" json:"retry_delay"`
+	Name       string        `yaml:"name" json:"name"`
+	Order      int           `yaml:"order" json:"order"`
+	Timeout    time.Duration `yaml:"timeout" json:"timeout"`
+	Critical   bool          `yaml:"critical" json:"critical"`
+	RetryCount int           `yaml:"retry_count" json:"retry_count"`
+	RetryDelay time.Duration `yaml:"retry_delay" json:"retry_delay"`
 }
 
 // ShutdownResult represents the result of a shutdown operation
 type ShutdownResult struct {
-	HookName    string        `json:"hook_name"`
-	Success     bool          `json:"success"`
-	Duration    time.Duration `json:"duration"`
-	Error       string        `json:"error,omitempty"`
-	Retries     int           `json:"retries"`
-	TimedOut    bool          `json:"timed_out"`
+	HookName string        `json:"hook_name"`
+	Success  bool          `json:"success"`
+	Duration time.Duration `json:"duration"`
+	Error    string        `json:"error,omitempty"`
+	Retries  int           `json:"retries"`
+	TimedOut bool          `json:"timed_out"`
 }
 
 // ShutdownReport represents a comprehensive shutdown report
 type ShutdownReport struct {
-	StartTime   time.Time         `json:"start_time"`
-	EndTime     time.Time         `json:"end_time"`
-	Duration    time.Duration     `json:"duration"`
-	Timeout     bool              `json:"timeout"`
-	Forced      bool              `json:"forced"`
-	Results     []ShutdownResult  `json:"results"`
-	Summary     ShutdownSummary   `json:"summary"`
-	Signal      string            `json:"signal,omitempty"`
+	StartTime time.Time        `json:"start_time"`
+	EndTime   time.Time        `json:"end_time"`
+	Duration  time.Duration    `json:"duration"`
+	Timeout   bool             `json:"timeout"`
+	Forced    bool             `json:"forced"`
+	Results   []ShutdownResult `json:"results"`
+	Summary   ShutdownSummary  `json:"summary"`
+	Signal    string           `json:"signal,omitempty"`
 }
 
 // ShutdownSummary represents a summary of shutdown operations
 type ShutdownSummary struct {
-	TotalHooks   int `json:"total_hooks"`
-	Successful   int `json:"successful"`
-	Failed       int `json:"failed"`
-	TimedOut     int `json:"timed_out"`
-	Critical     int `json:"critical"`
+	TotalHooks int `json:"total_hooks"`
+	Successful int `json:"successful"`
+	Failed     int `json:"failed"`
+	TimedOut   int `json:"timed_out"`
+	Critical   int `json:"critical"`
 }
 
 // ShutdownHandler represents a shutdown handler
 type ShutdownHandler struct {
-	config     *ShutdownConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	
+	config  *ShutdownConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+
 	// Shutdown hooks
-	hooks      map[string]ShutdownHook
+	hooks       map[string]ShutdownHook
 	hookConfigs map[string]ShutdownHookConfig
-	mu         sync.RWMutex
-	
+	mu          sync.RWMutex
+
 	// Shutdown state
-	started    bool
-	stopped    bool
-	shutdown   chan struct{}
+	started     bool
+	stopped     bool
+	shutdown    chan struct{}
 	shutdownCtx context.Context
-	cancelCtx  context.CancelFunc
-	
+	cancelCtx   context.CancelFunc
+
 	// Signal handling
 	signalChan chan os.Signal
-	
+
 	// Shutdown tracking
-	startTime  time.Time
-	results    []ShutdownResult
+	startTime time.Time
+	results   []ShutdownResult
 }
 
 // NewShutdownHandler creates a new shutdown handler
 func NewShutdownHandler(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*ShutdownHandler, error) {
 	shutdownConfig := DefaultShutdownConfig()
-	
+
 	if cfg != nil {
 		if shutdownCfg, ok := cfg.Get("shutdown"); ok {
 			if cfgMap, ok := shutdownCfg.(map[string]interface{}); ok {
@@ -171,34 +171,34 @@ func NewShutdownHandler(cfg config.Config, logger logging.Logger, metrics *metri
 			}
 		}
 	}
-	
+
 	// Validate configuration
 	if err := validateShutdownConfig(shutdownConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidShutdownConfig, err)
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	handler := &ShutdownHandler{
-		config:       shutdownConfig,
-		logger:       logger,
-		metrics:      metrics,
-		hooks:        make(map[string]ShutdownHook),
-		hookConfigs:  make(map[string]ShutdownHookConfig),
-		shutdown:     make(chan struct{}),
-		shutdownCtx:  ctx,
-		cancelCtx:    cancel,
-		signalChan:   make(chan os.Signal, 1),
-		results:      make([]ShutdownResult, 0),
+		config:      shutdownConfig,
+		logger:      logger,
+		metrics:     metrics,
+		hooks:       make(map[string]ShutdownHook),
+		hookConfigs: make(map[string]ShutdownHookConfig),
+		shutdown:    make(chan struct{}),
+		shutdownCtx: ctx,
+		cancelCtx:   cancel,
+		signalChan:  make(chan os.Signal, 1),
+		results:     make([]ShutdownResult, 0),
 	}
-	
+
 	handler.logger.Info("Created shutdown handler",
 		zap.Bool("enabled", shutdownConfig.Enabled),
 		zap.Duration("timeout", shutdownConfig.Timeout),
 		zap.Duration("grace_period", shutdownConfig.GracePeriod),
 		zap.Bool("enable_signals", shutdownConfig.EnableSignals),
 		zap.Strings("signals", shutdownConfig.Signals))
-	
+
 	return handler, nil
 }
 
@@ -207,29 +207,29 @@ func validateShutdownConfig(cfg *ShutdownConfig) error {
 	if cfg.Timeout <= 0 {
 		return errors.New("timeout must be positive")
 	}
-	
+
 	if cfg.GracePeriod <= 0 {
 		return errors.New("grace period must be positive")
 	}
-	
+
 	if cfg.ForceKillDelay <= 0 {
 		return errors.New("force kill delay must be positive")
 	}
-	
+
 	if cfg.GracePeriod >= cfg.Timeout {
 		return errors.New("grace period must be less than timeout")
 	}
-	
+
 	if cfg.HealthCheckDelay <= 0 {
 		return errors.New("health check delay must be positive")
 	}
-	
+
 	for _, signal := range cfg.Signals {
 		if signal == "" {
 			return errors.New("signal cannot be empty")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -237,26 +237,26 @@ func validateShutdownConfig(cfg *ShutdownConfig) error {
 func (h *ShutdownHandler) Start() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.started {
 		return nil
 	}
-	
+
 	if !h.config.Enabled {
 		h.logger.Info("Shutdown handler is disabled")
 		return nil
 	}
-	
+
 	// Start signal handling
 	if h.config.EnableSignals {
 		h.startSignalHandling()
 	}
-	
+
 	h.started = true
 	h.stopped = false
-	
+
 	h.logger.Info("Started shutdown handler")
-	
+
 	return nil
 }
 
@@ -264,25 +264,25 @@ func (h *ShutdownHandler) Start() error {
 func (h *ShutdownHandler) Stop() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.stopped {
 		return nil
 	}
-	
+
 	if !h.started {
 		return ErrHandlerNotRunning
 	}
-	
+
 	// Stop signal handling
 	if h.config.EnableSignals {
 		h.stopSignalHandling()
 	}
-	
+
 	h.stopped = true
 	h.started = false
-	
+
 	h.logger.Info("Stopped shutdown handler")
-	
+
 	return nil
 }
 
@@ -290,7 +290,7 @@ func (h *ShutdownHandler) Stop() error {
 func (h *ShutdownHandler) IsRunning() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return h.started && !h.stopped
 }
 
@@ -298,11 +298,11 @@ func (h *ShutdownHandler) IsRunning() bool {
 func (h *ShutdownHandler) RegisterHook(name string, hook ShutdownHook, config ShutdownHookConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if _, exists := h.hooks[name]; exists {
 		return fmt.Errorf("hook %s is already registered", name)
 	}
-	
+
 	// Validate hook config
 	if config.Name == "" {
 		config.Name = name
@@ -316,17 +316,17 @@ func (h *ShutdownHandler) RegisterHook(name string, hook ShutdownHook, config Sh
 	if config.RetryDelay <= 0 {
 		config.RetryDelay = 1 * time.Second
 	}
-	
+
 	h.hooks[name] = hook
 	h.hookConfigs[name] = config
-	
+
 	h.logger.Info("Registered shutdown hook",
 		zap.String("name", name),
 		zap.Int("order", config.Order),
 		zap.Duration("timeout", config.Timeout),
 		zap.Bool("critical", config.Critical),
 		zap.Int("retry_count", config.RetryCount))
-	
+
 	return nil
 }
 
@@ -334,16 +334,16 @@ func (h *ShutdownHandler) RegisterHook(name string, hook ShutdownHook, config Sh
 func (h *ShutdownHandler) UnregisterHook(name string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if _, exists := h.hooks[name]; !exists {
 		return fmt.Errorf("hook %s is not registered", name)
 	}
-	
+
 	delete(h.hooks, name)
 	delete(h.hookConfigs, name)
-	
+
 	h.logger.Info("Unregistered shutdown hook", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -351,12 +351,12 @@ func (h *ShutdownHandler) UnregisterHook(name string) error {
 func (h *ShutdownHandler) GetRegisteredHooks() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	hooks := make([]string, 0, len(h.hooks))
 	for name := range h.hooks {
 		hooks = append(hooks, name)
 	}
-	
+
 	return hooks
 }
 
@@ -364,7 +364,7 @@ func (h *ShutdownHandler) GetRegisteredHooks() []string {
 func (h *ShutdownHandler) GetConfig() *ShutdownConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *h.config
 	return &config
@@ -374,16 +374,16 @@ func (h *ShutdownHandler) GetConfig() *ShutdownConfig {
 func (h *ShutdownHandler) UpdateConfig(config *ShutdownConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateShutdownConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidShutdownConfig, err)
 	}
-	
+
 	h.config = config
-	
+
 	h.logger.Info("Updated shutdown handler configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -395,17 +395,17 @@ func (h *ShutdownHandler) Shutdown() error {
 // ShutdownWithSignal initiates a graceful shutdown with a specific signal
 func (h *ShutdownHandler) ShutdownWithSignal(signal string) error {
 	h.mu.Lock()
-	
+
 	if h.stopped {
 		h.mu.Unlock()
 		return ErrHandlerNotRunning
 	}
-	
+
 	if !h.started {
 		h.mu.Unlock()
 		return ErrHandlerNotRunning
 	}
-	
+
 	// Check if shutdown is already in progress
 	select {
 	case <-h.shutdown:
@@ -413,25 +413,25 @@ func (h *ShutdownHandler) ShutdownWithSignal(signal string) error {
 		return errors.New("shutdown already in progress")
 	default:
 	}
-	
+
 	h.startTime = time.Now()
 	h.results = make([]ShutdownResult, 0)
-	
+
 	// Cancel context to signal shutdown
 	h.cancelCtx()
-	
+
 	h.mu.Unlock()
-	
+
 	h.logger.Info("Initiating graceful shutdown", zap.String("signal", signal))
-	
+
 	// Execute shutdown hooks
 	if err := h.executeShutdownHooks(); err != nil {
 		h.logger.Error("Shutdown failed", zap.Error(err))
 		return fmt.Errorf("%w: %v", ErrShutdownFailed, err)
 	}
-	
+
 	h.logger.Info("Graceful shutdown completed")
-	
+
 	return nil
 }
 
@@ -439,26 +439,26 @@ func (h *ShutdownHandler) ShutdownWithSignal(signal string) error {
 func (h *ShutdownHandler) ForceShutdown() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.stopped {
 		return nil
 	}
-	
+
 	if !h.started {
 		return ErrHandlerNotRunning
 	}
-	
+
 	h.logger.Info("Forcing immediate shutdown")
-	
+
 	// Cancel context
 	h.cancelCtx()
-	
+
 	// Close shutdown channel
 	close(h.shutdown)
-	
+
 	h.stopped = true
 	h.started = false
-	
+
 	return nil
 }
 
@@ -466,24 +466,24 @@ func (h *ShutdownHandler) ForceShutdown() error {
 func (h *ShutdownHandler) GetShutdownReport() *ShutdownReport {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	if len(h.results) == 0 {
 		return nil
 	}
-	
+
 	report := &ShutdownReport{
 		StartTime: h.startTime,
 		EndTime:   time.Now(),
 		Duration:  time.Since(h.startTime),
 		Results:   make([]ShutdownResult, len(h.results)),
 	}
-	
+
 	// Copy results
 	copy(report.Results, h.results)
-	
+
 	// Calculate summary
 	report.Summary = h.calculateShutdownSummary(report.Results)
-	
+
 	return report
 }
 
@@ -491,7 +491,7 @@ func (h *ShutdownHandler) GetShutdownReport() *ShutdownReport {
 func (h *ShutdownHandler) GetContext() context.Context {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return h.shutdownCtx
 }
 
@@ -499,7 +499,7 @@ func (h *ShutdownHandler) GetContext() context.Context {
 func (h *ShutdownHandler) IsShuttingDown() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	select {
 	case <-h.shutdown:
 		return true
@@ -512,12 +512,12 @@ func (h *ShutdownHandler) IsShuttingDown() bool {
 func (h *ShutdownHandler) Validate() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateShutdownConfig(h.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -540,10 +540,10 @@ func (h *ShutdownHandler) startSignalHandling() {
 			continue
 		}
 	}
-	
+
 	// Notify on signals
 	signal.Notify(h.signalChan, signals...)
-	
+
 	// Start signal handler goroutine
 	go h.handleSignals()
 }
@@ -558,7 +558,7 @@ func (h *ShutdownHandler) stopSignalHandling() {
 func (h *ShutdownHandler) handleSignals() {
 	for sig := range h.signalChan {
 		h.logger.Info("Received shutdown signal", zap.String("signal", sig.String()))
-		
+
 		// Convert signal to string
 		sigStr := ""
 		switch sig {
@@ -571,12 +571,12 @@ func (h *ShutdownHandler) handleSignals() {
 		case syscall.SIGHUP:
 			sigStr = "SIGHUP"
 		}
-		
+
 		// Initiate shutdown
 		if err := h.ShutdownWithSignal(sigStr); err != nil {
 			h.logger.Error("Shutdown failed", zap.Error(err))
 		}
-		
+
 		break
 	}
 }
@@ -585,11 +585,11 @@ func (h *ShutdownHandler) handleSignals() {
 func (h *ShutdownHandler) executeShutdownHooks() error {
 	// Sort hooks by order
 	sortedHooks := h.getSortedHooks()
-	
+
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), h.config.Timeout)
 	defer cancel()
-	
+
 	// Execute hooks in order
 	for _, hookConfig := range sortedHooks {
 		select {
@@ -598,29 +598,29 @@ func (h *ShutdownHandler) executeShutdownHooks() error {
 			return ErrShutdownTimeout
 		default:
 		}
-		
+
 		result := h.executeShutdownHook(ctx, hookConfig)
 		h.results = append(h.results, result)
-		
+
 		// Update metrics if enabled
 		if h.config.EnableMetrics && h.metrics != nil {
-            if result.Success {
-                h.metrics.ServiceErrors.Inc("shutdown", "success")
-            } else {
-                h.metrics.ServiceErrors.Inc("shutdown", "failure")
-            }
+			if result.Success {
+				h.metrics.ServiceErrors.Inc("shutdown", "success")
+			} else {
+				h.metrics.ServiceErrors.Inc("shutdown", "failure")
+			}
 		}
-		
+
 		// If critical hook failed, stop shutdown
 		if hookConfig.Critical && !result.Success {
 			h.logger.Error("Critical shutdown hook failed", zap.String("hook", hookConfig.Name), zap.String("error", result.Error))
 			return fmt.Errorf("critical hook %s failed: %s", hookConfig.Name, result.Error)
 		}
 	}
-	
+
 	// Close shutdown channel
 	close(h.shutdown)
-	
+
 	return nil
 }
 
@@ -633,20 +633,20 @@ func (h *ShutdownHandler) executeShutdownHook(ctx context.Context, config Shutdo
 		Retries:  0,
 		TimedOut: false,
 	}
-	
+
 	hook, exists := h.hooks[config.Name]
 	if !exists {
 		result.Error = "hook not found"
 		return result
 	}
-	
+
 	start := time.Now()
-	
+
 	// Execute with retries
 	for i := 0; i <= config.RetryCount; i++ {
 		if i > 0 {
 			result.Retries++
-			
+
 			// Wait before retry
 			select {
 			case <-time.After(config.RetryDelay):
@@ -657,36 +657,36 @@ func (h *ShutdownHandler) executeShutdownHook(ctx context.Context, config Shutdo
 				return result
 			}
 		}
-		
+
 		// Create hook context with timeout
 		hookCtx, cancel := context.WithTimeout(ctx, config.Timeout)
-		
+
 		// Execute hook
 		err := hook(hookCtx)
 		cancel()
-		
+
 		if err == nil {
 			result.Success = true
 			result.Duration = time.Since(start)
 			return result
 		}
-		
+
 		result.Error = err.Error()
-		
+
 		// Check if context was cancelled
 		if ctx.Err() != nil {
 			result.TimedOut = true
 			result.Duration = time.Since(start)
 			return result
 		}
-		
+
 		h.logger.Warn("Shutdown hook failed, retrying",
 			zap.String("hook", config.Name),
 			zap.Int("attempt", i+1),
 			zap.Int("max_attempts", config.RetryCount+1),
 			zap.Error(err))
 	}
-	
+
 	result.Duration = time.Since(start)
 	return result
 }
@@ -695,13 +695,13 @@ func (h *ShutdownHandler) executeShutdownHook(ctx context.Context, config Shutdo
 func (h *ShutdownHandler) getSortedHooks() []ShutdownHookConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Copy hook configs
 	hooks := make([]ShutdownHookConfig, 0, len(h.hookConfigs))
 	for _, config := range h.hookConfigs {
 		hooks = append(hooks, config)
 	}
-	
+
 	// Simple bubble sort by order
 	for i := 0; i < len(hooks)-1; i++ {
 		for j := i + 1; j < len(hooks); j++ {
@@ -710,7 +710,7 @@ func (h *ShutdownHandler) getSortedHooks() []ShutdownHookConfig {
 			}
 		}
 	}
-	
+
 	return hooks
 }
 
@@ -719,23 +719,23 @@ func (h *ShutdownHandler) calculateShutdownSummary(results []ShutdownResult) Shu
 	summary := ShutdownSummary{
 		TotalHooks: len(results),
 	}
-	
+
 	for _, result := range results {
 		if result.Success {
 			summary.Successful++
 		} else {
 			summary.Failed++
 		}
-		
+
 		if result.TimedOut {
 			summary.TimedOut++
 		}
-		
+
 		// Count critical failures
 		if config, exists := h.hookConfigs[result.HookName]; exists && config.Critical && !result.Success {
 			summary.Critical++
 		}
 	}
-	
+
 	return summary
 }

@@ -9,10 +9,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/protocol/adapter"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/protocol/adapter"
 )
 
 var (
@@ -254,10 +254,10 @@ func (m *ConnectionManager) Stop() error {
 		return ErrManagerNotRunning
 	}
 
-        // Close all connections
-        if err := m.closeAllConnectionsLocked(); err != nil {
-                m.logger.Error("Failed to close all connections", zap.Error(err))
-        }
+	// Close all connections
+	if err := m.closeAllConnectionsLocked(); err != nil {
+		m.logger.Error("Failed to close all connections", zap.Error(err))
+	}
 
 	// Stop cleanup routine
 	close(m.cleanupChan)
@@ -451,22 +451,22 @@ func (m *ConnectionManager) CloseConnection(connID string) error {
 
 // CloseAllConnections closes all connections
 func (m *ConnectionManager) CloseAllConnections() error {
-        m.mu.Lock()
-        defer m.mu.Unlock()
-        return m.closeAllConnectionsLocked()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.closeAllConnectionsLocked()
 }
 
 // closeAllConnectionsLocked assumes the mutex is already held and marks all connections inactive.
 func (m *ConnectionManager) closeAllConnectionsLocked() error {
-        if m.config.EnableLogging {
-                m.logger.Info("Closing all connections", zap.Int("count", len(m.connections)))
-        }
+	if m.config.EnableLogging {
+		m.logger.Info("Closing all connections", zap.Int("count", len(m.connections)))
+	}
 
-        for _, conn := range m.connections {
-                conn.Active = false
-        }
+	for _, conn := range m.connections {
+		conn.Active = false
+	}
 
-        return nil
+	return nil
 }
 
 // GetStats returns connection manager statistics

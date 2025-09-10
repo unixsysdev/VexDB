@@ -1,4 +1,4 @@
-# Multi-stage build for VexDB Storage Service
+# Multi-stage build for VxDB Storage Service
 # Stage 1: Builder
 FROM golang:1.21-alpine AS builder
 
@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o vexstorage ./cmd/vexstorage
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o vxstorage ./cmd/vxstorage
 
 # Stage 2: Runtime
 FROM alpine:3.19
@@ -27,36 +27,36 @@ FROM alpine:3.19
 RUN apk --no-cache add ca-certificates tzdata curl lz4-dev
 
 # Create non-root user
-RUN addgroup -g 1000 -S vexdb && \
-    adduser -u 1000 -S vexdb -G vexdb
+RUN addgroup -g 1000 -S vxdb && \
+    adduser -u 1000 -S vxdb -G vxdb
 
 # Create directories
-RUN mkdir -p /var/lib/vexdb/data /var/lib/vexdb/wal /var/lib/vexdb/snapshots /var/lib/vexdb/storage /var/lib/vexdb/temp /var/lib/vexdb/manifest /var/lib/vexdb/backups /var/log/vexdb /etc/vexdb/certs && \
-    chown -R vexdb:vexdb /var/lib/vexdb /var/log/vexdb /etc/vexdb
+RUN mkdir -p /var/lib/vxdb/data /var/lib/vxdb/wal /var/lib/vxdb/snapshots /var/lib/vxdb/storage /var/lib/vxdb/temp /var/lib/vxdb/manifest /var/lib/vxdb/backups /var/log/vxdb /etc/vxdb/certs && \
+    chown -R vxdb:vxdb /var/lib/vxdb /var/log/vxdb /etc/vxdb
 
 # Set working directory
 WORKDIR /app
 
 # Copy binary from builder stage
-COPY --from=builder /app/vexstorage .
+COPY --from=builder /app/vxstorage .
 
 # Copy configuration files
-COPY --chown=vexdb:vexdb configs/vexstorage-production.yaml /etc/vexdb/config.yaml
+COPY --chown=vxdb:vxdb configs/vxstorage-production.yaml /etc/vxdb/config.yaml
 
 # Copy health check script
-COPY --chown=vexdb:vexdb scripts/health-check.sh /usr/local/bin/health-check.sh
+COPY --chown=vxdb:vxdb scripts/health-check.sh /usr/local/bin/health-check.sh
 RUN chmod +x /usr/local/bin/health-check.sh
 
 # Copy backup script
-COPY --chown=vexdb:vexdb scripts/backup.sh /usr/local/bin/backup.sh
+COPY --chown=vxdb:vxdb scripts/backup.sh /usr/local/bin/backup.sh
 RUN chmod +x /usr/local/bin/backup.sh
 
 # Copy maintenance script
-COPY --chown=vexdb:vexdb scripts/maintenance.sh /usr/local/bin/maintenance.sh
+COPY --chown=vxdb:vxdb scripts/maintenance.sh /usr/local/bin/maintenance.sh
 RUN chmod +x /usr/local/bin/maintenance.sh
 
 # Switch to non-root user
-USER vexdb
+USER vxdb
 
 # Expose ports
 EXPOSE 8082 9094 9095 9096 7948 7949
@@ -67,7 +67,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Set environment variables
 ENV GIN_MODE=release
-ENV VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+ENV VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
 
 # Run the application
-CMD ["./vexstorage", "--config", "/etc/vexdb/config.yaml"]
+CMD ["./vxstorage", "--config", "/etc/vxdb/config.yaml"]

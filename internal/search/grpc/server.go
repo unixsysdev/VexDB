@@ -6,21 +6,21 @@ import (
 	"math"
 	"time"
 
-	"vexdb/internal/metrics"
-	"vexdb/internal/search/config"
-	"vexdb/internal/search/response"
-	"vexdb/internal/search/validation"
-	"vexdb/internal/service"
-	"vexdb/internal/types"
+	"vxdb/internal/metrics"
+	"vxdb/internal/search/config"
+	"vxdb/internal/search/response"
+	"vxdb/internal/search/validation"
+	"vxdb/internal/service"
+	"vxdb/internal/types"
 
-	pb "vexdb/proto"
+	pb "vxdb/proto"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-    "google.golang.org/grpc/status"
-    emptypb "google.golang.org/protobuf/types/known/emptypb"
-    timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // SearchServer implements the gRPC SearchService
@@ -42,7 +42,7 @@ func NewSearchServer(cfg *config.SearchServiceConfig, logger *zap.Logger, metric
 		cfg.Engine.MaxResults,
 		100, // maxMetadataFilters
 	)
-	
+
 	formatter := response.NewFormatter(&response.ResponseConfig{
 		IncludeQueryVector: cfg.API.Response.IncludeQueryVector,
 		IncludeMetadata:    cfg.API.Response.IncludeMetadata,
@@ -83,12 +83,12 @@ func (s *SearchServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.S
 	}
 
 	// Convert protobuf request to internal types
-    queryVector := &types.Vector{
-        ID:        req.QueryVector.Id,
-        Data:      req.QueryVector.Data,
-        Metadata:  toMetadata(req.QueryVector.Metadata),
-        ClusterID: req.QueryVector.ClusterId,
-    }
+	queryVector := &types.Vector{
+		ID:        req.QueryVector.Id,
+		Data:      req.QueryVector.Data,
+		Metadata:  toMetadata(req.QueryVector.Metadata),
+		ClusterID: req.QueryVector.ClusterId,
+	}
 
 	// Set default k if not provided
 	k := int(req.K)
@@ -110,18 +110,18 @@ func (s *SearchServer) Search(ctx context.Context, req *pb.SearchRequest) (*pb.S
 	}
 
 	// Apply distance threshold if provided
-    if req.DistanceThreshold > 0 {
-        results = s.filterByDistance(results, float64(req.DistanceThreshold))
-    }
+	if req.DistanceThreshold > 0 {
+		results = s.filterByDistance(results, float64(req.DistanceThreshold))
+	}
 
 	// Convert results to protobuf format
 	pbResults := s.convertToProtoResults(results)
 
 	// Build response metadata
 	metadata := map[string]string{
-		"query_id":        queryID,
-		"execution_time":  time.Since(startTime).String(),
-		"distance_type":   s.config.Engine.DistanceType,
+		"query_id":       queryID,
+		"execution_time": time.Since(startTime).String(),
+		"distance_type":  s.config.Engine.DistanceType,
 	}
 
 	return &pb.SearchResponse{
@@ -179,12 +179,12 @@ func (s *SearchServer) MultiClusterSearch(ctx context.Context, req *pb.SearchReq
 	}
 
 	// Convert protobuf request to internal types
-    queryVector := &types.Vector{
-        ID:        req.QueryVector.Id,
-        Data:      req.QueryVector.Data,
-        Metadata:  toMetadata(req.QueryVector.Metadata),
-        ClusterID: req.QueryVector.ClusterId,
-    }
+	queryVector := &types.Vector{
+		ID:        req.QueryVector.Id,
+		Data:      req.QueryVector.Data,
+		Metadata:  toMetadata(req.QueryVector.Metadata),
+		ClusterID: req.QueryVector.ClusterId,
+	}
 
 	// Set default k if not provided
 	k := int(req.K)
@@ -212,9 +212,9 @@ func (s *SearchServer) MultiClusterSearch(ctx context.Context, req *pb.SearchReq
 	}
 
 	// Apply distance threshold if provided
-    if req.DistanceThreshold > 0 {
-        results = s.filterByDistance(results, float64(req.DistanceThreshold))
-    }
+	if req.DistanceThreshold > 0 {
+		results = s.filterByDistance(results, float64(req.DistanceThreshold))
+	}
 
 	// Convert results to protobuf format
 	pbResults := s.convertToProtoResults(results)
@@ -282,10 +282,10 @@ func (s *SearchServer) GetClusterInfo(ctx context.Context, req *pb.ClusterInfo) 
 	}
 
 	// Convert to protobuf format
-    pbClusterInfo := &pb.ClusterInfo{
-        Id:       clusterInfo.ID,
-        Metadata: clusterInfo.Metadata,
-    }
+	pbClusterInfo := &pb.ClusterInfo{
+		Id:       clusterInfo.ID,
+		Metadata: clusterInfo.Metadata,
+	}
 
 	return pbClusterInfo, nil
 }
@@ -299,15 +299,15 @@ func (s *SearchServer) GetClusterStatus(ctx context.Context, req *emptypb.Empty)
 		s.recordMetrics("grpc_get_cluster_status", time.Since(startTime), nil)
 	}()
 
-    if _, err := s.service.GetClusterStatus(ctx); err != nil {
-        s.logger.Error("Failed to get cluster status", zap.String("query_id", queryID), zap.Error(err))
-        return nil, status.Error(codes.Internal, "Failed to get cluster status")
-    }
+	if _, err := s.service.GetClusterStatus(ctx); err != nil {
+		s.logger.Error("Failed to get cluster status", zap.String("query_id", queryID), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get cluster status")
+	}
 
-    // Convert to protobuf format (limited internal fields available)
-    pbClusterStatus := &pb.ClusterStatus{}
+	// Convert to protobuf format (limited internal fields available)
+	pbClusterStatus := &pb.ClusterStatus{}
 
-    return pbClusterStatus, nil
+	return pbClusterStatus, nil
 }
 
 // HealthCheck performs a health check
@@ -326,13 +326,13 @@ func (s *SearchServer) HealthCheck(ctx context.Context, req *pb.HealthCheckReque
 	}
 
 	// Convert to protobuf format
-    pbHealthResponse := &pb.HealthCheckResponse{
-        Healthy:   healthStatus.Status == "healthy",
-        Status:    healthStatus.Status,
-        Message:   healthStatus.Message,
-        Details:   healthStatus.Details,
-        Timestamp: timestamppb.Now(),
-    }
+	pbHealthResponse := &pb.HealthCheckResponse{
+		Healthy:   healthStatus.Status == "healthy",
+		Status:    healthStatus.Status,
+		Message:   healthStatus.Message,
+		Details:   healthStatus.Details,
+		Timestamp: timestamppb.Now(),
+	}
 
 	return pbHealthResponse, nil
 }
@@ -358,12 +358,12 @@ func (s *SearchServer) GetMetrics(ctx context.Context, req *pb.MetricsRequest) (
 		pbMetrics[key] = value
 	}
 
-    pbMetricsResponse := &pb.MetricsResponse{
-        Success:   true,
-        Message:   "Metrics retrieved successfully",
-        Metrics:   pbMetrics,
-        Timestamp: timestamppb.Now(),
-    }
+	pbMetricsResponse := &pb.MetricsResponse{
+		Success:   true,
+		Message:   "Metrics retrieved successfully",
+		Metrics:   pbMetrics,
+		Timestamp: timestamppb.Now(),
+	}
 
 	return pbMetricsResponse, nil
 }
@@ -407,8 +407,8 @@ func (s *SearchServer) GetConfig(ctx context.Context, req *emptypb.Empty) (*pb.C
 	}
 
 	pbConfigResponse := &pb.ConfigUpdateResponse{
-		Success: true,
-		Message: "Configuration retrieved successfully",
+		Success:        true,
+		Message:        "Configuration retrieved successfully",
 		AppliedUpdates: config,
 	}
 
@@ -456,12 +456,12 @@ func (s *SearchServer) convertToProtoResults(results []*types.SearchResult) []*p
 
 	for _, result := range results {
 		pbResult := &pb.SearchResult{
-            Vector: &pb.Vector{
-                Id:        result.Vector.ID,
-                Data:      result.Vector.Data,
-                Metadata:  toStringMetadata(result.Vector.Metadata),
-                ClusterId: result.Vector.ClusterID,
-            },
+			Vector: &pb.Vector{
+				Id:        result.Vector.ID,
+				Data:      result.Vector.Data,
+				Metadata:  toStringMetadata(result.Vector.Metadata),
+				ClusterId: result.Vector.ClusterID,
+			},
 			Distance:  float32(result.Distance),
 			Score:     float32(calculateScore(result.Distance)),
 			ClusterId: fmt.Sprintf("%d", result.Vector.ClusterID),
@@ -474,13 +474,13 @@ func (s *SearchServer) convertToProtoResults(results []*types.SearchResult) []*p
 }
 
 func (s *SearchServer) filterByDistance(results []*types.SearchResult, threshold float64) []*types.SearchResult {
-    filtered := make([]*types.SearchResult, 0, len(results))
-    for _, result := range results {
-        if result.Distance <= threshold {
-            filtered = append(filtered, result)
-        }
-    }
-    return filtered
+	filtered := make([]*types.SearchResult, 0, len(results))
+	for _, result := range results {
+		if result.Distance <= threshold {
+			filtered = append(filtered, result)
+		}
+	}
+	return filtered
 }
 
 func (s *SearchServer) recordMetrics(operation string, duration time.Duration, err error) {
@@ -506,9 +506,9 @@ func calculateScore(distance float64) float64 {
 	if distance <= 0 {
 		return 1.0
 	}
-	
+
 	// Use exponential decay for score calculation
-    score := math.Exp(-distance / 10.0)
+	score := math.Exp(-distance / 10.0)
 	if score > 1.0 {
 		score = 1.0
 	}
@@ -516,23 +516,23 @@ func calculateScore(distance float64) float64 {
 }
 
 func toMetadata(in map[string]string) map[string]interface{} {
-    if in == nil {
-        return nil
-    }
-    out := make(map[string]interface{}, len(in))
-    for k, v := range in {
-        out[k] = v
-    }
-    return out
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func toStringMetadata(in map[string]interface{}) map[string]string {
-    if in == nil {
-        return nil
-    }
-    out := make(map[string]string, len(in))
-    for k, v := range in {
-        out[k] = fmt.Sprint(v)
-    }
-    return out
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = fmt.Sprint(v)
+	}
+	return out
 }

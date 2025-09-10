@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/metrics"
-	searchconfig "vexdb/internal/search/config"
-	"vexdb/internal/service"
-	"vexdb/internal/storage/search"
-	"vexdb/internal/types"
+	"vxdb/internal/metrics"
+	searchconfig "vxdb/internal/search/config"
+	"vxdb/internal/service"
+	"vxdb/internal/storage/search"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )

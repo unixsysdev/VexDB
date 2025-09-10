@@ -1,29 +1,29 @@
-# VexDB Kubernetes Deployment Configuration
-# This configuration deploys all three VexDB services with production-ready settings
+# VxDB Kubernetes Deployment Configuration
+# This configuration deploys all three VxDB services with production-ready settings
 
 ---
-# Namespace for VexDB components
+# Namespace for VxDB components
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: vexdb
+  name: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: namespace
 
 ---
-# ConfigMap for VexDB Insert Service configuration
+# ConfigMap for VxDB Insert Service configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vexinsert-config
-  namespace: vexdb
+  name: vxinsert-config
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
 data:
   config.yaml: |
-    # VexDB Insert Service Configuration
+    # VxDB Insert Service Configuration
     server:
       host: "0.0.0.0"
       port: 8080
@@ -43,14 +43,14 @@ data:
       host: "0.0.0.0"
       port: 9091
       path: "/metrics"
-      namespace: "vexdb"
+      namespace: "vxdb"
       subsystem: "insert"
     
     cluster:
-      name: "vexdb-cluster"
-      data_dir: "/var/lib/vexdb/data"
-      wal_dir: "/var/lib/vexdb/wal"
-      snapshot_dir: "/var/lib/vexdb/snapshots"
+      name: "vxdb-cluster"
+      data_dir: "/var/lib/vxdb/data"
+      wal_dir: "/var/lib/vxdb/wal"
+      snapshot_dir: "/var/lib/vxdb/snapshots"
     
     replication:
       enabled: true
@@ -97,18 +97,18 @@ data:
         by_ip: true
 
 ---
-# ConfigMap for VexDB Storage Service configuration
+# ConfigMap for VxDB Storage Service configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vexstorage-config
-  namespace: vexdb
+  name: vxstorage-config
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
 data:
   config.yaml: |
-    # VexDB Storage Service Configuration
+    # VxDB Storage Service Configuration
     server:
       host: "0.0.0.0"
       port: 8082
@@ -128,19 +128,19 @@ data:
       host: "0.0.0.0"
       port: 9094
       path: "/metrics"
-      namespace: "vexdb"
+      namespace: "vxdb"
       subsystem: "storage"
     
     cluster:
-      name: "vexdb-cluster"
-      data_dir: "/var/lib/vexdb/data"
-      wal_dir: "/var/lib/vexdb/wal"
-      snapshot_dir: "/var/lib/vexdb/snapshots"
+      name: "vxdb-cluster"
+      data_dir: "/var/lib/vxdb/data"
+      wal_dir: "/var/lib/vxdb/wal"
+      snapshot_dir: "/var/lib/vxdb/snapshots"
     
     storage:
-      data_dir: "/var/lib/vexdb/storage"
-      wal_dir: "/var/lib/vexdb/wal"
-      temp_dir: "/var/lib/vexdb/temp"
+      data_dir: "/var/lib/vxdb/storage"
+      wal_dir: "/var/lib/vxdb/wal"
+      temp_dir: "/var/lib/vxdb/temp"
       
       segment:
         max_vectors: 10000
@@ -198,18 +198,18 @@ data:
         enabled: false
 
 ---
-# ConfigMap for VexDB Search Service configuration
+# ConfigMap for VxDB Search Service configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: vexsearch-config
-  namespace: vexdb
+  name: vxsearch-config
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
 data:
   config.yaml: |
-    # VexDB Search Service Configuration
+    # VxDB Search Service Configuration
     server:
       host: "0.0.0.0"
       port: 8083
@@ -229,14 +229,14 @@ data:
       host: "0.0.0.0"
       port: 9097
       path: "/metrics"
-      namespace: "vexdb"
+      namespace: "vxdb"
       subsystem: "search"
     
     cluster:
-      name: "vexdb-cluster"
-      data_dir: "/var/lib/vexdb/data"
-      wal_dir: "/var/lib/vexdb/wal"
-      snapshot_dir: "/var/lib/vexdb/snapshots"
+      name: "vxdb-cluster"
+      data_dir: "/var/lib/vxdb/data"
+      wal_dir: "/var/lib/vxdb/wal"
+      snapshot_dir: "/var/lib/vxdb/snapshots"
     
     engine:
       max_results: 100
@@ -347,14 +347,14 @@ data:
         max_results: 1000
 
 ---
-# Secret for VexDB API keys and certificates
+# Secret for VxDB API keys and certificates
 apiVersion: v1
 kind: Secret
 metadata:
-  name: vexdb-secrets
-  namespace: vexdb
+  name: vxdb-secrets
+  namespace: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: secrets
 type: Opaque
 data:
@@ -365,19 +365,19 @@ data:
   tls-key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K"
 
 ---
-# Service for VexDB Insert Service
+# Service for VxDB Insert Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: vexinsert-service
-  namespace: vexdb
+  name: vxinsert-service
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
 spec:
   selector:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
   ports:
     - name: http
       port: 8080
@@ -406,19 +406,19 @@ spec:
   type: ClusterIP
 
 ---
-# Service for VexDB Storage Service
+# Service for VxDB Storage Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: vexstorage-service
-  namespace: vexdb
+  name: vxstorage-service
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
 spec:
   selector:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
   ports:
     - name: http
       port: 8082
@@ -439,19 +439,19 @@ spec:
   type: ClusterIP
 
 ---
-# Service for VexDB Search Service
+# Service for VxDB Search Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: vexsearch-service
-  namespace: vexdb
+  name: vxsearch-service
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
 spec:
   selector:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
   ports:
     - name: http
       port: 8083
@@ -472,31 +472,31 @@ spec:
   type: ClusterIP
 
 ---
-# Deployment for VexDB Insert Service
+# Deployment for VxDB Insert Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vexinsert-deployment
-  namespace: vexdb
+  name: vxinsert-deployment
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: vexdb
-      component: vexinsert
+      app: vxdb
+      component: vxinsert
   template:
     metadata:
       labels:
-        app: vexdb
-        component: vexinsert
+        app: vxdb
+        component: vxinsert
     spec:
-      serviceAccountName: vexdb-service-account
+      serviceAccountName: vxdb-service-account
       containers:
-        - name: vexinsert
-          image: vexdb/vexinsert:latest
+        - name: vxinsert
+          image: vxdb/vxinsert:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -512,8 +512,8 @@ spec:
             - containerPort: 6379
               name: redis
           env:
-            - name: VEXDB_CONFIG_FILE
-              value: "/etc/vexdb/config.yaml"
+            - name: VXDB_CONFIG_FILE
+              value: "/etc/vxdb/config.yaml"
             - name: GIN_MODE
               value: "release"
             - name: POD_NAME
@@ -530,18 +530,18 @@ spec:
                   fieldPath: status.podIP
           volumeMounts:
             - name: config
-              mountPath: /etc/vexdb
+              mountPath: /etc/vxdb
               readOnly: true
             - name: data
-              mountPath: /var/lib/vexdb/data
+              mountPath: /var/lib/vxdb/data
             - name: wal
-              mountPath: /var/lib/vexdb/wal
+              mountPath: /var/lib/vxdb/wal
             - name: snapshots
-              mountPath: /var/lib/vexdb/snapshots
+              mountPath: /var/lib/vxdb/snapshots
             - name: buffer
-              mountPath: /var/lib/vexdb/buffer
+              mountPath: /var/lib/vxdb/buffer
             - name: logs
-              mountPath: /var/log/vexdb
+              mountPath: /var/log/vxdb
           resources:
             requests:
               memory: "512Mi"
@@ -568,49 +568,49 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: vexinsert-config
+            name: vxinsert-config
         - name: data
           persistentVolumeClaim:
-            claimName: vexinsert-data-pvc
+            claimName: vxinsert-data-pvc
         - name: wal
           persistentVolumeClaim:
-            claimName: vexinsert-wal-pvc
+            claimName: vxinsert-wal-pvc
         - name: snapshots
           persistentVolumeClaim:
-            claimName: vexinsert-snapshots-pvc
+            claimName: vxinsert-snapshots-pvc
         - name: buffer
           persistentVolumeClaim:
-            claimName: vexinsert-buffer-pvc
+            claimName: vxinsert-buffer-pvc
         - name: logs
           persistentVolumeClaim:
-            claimName: vexinsert-logs-pvc
+            claimName: vxinsert-logs-pvc
 
 ---
-# Deployment for VexDB Storage Service
+# Deployment for VxDB Storage Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vexstorage-deployment
-  namespace: vexdb
+  name: vxstorage-deployment
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: vexdb
-      component: vexstorage
+      app: vxdb
+      component: vxstorage
   template:
     metadata:
       labels:
-        app: vexdb
-        component: vexstorage
+        app: vxdb
+        component: vxstorage
     spec:
-      serviceAccountName: vexdb-service-account
+      serviceAccountName: vxdb-service-account
       containers:
-        - name: vexstorage
-          image: vexdb/vexstorage:latest
+        - name: vxstorage
+          image: vxdb/vxstorage:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082
@@ -622,8 +622,8 @@ spec:
             - containerPort: 9096
               name: grpc
           env:
-            - name: VEXDB_CONFIG_FILE
-              value: "/etc/vexdb/config.yaml"
+            - name: VXDB_CONFIG_FILE
+              value: "/etc/vxdb/config.yaml"
             - name: GIN_MODE
               value: "release"
             - name: POD_NAME
@@ -640,24 +640,24 @@ spec:
                   fieldPath: status.podIP
           volumeMounts:
             - name: config
-              mountPath: /etc/vexdb
+              mountPath: /etc/vxdb
               readOnly: true
             - name: data
-              mountPath: /var/lib/vexdb/data
+              mountPath: /var/lib/vxdb/data
             - name: wal
-              mountPath: /var/lib/vexdb/wal
+              mountPath: /var/lib/vxdb/wal
             - name: snapshots
-              mountPath: /var/lib/vexdb/snapshots
+              mountPath: /var/lib/vxdb/snapshots
             - name: storage
-              mountPath: /var/lib/vexdb/storage
+              mountPath: /var/lib/vxdb/storage
             - name: temp
-              mountPath: /var/lib/vexdb/temp
+              mountPath: /var/lib/vxdb/temp
             - name: manifest
-              mountPath: /var/lib/vexdb/manifest
+              mountPath: /var/lib/vxdb/manifest
             - name: backups
-              mountPath: /var/lib/vexdb/backups
+              mountPath: /var/lib/vxdb/backups
             - name: logs
-              mountPath: /var/log/vexdb
+              mountPath: /var/log/vxdb
           resources:
             requests:
               memory: "1Gi"
@@ -684,58 +684,58 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: vexstorage-config
+            name: vxstorage-config
         - name: data
           persistentVolumeClaim:
-            claimName: vexstorage-data-pvc
+            claimName: vxstorage-data-pvc
         - name: wal
           persistentVolumeClaim:
-            claimName: vexstorage-wal-pvc
+            claimName: vxstorage-wal-pvc
         - name: snapshots
           persistentVolumeClaim:
-            claimName: vexstorage-snapshots-pvc
+            claimName: vxstorage-snapshots-pvc
         - name: storage
           persistentVolumeClaim:
-            claimName: vexstorage-storage-pvc
+            claimName: vxstorage-storage-pvc
         - name: temp
           persistentVolumeClaim:
-            claimName: vexstorage-temp-pvc
+            claimName: vxstorage-temp-pvc
         - name: manifest
           persistentVolumeClaim:
-            claimName: vexstorage-manifest-pvc
+            claimName: vxstorage-manifest-pvc
         - name: backups
           persistentVolumeClaim:
-            claimName: vexstorage-backups-pvc
+            claimName: vxstorage-backups-pvc
         - name: logs
           persistentVolumeClaim:
-            claimName: vexstorage-logs-pvc
+            claimName: vxstorage-logs-pvc
 
 ---
-# Deployment for VexDB Search Service
+# Deployment for VxDB Search Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vexsearch-deployment
-  namespace: vexdb
+  name: vxsearch-deployment
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: vexdb
-      component: vexsearch
+      app: vxdb
+      component: vxsearch
   template:
     metadata:
       labels:
-        app: vexdb
-        component: vexsearch
+        app: vxdb
+        component: vxsearch
     spec:
-      serviceAccountName: vexdb-service-account
+      serviceAccountName: vxdb-service-account
       containers:
-        - name: vexsearch
-          image: vexdb/vexsearch:latest
+        - name: vxsearch
+          image: vxdb/vxsearch:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
@@ -747,8 +747,8 @@ spec:
             - containerPort: 9099
               name: grpc
           env:
-            - name: VEXDB_CONFIG_FILE
-              value: "/etc/vexdb/config.yaml"
+            - name: VXDB_CONFIG_FILE
+              value: "/etc/vxdb/config.yaml"
             - name: GIN_MODE
               value: "release"
             - name: POD_NAME
@@ -765,18 +765,18 @@ spec:
                   fieldPath: status.podIP
           volumeMounts:
             - name: config
-              mountPath: /etc/vexdb
+              mountPath: /etc/vxdb
               readOnly: true
             - name: data
-              mountPath: /var/lib/vexdb/data
+              mountPath: /var/lib/vxdb/data
             - name: wal
-              mountPath: /var/lib/vexdb/wal
+              mountPath: /var/lib/vxdb/wal
             - name: snapshots
-              mountPath: /var/lib/vexdb/snapshots
+              mountPath: /var/lib/vxdb/snapshots
             - name: cache
-              mountPath: /var/lib/vexdb/cache
+              mountPath: /var/lib/vxdb/cache
             - name: logs
-              mountPath: /var/log/vexdb
+              mountPath: /var/log/vxdb
           resources:
             requests:
               memory: "1Gi"
@@ -803,43 +803,43 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: vexsearch-config
+            name: vxsearch-config
         - name: data
           persistentVolumeClaim:
-            claimName: vexsearch-data-pvc
+            claimName: vxsearch-data-pvc
         - name: wal
           persistentVolumeClaim:
-            claimName: vexsearch-wal-pvc
+            claimName: vxsearch-wal-pvc
         - name: snapshots
           persistentVolumeClaim:
-            claimName: vexsearch-snapshots-pvc
+            claimName: vxsearch-snapshots-pvc
         - name: cache
           persistentVolumeClaim:
-            claimName: vexsearch-cache-pvc
+            claimName: vxsearch-cache-pvc
         - name: logs
           persistentVolumeClaim:
-            claimName: vexsearch-logs-pvc
+            claimName: vxsearch-logs-pvc
 
 ---
-# Service Account for VexDB services
+# Service Account for VxDB services
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: vexdb-service-account
-  namespace: vexdb
+  name: vxdb-service-account
+  namespace: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: service-account
 
 ---
-# Role for VexDB services
+# Role for VxDB services
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: vexdb-role
-  namespace: vexdb
+  name: vxdb-role
+  namespace: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: role
 rules:
   - apiGroups: [""]
@@ -853,39 +853,39 @@ rules:
     verbs: ["get", "list"]
 
 ---
-# Role Binding for VexDB services
+# Role Binding for VxDB services
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: vexdb-role-binding
-  namespace: vexdb
+  name: vxdb-role-binding
+  namespace: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: role-binding
 subjects:
   - kind: ServiceAccount
-    name: vexdb-service-account
-    namespace: vexdb
+    name: vxdb-service-account
+    namespace: vxdb
 roleRef:
   kind: Role
-  name: vexdb-role
+  name: vxdb-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
-# Horizontal Pod Autoscaler for VexDB Insert Service
+# Horizontal Pod Autoscaler for VxDB Insert Service
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: vexinsert-hpa
-  namespace: vexdb
+  name: vxinsert-hpa
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: vexinsert-deployment
+    name: vxinsert-deployment
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -903,20 +903,20 @@ spec:
           averageUtilization: 80
 
 ---
-# Horizontal Pod Autoscaler for VexDB Storage Service
+# Horizontal Pod Autoscaler for VxDB Storage Service
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: vexstorage-hpa
-  namespace: vexdb
+  name: vxstorage-hpa
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: vexstorage-deployment
+    name: vxstorage-deployment
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -934,20 +934,20 @@ spec:
           averageUtilization: 80
 
 ---
-# Horizontal Pod Autoscaler for VexDB Search Service
+# Horizontal Pod Autoscaler for VxDB Search Service
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: vexsearch-hpa
-  namespace: vexdb
+  name: vxsearch-hpa
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: vexsearch-deployment
+    name: vxsearch-deployment
   minReplicas: 3
   maxReplicas: 10
   metrics:
@@ -965,15 +965,15 @@ spec:
           averageUtilization: 80
 
 ---
-# Persistent Volume Claims for VexDB Insert Service
+# Persistent Volume Claims for VxDB Insert Service
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexinsert-data-pvc
-  namespace: vexdb
+  name: vxinsert-data-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
     volume: data
 spec:
   accessModes:
@@ -987,11 +987,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexinsert-wal-pvc
-  namespace: vexdb
+  name: vxinsert-wal-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
     volume: wal
 spec:
   accessModes:
@@ -1005,11 +1005,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexinsert-snapshots-pvc
-  namespace: vexdb
+  name: vxinsert-snapshots-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
     volume: snapshots
 spec:
   accessModes:
@@ -1023,11 +1023,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexinsert-buffer-pvc
-  namespace: vexdb
+  name: vxinsert-buffer-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
     volume: buffer
 spec:
   accessModes:
@@ -1041,11 +1041,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexinsert-logs-pvc
-  namespace: vexdb
+  name: vxinsert-logs-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexinsert
+    app: vxdb
+    component: vxinsert
     volume: logs
 spec:
   accessModes:
@@ -1056,15 +1056,15 @@ spec:
   storageClassName: standard
 
 ---
-# Persistent Volume Claims for VexDB Storage Service
+# Persistent Volume Claims for VxDB Storage Service
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-data-pvc
-  namespace: vexdb
+  name: vxstorage-data-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: data
 spec:
   accessModes:
@@ -1078,11 +1078,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-wal-pvc
-  namespace: vexdb
+  name: vxstorage-wal-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: wal
 spec:
   accessModes:
@@ -1096,11 +1096,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-snapshots-pvc
-  namespace: vexdb
+  name: vxstorage-snapshots-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: snapshots
 spec:
   accessModes:
@@ -1114,11 +1114,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-storage-pvc
-  namespace: vexdb
+  name: vxstorage-storage-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: storage
 spec:
   accessModes:
@@ -1132,11 +1132,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-temp-pvc
-  namespace: vexdb
+  name: vxstorage-temp-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: temp
 spec:
   accessModes:
@@ -1150,11 +1150,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-manifest-pvc
-  namespace: vexdb
+  name: vxstorage-manifest-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: manifest
 spec:
   accessModes:
@@ -1168,11 +1168,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-backups-pvc
-  namespace: vexdb
+  name: vxstorage-backups-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: backups
 spec:
   accessModes:
@@ -1186,11 +1186,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexstorage-logs-pvc
-  namespace: vexdb
+  name: vxstorage-logs-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexstorage
+    app: vxdb
+    component: vxstorage
     volume: logs
 spec:
   accessModes:
@@ -1201,15 +1201,15 @@ spec:
   storageClassName: standard
 
 ---
-# Persistent Volume Claims for VexDB Search Service
+# Persistent Volume Claims for VxDB Search Service
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexsearch-data-pvc
-  namespace: vexdb
+  name: vxsearch-data-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
     volume: data
 spec:
   accessModes:
@@ -1223,11 +1223,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexsearch-wal-pvc
-  namespace: vexdb
+  name: vxsearch-wal-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
     volume: wal
 spec:
   accessModes:
@@ -1241,11 +1241,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexsearch-snapshots-pvc
-  namespace: vexdb
+  name: vxsearch-snapshots-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
     volume: snapshots
 spec:
   accessModes:
@@ -1259,11 +1259,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexsearch-cache-pvc
-  namespace: vexdb
+  name: vxsearch-cache-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
     volume: cache
 spec:
   accessModes:
@@ -1277,11 +1277,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: vexsearch-logs-pvc
-  namespace: vexdb
+  name: vxsearch-logs-pvc
+  namespace: vxdb
   labels:
-    app: vexdb
-    component: vexsearch
+    app: vxdb
+    component: vxsearch
     volume: logs
 spec:
   accessModes:
@@ -1292,14 +1292,14 @@ spec:
   storageClassName: standard
 
 ---
-# Ingress for VexDB services
+# Ingress for VxDB services
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: vexdb-ingress
-  namespace: vexdb
+  name: vxdb-ingress
+  namespace: vxdb
   labels:
-    app: vexdb
+    app: vxdb
     component: ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -1308,30 +1308,30 @@ metadata:
 spec:
   tls:
     - hosts:
-        - vexdb.example.com
-      secretName: vexdb-tls
+        - vxdb.example.com
+      secretName: vxdb-tls
   rules:
-    - host: vexdb.example.com
+    - host: vxdb.example.com
       http:
         paths:
           - path: /insert
             pathType: Prefix
             backend:
               service:
-                name: vexinsert-service
+                name: vxinsert-service
                 port:
                   number: 8080
           - path: /storage
             pathType: Prefix
             backend:
               service:
-                name: vexstorage-service
+                name: vxstorage-service
                 port:
                   number: 8082
           - path: /search
             pathType: Prefix
             backend:
               service:
-                name: vexsearch-service
+                name: vxsearch-service
                 port:
                   number: 8083

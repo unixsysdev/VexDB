@@ -8,8 +8,8 @@ import (
 	"math"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/metrics"
+	"vxdb/internal/config"
+	"vxdb/internal/metrics"
 
 	"go.uber.org/zap"
 )

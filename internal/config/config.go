@@ -28,21 +28,21 @@ func LoadConfig(serviceType, path string) (Config, error) {
 	}
 }
 
-// InsertConfig holds configuration for the vexinsert service
+// InsertConfig holds configuration for the vxinsert service
 type InsertConfig struct {
-	Server   ServerConfig   `yaml:"server"`
-	Cluster  ClusterConfig  `yaml:"cluster"`
+	Server    ServerConfig   `yaml:"server"`
+	Cluster   ClusterConfig  `yaml:"cluster"`
 	Protocols ProtocolConfig `yaml:"protocols"`
 }
 
-// StorageConfig holds configuration for the vexstorage service
+// StorageConfig holds configuration for the vxstorage service
 type StorageConfig struct {
-	Server   ServerConfig    `yaml:"server"`
-	Storage  StorageEngineConfig `yaml:"storage"`
-	Cluster  ClusterConfig   `yaml:"cluster"`
+	Server  ServerConfig        `yaml:"server"`
+	Storage StorageEngineConfig `yaml:"storage"`
+	Cluster ClusterConfig       `yaml:"cluster"`
 }
 
-// SearchConfig holds configuration for the vexsearch service
+// SearchConfig holds configuration for the vxsearch service
 type SearchConfig struct {
 	Server  ServerConfig  `yaml:"server"`
 	Cluster ClusterConfig `yaml:"cluster"`
@@ -61,42 +61,42 @@ type ClusterConfig struct {
 	NodeID       string   `yaml:"node_id"`
 	ClusterNodes []string `yaml:"cluster_nodes"`
 	Replication  struct {
-		Enabled      bool   `yaml:"enabled"`
-		Factor       int    `yaml:"factor"`
-		Strategy     string `yaml:"strategy"`
+		Enabled  bool   `yaml:"enabled"`
+		Factor   int    `yaml:"factor"`
+		Strategy string `yaml:"strategy"`
 	} `yaml:"replication"`
 }
 
 // ProtocolConfig holds protocol adapter configuration
 type ProtocolConfig struct {
 	HTTP struct {
-		Enabled bool   `yaml:"enabled"`
-		Port    int    `yaml:"port"`
+		Enabled bool `yaml:"enabled"`
+		Port    int  `yaml:"port"`
 	} `yaml:"http"`
 	WebSocket struct {
-		Enabled bool   `yaml:"enabled"`
-		Port    int    `yaml:"port"`
+		Enabled bool `yaml:"enabled"`
+		Port    int  `yaml:"port"`
 	} `yaml:"websocket"`
 	GRPC struct {
-		Enabled bool   `yaml:"enabled"`
-		Port    int    `yaml:"port"`
+		Enabled bool `yaml:"enabled"`
+		Port    int  `yaml:"port"`
 	} `yaml:"grpc"`
 	Redis struct {
-		Enabled bool   `yaml:"enabled"`
-		Port    int    `yaml:"port"`
+		Enabled bool `yaml:"enabled"`
+		Port    int  `yaml:"port"`
 	} `yaml:"redis"`
 }
 
 // StorageEngineConfig holds storage engine configuration
 type StorageEngineConfig struct {
-	DataDir           string `yaml:"data_dir"`
-	SegmentSize       int    `yaml:"segment_size"`
-	BufferSize        int    `yaml:"buffer_size"`
-	FlushInterval     int    `yaml:"flush_interval"`
-	Compression       string `yaml:"compression"`
+	DataDir       string `yaml:"data_dir"`
+	SegmentSize   int    `yaml:"segment_size"`
+	BufferSize    int    `yaml:"buffer_size"`
+	FlushInterval int    `yaml:"flush_interval"`
+	Compression   string `yaml:"compression"`
 }
 
-// LoadInsertConfig loads configuration for vexinsert service
+// LoadInsertConfig loads configuration for vxinsert service
 func LoadInsertConfig(path string) (*InsertConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -111,7 +111,7 @@ func LoadInsertConfig(path string) (*InsertConfig, error) {
 	return &config, nil
 }
 
-// LoadStorageConfig loads configuration for vexstorage service
+// LoadStorageConfig loads configuration for vxstorage service
 func LoadStorageConfig(path string) (*StorageConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -126,7 +126,7 @@ func LoadStorageConfig(path string) (*StorageConfig, error) {
 	return &config, nil
 }
 
-// LoadSearchConfig loads configuration for vexsearch service
+// LoadSearchConfig loads configuration for vxsearch service
 func LoadSearchConfig(path string) (*SearchConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

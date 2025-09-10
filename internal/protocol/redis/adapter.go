@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/protocol/adapter"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/protocol/adapter"
 )
 
 // RedisAdapter implements the ProtocolAdapter interface for Redis protocol (RESP)

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	
-	"vexdb/internal/config"
-	"vexdb/internal/errors"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
+
+	"vxdb/internal/config"
+	"vxdb/internal/errors"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
 )
 
 var (
@@ -38,12 +38,12 @@ type HealthCheck func(ctx context.Context) error
 
 // HealthCheckConfig represents health check configuration
 type HealthCheckConfig struct {
-	Name        string        `yaml:"name" json:"name"`
-	Enabled     bool          `yaml:"enabled" json:"enabled"`
-	Interval    time.Duration `yaml:"interval" json:"interval"`
-	Timeout     time.Duration `yaml:"timeout" json:"timeout"`
+	Name         string        `yaml:"name" json:"name"`
+	Enabled      bool          `yaml:"enabled" json:"enabled"`
+	Interval     time.Duration `yaml:"interval" json:"interval"`
+	Timeout      time.Duration `yaml:"timeout" json:"timeout"`
 	InitialDelay time.Duration `yaml:"initial_delay" json:"initial_delay"`
-	Critical    bool          `yaml:"critical" json:"critical"`
+	Critical     bool          `yaml:"critical" json:"critical"`
 }
 
 // HealthCheckResult represents the result of a health check
@@ -61,22 +61,22 @@ type HealthCheckResult struct {
 
 // HealthReport represents a comprehensive health report
 type HealthReport struct {
-	Status       HealthStatus         `json:"status"`
-	Timestamp    time.Time            `json:"timestamp"`
-	Version      string               `json:"version,omitempty"`
-	Uptime       time.Duration        `json:"uptime"`
-	Checks       map[string]HealthCheckResult `json:"checks"`
-	Summary      HealthSummary        `json:"summary"`
+	Status    HealthStatus                 `json:"status"`
+	Timestamp time.Time                    `json:"timestamp"`
+	Version   string                       `json:"version,omitempty"`
+	Uptime    time.Duration                `json:"uptime"`
+	Checks    map[string]HealthCheckResult `json:"checks"`
+	Summary   HealthSummary                `json:"summary"`
 }
 
 // HealthSummary represents a summary of health checks
 type HealthSummary struct {
-	Total      int `json:"total"`
-	Healthy    int `json:"healthy"`
-	Unhealthy  int `json:"unhealthy"`
-	Degraded   int `json:"degraded"`
-	Unknown    int `json:"unknown"`
-	Critical   int `json:"critical"`
+	Total     int `json:"total"`
+	Healthy   int `json:"healthy"`
+	Unhealthy int `json:"unhealthy"`
+	Degraded  int `json:"degraded"`
+	Unknown   int `json:"unknown"`
+	Critical  int `json:"critical"`
 }
 
 // HealthConfig represents the health check service configuration
@@ -95,44 +95,44 @@ type HealthConfig struct {
 // DefaultHealthConfig returns the default health check configuration
 func DefaultHealthConfig() *HealthConfig {
 	return &HealthConfig{
-		Enabled:        true,
-		Port:           8080,
-		Path:           "/health",
-		ReadTimeout:    5 * time.Second,
-		WriteTimeout:   5 * time.Second,
-		IdleTimeout:    60 * time.Second,
+		Enabled:      true,
+		Port:         8080,
+		Path:         "/health",
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  60 * time.Second,
 		Checks: []HealthCheckConfig{
 			{
-				Name:        "storage",
-				Enabled:     true,
-				Interval:    30 * time.Second,
-				Timeout:     10 * time.Second,
+				Name:         "storage",
+				Enabled:      true,
+				Interval:     30 * time.Second,
+				Timeout:      10 * time.Second,
 				InitialDelay: 5 * time.Second,
-				Critical:    true,
+				Critical:     true,
 			},
 			{
-				Name:        "search",
-				Enabled:     true,
-				Interval:    30 * time.Second,
-				Timeout:     10 * time.Second,
+				Name:         "search",
+				Enabled:      true,
+				Interval:     30 * time.Second,
+				Timeout:      10 * time.Second,
 				InitialDelay: 5 * time.Second,
-				Critical:    true,
+				Critical:     true,
 			},
 			{
-				Name:        "memory",
-				Enabled:     true,
-				Interval:    60 * time.Second,
-				Timeout:     5 * time.Second,
+				Name:         "memory",
+				Enabled:      true,
+				Interval:     60 * time.Second,
+				Timeout:      5 * time.Second,
 				InitialDelay: 10 * time.Second,
-				Critical:    false,
+				Critical:     false,
 			},
 			{
-				Name:        "disk",
-				Enabled:     true,
-				Interval:    60 * time.Second,
-				Timeout:     5 * time.Second,
+				Name:         "disk",
+				Enabled:      true,
+				Interval:     60 * time.Second,
+				Timeout:      5 * time.Second,
 				InitialDelay: 10 * time.Second,
-				Critical:    false,
+				Critical:     false,
 			},
 		},
 		EnableDetailed: true,
@@ -142,37 +142,37 @@ func DefaultHealthConfig() *HealthConfig {
 
 // HealthEndpoints represents health check endpoints
 type HealthEndpoints struct {
-	config     *HealthConfig
-	logger     logging.Logger
-	metrics    *metrics.ServiceMetrics
-	
+	config  *HealthConfig
+	logger  logging.Logger
+	metrics *metrics.ServiceMetrics
+
 	// Health checks
-	checks     map[string]HealthCheck
-	results    map[string]HealthCheckResult
-	mu         sync.RWMutex
-	
+	checks  map[string]HealthCheck
+	results map[string]HealthCheckResult
+	mu      sync.RWMutex
+
 	// HTTP server
-	server     *http.Server
-	startTime  time.Time
-	
+	server    *http.Server
+	startTime time.Time
+
 	// Lifecycle
-	started    bool
-	stopped    bool
-	shutdown   chan struct{}
+	started  bool
+	stopped  bool
+	shutdown chan struct{}
 }
 
 // NewHealthEndpoints creates new health check endpoints
 func NewHealthEndpoints(cfg config.Config, logger logging.Logger, metrics *metrics.ServiceMetrics) (*HealthEndpoints, error) {
 	healthConfig := DefaultHealthConfig()
-	
+
 	// For now, use default config since we don't have a generic Get method
 	// TODO: Implement proper configuration extraction based on config type
-	
+
 	// Validate configuration
 	if err := validateHealthConfig(healthConfig); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidCheckConfig, err)
 	}
-	
+
 	endpoints := &HealthEndpoints{
 		config:    healthConfig,
 		logger:    logger,
@@ -182,16 +182,16 @@ func NewHealthEndpoints(cfg config.Config, logger logging.Logger, metrics *metri
 		startTime: time.Now(),
 		shutdown:  make(chan struct{}),
 	}
-	
+
 	// Initialize HTTP server
 	endpoints.initializeHTTPServer()
-	
+
 	endpoints.logger.Info("Created health endpoints",
 		zap.Bool("enabled", healthConfig.Enabled),
 		zap.Int("port", healthConfig.Port),
 		zap.String("path", healthConfig.Path),
 		zap.Int("checks_count", len(healthConfig.Checks)))
-	
+
 	return endpoints, nil
 }
 
@@ -200,23 +200,23 @@ func validateHealthConfig(cfg *HealthConfig) error {
 	if cfg.Port <= 0 || cfg.Port > 65535 {
 		return errors.New(errors.ErrorCodeInvalidArgument, "port must be between 1 and 65535")
 	}
-	
+
 	if cfg.Path == "" {
 		return errors.New(errors.ErrorCodeInvalidArgument, "path cannot be empty")
 	}
-	
+
 	if cfg.ReadTimeout <= 0 {
 		return errors.New(errors.ErrorCodeInvalidArgument, "read timeout must be positive")
 	}
-	
+
 	if cfg.WriteTimeout <= 0 {
 		return errors.New(errors.ErrorCodeInvalidArgument, "write timeout must be positive")
 	}
-	
+
 	if cfg.IdleTimeout <= 0 {
 		return errors.New(errors.ErrorCodeInvalidArgument, "idle timeout must be positive")
 	}
-	
+
 	for _, check := range cfg.Checks {
 		if check.Name == "" {
 			return errors.New(errors.ErrorCodeInvalidArgument, "check name cannot be empty")
@@ -231,20 +231,20 @@ func validateHealthConfig(cfg *HealthConfig) error {
 			return errors.New(errors.ErrorCodeInvalidArgument, "check initial delay must be non-negative")
 		}
 	}
-	
+
 	return nil
 }
 
 // initializeHTTPServer initializes the HTTP server
 func (h *HealthEndpoints) initializeHTTPServer() {
 	mux := http.NewServeMux()
-	
+
 	// Register health endpoints
 	mux.HandleFunc(h.config.Path, h.handleHealth)
 	mux.HandleFunc(h.config.Path+"/live", h.handleLiveness)
 	mux.HandleFunc(h.config.Path+"/ready", h.handleReadiness)
 	mux.HandleFunc(h.config.Path+"/detailed", h.handleDetailedHealth)
-	
+
 	h.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", h.config.Port),
 		Handler:      mux,
@@ -258,11 +258,11 @@ func (h *HealthEndpoints) initializeHTTPServer() {
 func (h *HealthEndpoints) Start() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.started {
 		return nil
 	}
-	
+
 	// Start HTTP server
 	go func() {
 		h.logger.Info("Starting health endpoints server", zap.Int("port", h.config.Port))
@@ -270,19 +270,19 @@ func (h *HealthEndpoints) Start() error {
 			h.logger.Error("Health endpoints server failed", zap.Error(err))
 		}
 	}()
-	
+
 	// Start health check runners
 	for _, checkConfig := range h.config.Checks {
 		if checkConfig.Enabled {
 			go h.runHealthCheck(checkConfig)
 		}
 	}
-	
+
 	h.started = true
 	h.stopped = false
-	
+
 	h.logger.Info("Started health endpoints")
-	
+
 	return nil
 }
 
@@ -290,31 +290,31 @@ func (h *HealthEndpoints) Start() error {
 func (h *HealthEndpoints) Stop() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if h.stopped {
 		return nil
 	}
-	
+
 	if !h.started {
 		return nil
 	}
-	
+
 	// Signal shutdown
 	close(h.shutdown)
-	
+
 	// Shutdown HTTP server
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	if err := h.server.Shutdown(ctx); err != nil {
 		h.logger.Error("Failed to shutdown health endpoints server", zap.Error(err))
 	}
-	
+
 	h.stopped = true
 	h.started = false
-	
+
 	h.logger.Info("Stopped health endpoints")
-	
+
 	return nil
 }
 
@@ -322,7 +322,7 @@ func (h *HealthEndpoints) Stop() error {
 func (h *HealthEndpoints) IsRunning() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return h.started && !h.stopped
 }
 
@@ -330,13 +330,13 @@ func (h *HealthEndpoints) IsRunning() bool {
 func (h *HealthEndpoints) RegisterCheck(name string, check HealthCheck) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if _, exists := h.checks[name]; exists {
 		return fmt.Errorf("%w: %s", ErrServiceNotRegistered, name)
 	}
-	
+
 	h.checks[name] = check
-	
+
 	// Initialize result
 	h.results[name] = HealthCheckResult{
 		Name:      name,
@@ -346,9 +346,9 @@ func (h *HealthEndpoints) RegisterCheck(name string, check HealthCheck) error {
 		Checks:    0,
 		Failures:  0,
 	}
-	
+
 	h.logger.Info("Registered health check", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -356,16 +356,16 @@ func (h *HealthEndpoints) RegisterCheck(name string, check HealthCheck) error {
 func (h *HealthEndpoints) UnregisterCheck(name string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if _, exists := h.checks[name]; !exists {
 		return fmt.Errorf("%w: %s", ErrServiceNotRegistered, name)
 	}
-	
+
 	delete(h.checks, name)
 	delete(h.results, name)
-	
+
 	h.logger.Info("Unregistered health check", zap.String("name", name))
-	
+
 	return nil
 }
 
@@ -373,7 +373,7 @@ func (h *HealthEndpoints) UnregisterCheck(name string) error {
 func (h *HealthEndpoints) GetCheckResult(name string) (HealthCheckResult, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	result, exists := h.results[name]
 	return result, exists
 }
@@ -382,22 +382,22 @@ func (h *HealthEndpoints) GetCheckResult(name string) (HealthCheckResult, bool) 
 func (h *HealthEndpoints) GetHealthReport() *HealthReport {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	report := &HealthReport{
 		Timestamp: time.Now(),
 		Version:   "1.0.0",
 		Uptime:    time.Since(h.startTime),
 		Checks:    make(map[string]HealthCheckResult),
 	}
-	
+
 	// Copy results
 	for name, result := range h.results {
 		report.Checks[name] = result
 	}
-	
+
 	// Calculate overall status and summary
 	report.Status, report.Summary = h.calculateHealthStatus(report.Checks)
-	
+
 	return report
 }
 
@@ -405,12 +405,12 @@ func (h *HealthEndpoints) GetHealthReport() *HealthReport {
 func (h *HealthEndpoints) IsHealthy(service string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	result, exists := h.results[service]
 	if !exists {
 		return false
 	}
-	
+
 	return result.Status == StatusHealthy
 }
 
@@ -418,7 +418,7 @@ func (h *HealthEndpoints) IsHealthy(service string) bool {
 func (h *HealthEndpoints) GetConfig() *HealthConfig {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Return a copy of config
 	config := *h.config
 	return &config
@@ -428,19 +428,19 @@ func (h *HealthEndpoints) GetConfig() *HealthConfig {
 func (h *HealthEndpoints) UpdateConfig(config *HealthConfig) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	// Validate new configuration
 	if err := validateHealthConfig(config); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalidCheckConfig, err)
 	}
-	
+
 	h.config = config
-	
+
 	// Reinitialize HTTP server
 	h.initializeHTTPServer()
-	
+
 	h.logger.Info("Updated health endpoints configuration", zap.Any("config", config))
-	
+
 	return nil
 }
 
@@ -448,12 +448,12 @@ func (h *HealthEndpoints) UpdateConfig(config *HealthConfig) error {
 func (h *HealthEndpoints) Validate() error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Validate configuration
 	if err := validateHealthConfig(h.config); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -461,10 +461,10 @@ func (h *HealthEndpoints) Validate() error {
 func (h *HealthEndpoints) runHealthCheck(config HealthCheckConfig) {
 	// Wait for initial delay
 	time.Sleep(config.InitialDelay)
-	
+
 	ticker := time.NewTicker(config.Interval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -480,42 +480,42 @@ func (h *HealthEndpoints) executeHealthCheck(config HealthCheckConfig) {
 	h.mu.RLock()
 	check, exists := h.checks[config.Name]
 	h.mu.RUnlock()
-	
+
 	if !exists {
 		return
 	}
-	
+
 	start := time.Now()
-	
+
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
-	
+
 	// Execute health check
 	err := check(ctx)
 	duration := time.Since(start)
-	
+
 	// Update result
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	result, exists := h.results[config.Name]
 	if !exists {
 		result = HealthCheckResult{
 			Name: config.Name,
 		}
 	}
-	
+
 	result.Duration = duration
 	result.Timestamp = time.Now()
 	result.LastCheck = time.Now()
 	result.Checks++
-	
+
 	if err != nil {
 		result.Status = StatusUnhealthy
 		result.Error = err.Error()
 		result.Failures++
-		
+
 		h.logger.Error("Health check failed",
 			zap.String("name", config.Name),
 			zap.Duration("duration", duration),
@@ -523,14 +523,14 @@ func (h *HealthEndpoints) executeHealthCheck(config HealthCheckConfig) {
 	} else {
 		result.Status = StatusHealthy
 		result.Error = ""
-		
+
 		h.logger.Debug("Health check passed",
 			zap.String("name", config.Name),
 			zap.Duration("duration", duration))
 	}
-	
+
 	h.results[config.Name] = result
-	
+
 	// Update metrics if enabled
 	if h.config.EnableMetrics && h.metrics != nil {
 		if err != nil {
@@ -544,10 +544,10 @@ func (h *HealthEndpoints) executeHealthCheck(config HealthCheckConfig) {
 // calculateHealthStatus calculates overall health status
 func (h *HealthEndpoints) calculateHealthStatus(checks map[string]HealthCheckResult) (HealthStatus, HealthSummary) {
 	summary := HealthSummary{}
-	
+
 	for _, check := range checks {
 		summary.Total++
-		
+
 		switch check.Status {
 		case StatusHealthy:
 			summary.Healthy++
@@ -558,7 +558,7 @@ func (h *HealthEndpoints) calculateHealthStatus(checks map[string]HealthCheckRes
 		case StatusUnknown:
 			summary.Unknown++
 		}
-		
+
 		// Count critical failures
 		if check.Status == StatusUnhealthy {
 			// Check if this is a critical service
@@ -570,7 +570,7 @@ func (h *HealthEndpoints) calculateHealthStatus(checks map[string]HealthCheckRes
 			}
 		}
 	}
-	
+
 	// Determine overall status
 	var status HealthStatus
 	if summary.Critical > 0 {
@@ -582,28 +582,28 @@ func (h *HealthEndpoints) calculateHealthStatus(checks map[string]HealthCheckRes
 	} else {
 		status = StatusUnknown
 	}
-	
+
 	return status, summary
 }
 
 // HTTP handlers
 func (h *HealthEndpoints) handleHealth(w http.ResponseWriter, r *http.Request) {
 	report := h.GetHealthReport()
-	
+
 	status := http.StatusOK
 	if report.Status == StatusUnhealthy {
 		status = http.StatusServiceUnavailable
 	} else if report.Status == StatusDegraded {
 		status = http.StatusPartialContent
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": report.Status,
+		"status":    report.Status,
 		"timestamp": report.Timestamp,
-		"uptime": report.Uptime.String(),
+		"uptime":    report.Uptime.String(),
 	})
 }
 
@@ -624,20 +624,20 @@ func (h *HealthEndpoints) handleLiveness(w http.ResponseWriter, r *http.Request)
 
 func (h *HealthEndpoints) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	report := h.GetHealthReport()
-	
+
 	status := http.StatusOK
 	if report.Status == StatusUnhealthy {
 		status = http.StatusServiceUnavailable
 	} else if report.Status == StatusDegraded {
 		status = http.StatusPartialContent
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": report.Status,
-		"ready": report.Status == StatusHealthy,
+		"status":    report.Status,
+		"ready":     report.Status == StatusHealthy,
 		"timestamp": report.Timestamp,
 	})
 }
@@ -647,19 +647,19 @@ func (h *HealthEndpoints) handleDetailedHealth(w http.ResponseWriter, r *http.Re
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	
+
 	report := h.GetHealthReport()
-	
+
 	status := http.StatusOK
 	if report.Status == StatusUnhealthy {
 		status = http.StatusServiceUnavailable
 	} else if report.Status == StatusDegraded {
 		status = http.StatusPartialContent
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	
+
 	json.NewEncoder(w).Encode(report)
 }
 

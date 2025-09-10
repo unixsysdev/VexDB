@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Tracer manages distributed tracing for the VexDB system
+// Tracer manages distributed tracing for the VxDB system
 type Tracer struct {
 	logger       *zap.Logger
 	config       *TracingConfig
@@ -44,7 +44,7 @@ type TracingConfig struct {
 func DefaultTracingConfig() *TracingConfig {
 	return &TracingConfig{
 		Enabled:      false,
-		ServiceName:  "vexdb",
+		ServiceName:  "vxdb",
 		Endpoint:     "http://localhost:14268/api/traces",
 		SamplingRate: 0.1, // 10% sampling
 		BatchSize:    512,

@@ -3,7 +3,7 @@ package errors_test
 import (
 	"errors"
 	"testing"
-	ve "vexdb/internal/errors"
+	ve "vxdb/internal/errors"
 )
 
 func TestErrorCreationAndFormatting(t *testing.T) {

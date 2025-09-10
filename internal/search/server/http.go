@@ -1,18 +1,18 @@
 package server
 
 import (
-    "context"
-    "crypto/tls"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "time"
+	"context"
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
 
-    "vexdb/internal/metrics"
-    "vexdb/internal/search/api"
-    "vexdb/internal/search/auth"
-    "vexdb/internal/search/config"
-    "vexdb/internal/service"
+	"vxdb/internal/metrics"
+	"vxdb/internal/search/api"
+	"vxdb/internal/search/auth"
+	"vxdb/internal/search/config"
+	"vxdb/internal/service"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
@@ -20,12 +20,12 @@ import (
 
 // HTTPServer represents the HTTP server for the search service
 type HTTPServer struct {
-	config       *config.SearchServiceConfig
-	logger       *zap.Logger
-	metrics      *metrics.Collector
+	config        *config.SearchServiceConfig
+	logger        *zap.Logger
+	metrics       *metrics.Collector
 	searchService service.SearchService
-	server       *http.Server
-	router       *mux.Router
+	server        *http.Server
+	router        *mux.Router
 }
 
 // NewHTTPServer creates a new HTTP server for the search service
@@ -209,9 +209,9 @@ func (s *HTTPServer) createMetricsMiddleware() mux.MiddlewareFunc {
 			// Record metrics
 			duration := time.Since(start)
 			s.metrics.RecordHistogram("http_request_duration_seconds", duration.Seconds(), map[string]string{
-				"method":     r.Method,
-				"path":       r.URL.Path,
-				"status":     fmt.Sprintf("%d", wrapper.statusCode),
+				"method": r.Method,
+				"path":   r.URL.Path,
+				"status": fmt.Sprintf("%d", wrapper.statusCode),
 			})
 
 			s.metrics.RecordCounter("http_requests_total", 1, map[string]string{
@@ -238,10 +238,10 @@ func (s *HTTPServer) createRecoveryMiddleware() mux.MiddlewareFunc {
 					// Send error response
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusInternalServerError)
-					
-                    // Simple JSON encoding
-                    jsonResponse := fmt.Sprintf(`{"success":false,"error":"internal_server_error","message":"An internal server error occurred","timestamp":"%s"}`,
-                        time.Now().Format(time.RFC3339))
+
+					// Simple JSON encoding
+					jsonResponse := fmt.Sprintf(`{"success":false,"error":"internal_server_error","message":"An internal server error occurred","timestamp":"%s"}`,
+						time.Now().Format(time.RFC3339))
 
 					w.Write([]byte(jsonResponse))
 				}
@@ -299,23 +299,23 @@ func (s *HTTPServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	// Get metrics from the metrics collector
 	// For now, just return a simple response
 	// In a real implementation, this would get metrics from the metrics collector
-	
+
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("# VexDB Search Service Metrics\n"))
+	w.Write([]byte("# VxDB Search Service Metrics\n"))
 }
 
 func (s *HTTPServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
-		"service":   "VexDB Search Service",
+		"service":   "VxDB Search Service",
 		"version":   "1.0.0",
 		"status":    "running",
 		"timestamp": time.Now().Format(time.RFC3339),
 		"endpoints": map[string]interface{}{
-			"health":        "/health",
+			"health":          "/health",
 			"health_detailed": "/health/detailed",
-			"metrics":       s.config.Metrics.Path,
-			"api":           s.config.API.HTTP.BasePath,
+			"metrics":         s.config.Metrics.Path,
+			"api":             s.config.API.HTTP.BasePath,
 		},
 	}
 

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: vexdb.proto
+// source: vxdb.proto
 
 package proto
 
@@ -20,18 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StorageService_InsertVector_FullMethodName        = "/vexdb.StorageService/InsertVector"
-	StorageService_InsertVectorStream_FullMethodName  = "/vexdb.StorageService/InsertVectorStream"
-	StorageService_Search_FullMethodName              = "/vexdb.StorageService/Search"
-	StorageService_SearchStream_FullMethodName        = "/vexdb.StorageService/SearchStream"
-	StorageService_DeleteVectors_FullMethodName       = "/vexdb.StorageService/DeleteVectors"
-	StorageService_DeleteVectorsStream_FullMethodName = "/vexdb.StorageService/DeleteVectorsStream"
-	StorageService_GetClusterInfo_FullMethodName      = "/vexdb.StorageService/GetClusterInfo"
-	StorageService_GetClusterStatus_FullMethodName    = "/vexdb.StorageService/GetClusterStatus"
-	StorageService_HealthCheck_FullMethodName         = "/vexdb.StorageService/HealthCheck"
-	StorageService_GetMetrics_FullMethodName          = "/vexdb.StorageService/GetMetrics"
-	StorageService_UpdateConfig_FullMethodName        = "/vexdb.StorageService/UpdateConfig"
-	StorageService_GetConfig_FullMethodName           = "/vexdb.StorageService/GetConfig"
+	StorageService_InsertVector_FullMethodName        = "/vxdb.StorageService/InsertVector"
+	StorageService_InsertVectorStream_FullMethodName  = "/vxdb.StorageService/InsertVectorStream"
+	StorageService_Search_FullMethodName              = "/vxdb.StorageService/Search"
+	StorageService_SearchStream_FullMethodName        = "/vxdb.StorageService/SearchStream"
+	StorageService_DeleteVectors_FullMethodName       = "/vxdb.StorageService/DeleteVectors"
+	StorageService_DeleteVectorsStream_FullMethodName = "/vxdb.StorageService/DeleteVectorsStream"
+	StorageService_GetClusterInfo_FullMethodName      = "/vxdb.StorageService/GetClusterInfo"
+	StorageService_GetClusterStatus_FullMethodName    = "/vxdb.StorageService/GetClusterStatus"
+	StorageService_HealthCheck_FullMethodName         = "/vxdb.StorageService/HealthCheck"
+	StorageService_GetMetrics_FullMethodName          = "/vxdb.StorageService/GetMetrics"
+	StorageService_UpdateConfig_FullMethodName        = "/vxdb.StorageService/UpdateConfig"
+	StorageService_GetConfig_FullMethodName           = "/vxdb.StorageService/GetConfig"
 )
 
 // StorageServiceClient is the client API for StorageService service.
@@ -475,7 +475,7 @@ func _StorageService_GetConfig_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var StorageService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "vexdb.StorageService",
+	ServiceName: "vxdb.StorageService",
 	HandlerType: (*StorageServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -535,20 +535,20 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "vexdb.proto",
+	Metadata: "vxdb.proto",
 }
 
 const (
-	InsertService_InsertVector_FullMethodName        = "/vexdb.InsertService/InsertVector"
-	InsertService_InsertVectorStream_FullMethodName  = "/vexdb.InsertService/InsertVectorStream"
-	InsertService_InsertBatch_FullMethodName         = "/vexdb.InsertService/InsertBatch"
-	InsertService_InsertBatchStream_FullMethodName   = "/vexdb.InsertService/InsertBatchStream"
-	InsertService_GetClusterForVector_FullMethodName = "/vexdb.InsertService/GetClusterForVector"
-	InsertService_GetClusterStatus_FullMethodName    = "/vexdb.InsertService/GetClusterStatus"
-	InsertService_HealthCheck_FullMethodName         = "/vexdb.InsertService/HealthCheck"
-	InsertService_GetMetrics_FullMethodName          = "/vexdb.InsertService/GetMetrics"
-	InsertService_UpdateConfig_FullMethodName        = "/vexdb.InsertService/UpdateConfig"
-	InsertService_GetConfig_FullMethodName           = "/vexdb.InsertService/GetConfig"
+	InsertService_InsertVector_FullMethodName        = "/vxdb.InsertService/InsertVector"
+	InsertService_InsertVectorStream_FullMethodName  = "/vxdb.InsertService/InsertVectorStream"
+	InsertService_InsertBatch_FullMethodName         = "/vxdb.InsertService/InsertBatch"
+	InsertService_InsertBatchStream_FullMethodName   = "/vxdb.InsertService/InsertBatchStream"
+	InsertService_GetClusterForVector_FullMethodName = "/vxdb.InsertService/GetClusterForVector"
+	InsertService_GetClusterStatus_FullMethodName    = "/vxdb.InsertService/GetClusterStatus"
+	InsertService_HealthCheck_FullMethodName         = "/vxdb.InsertService/HealthCheck"
+	InsertService_GetMetrics_FullMethodName          = "/vxdb.InsertService/GetMetrics"
+	InsertService_UpdateConfig_FullMethodName        = "/vxdb.InsertService/UpdateConfig"
+	InsertService_GetConfig_FullMethodName           = "/vxdb.InsertService/GetConfig"
 )
 
 // InsertServiceClient is the client API for InsertService service.
@@ -932,7 +932,7 @@ func _InsertService_GetConfig_Handler(srv interface{}, ctx context.Context, dec 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var InsertService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "vexdb.InsertService",
+	ServiceName: "vxdb.InsertService",
 	HandlerType: (*InsertServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -982,20 +982,20 @@ var InsertService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "vexdb.proto",
+	Metadata: "vxdb.proto",
 }
 
 const (
-	SearchService_Search_FullMethodName                   = "/vexdb.SearchService/Search"
-	SearchService_SearchStream_FullMethodName             = "/vexdb.SearchService/SearchStream"
-	SearchService_MultiClusterSearch_FullMethodName       = "/vexdb.SearchService/MultiClusterSearch"
-	SearchService_MultiClusterSearchStream_FullMethodName = "/vexdb.SearchService/MultiClusterSearchStream"
-	SearchService_GetClusterInfo_FullMethodName           = "/vexdb.SearchService/GetClusterInfo"
-	SearchService_GetClusterStatus_FullMethodName         = "/vexdb.SearchService/GetClusterStatus"
-	SearchService_HealthCheck_FullMethodName              = "/vexdb.SearchService/HealthCheck"
-	SearchService_GetMetrics_FullMethodName               = "/vexdb.SearchService/GetMetrics"
-	SearchService_UpdateConfig_FullMethodName             = "/vexdb.SearchService/UpdateConfig"
-	SearchService_GetConfig_FullMethodName                = "/vexdb.SearchService/GetConfig"
+	SearchService_Search_FullMethodName                   = "/vxdb.SearchService/Search"
+	SearchService_SearchStream_FullMethodName             = "/vxdb.SearchService/SearchStream"
+	SearchService_MultiClusterSearch_FullMethodName       = "/vxdb.SearchService/MultiClusterSearch"
+	SearchService_MultiClusterSearchStream_FullMethodName = "/vxdb.SearchService/MultiClusterSearchStream"
+	SearchService_GetClusterInfo_FullMethodName           = "/vxdb.SearchService/GetClusterInfo"
+	SearchService_GetClusterStatus_FullMethodName         = "/vxdb.SearchService/GetClusterStatus"
+	SearchService_HealthCheck_FullMethodName              = "/vxdb.SearchService/HealthCheck"
+	SearchService_GetMetrics_FullMethodName               = "/vxdb.SearchService/GetMetrics"
+	SearchService_UpdateConfig_FullMethodName             = "/vxdb.SearchService/UpdateConfig"
+	SearchService_GetConfig_FullMethodName                = "/vxdb.SearchService/GetConfig"
 )
 
 // SearchServiceClient is the client API for SearchService service.
@@ -1379,7 +1379,7 @@ func _SearchService_GetConfig_Handler(srv interface{}, ctx context.Context, dec 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SearchService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "vexdb.SearchService",
+	ServiceName: "vxdb.SearchService",
 	HandlerType: (*SearchServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1429,23 +1429,23 @@ var SearchService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "vexdb.proto",
+	Metadata: "vxdb.proto",
 }
 
 const (
-	AdminService_AddNode_FullMethodName        = "/vexdb.AdminService/AddNode"
-	AdminService_RemoveNode_FullMethodName     = "/vexdb.AdminService/RemoveNode"
-	AdminService_UpdateNode_FullMethodName     = "/vexdb.AdminService/UpdateNode"
-	AdminService_CreateCluster_FullMethodName  = "/vexdb.AdminService/CreateCluster"
-	AdminService_DeleteCluster_FullMethodName  = "/vexdb.AdminService/DeleteCluster"
-	AdminService_UpdateCluster_FullMethodName  = "/vexdb.AdminService/UpdateCluster"
-	AdminService_BackupSystem_FullMethodName   = "/vexdb.AdminService/BackupSystem"
-	AdminService_RestoreSystem_FullMethodName  = "/vexdb.AdminService/RestoreSystem"
-	AdminService_CompactStorage_FullMethodName = "/vexdb.AdminService/CompactStorage"
-	AdminService_HealthCheck_FullMethodName    = "/vexdb.AdminService/HealthCheck"
-	AdminService_GetMetrics_FullMethodName     = "/vexdb.AdminService/GetMetrics"
-	AdminService_UpdateConfig_FullMethodName   = "/vexdb.AdminService/UpdateConfig"
-	AdminService_GetConfig_FullMethodName      = "/vexdb.AdminService/GetConfig"
+	AdminService_AddNode_FullMethodName        = "/vxdb.AdminService/AddNode"
+	AdminService_RemoveNode_FullMethodName     = "/vxdb.AdminService/RemoveNode"
+	AdminService_UpdateNode_FullMethodName     = "/vxdb.AdminService/UpdateNode"
+	AdminService_CreateCluster_FullMethodName  = "/vxdb.AdminService/CreateCluster"
+	AdminService_DeleteCluster_FullMethodName  = "/vxdb.AdminService/DeleteCluster"
+	AdminService_UpdateCluster_FullMethodName  = "/vxdb.AdminService/UpdateCluster"
+	AdminService_BackupSystem_FullMethodName   = "/vxdb.AdminService/BackupSystem"
+	AdminService_RestoreSystem_FullMethodName  = "/vxdb.AdminService/RestoreSystem"
+	AdminService_CompactStorage_FullMethodName = "/vxdb.AdminService/CompactStorage"
+	AdminService_HealthCheck_FullMethodName    = "/vxdb.AdminService/HealthCheck"
+	AdminService_GetMetrics_FullMethodName     = "/vxdb.AdminService/GetMetrics"
+	AdminService_UpdateConfig_FullMethodName   = "/vxdb.AdminService/UpdateConfig"
+	AdminService_GetConfig_FullMethodName      = "/vxdb.AdminService/GetConfig"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -1944,7 +1944,7 @@ func _AdminService_GetConfig_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AdminService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "vexdb.AdminService",
+	ServiceName: "vxdb.AdminService",
 	HandlerType: (*AdminServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -2001,5 +2001,5 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "vexdb.proto",
+	Metadata: "vxdb.proto",
 }

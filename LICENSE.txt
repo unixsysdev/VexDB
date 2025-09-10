@@ -1,8 +1,8 @@
 Business Source License 1.0
 License Grant
-Subject to the limitations and conditions below, you are granted a non-exclusive, worldwide, royalty-free license to use, copy, modify, and distribute VEXDB software.
+Subject to the limitations and conditions below, you are granted a non-exclusive, worldwide, royalty-free license to use, copy, modify, and distribute VXDB software.
 Usage Limitations
-You may use VEXDB under this license provided your use qualifies under the free usage criteria below:
+You may use VXDB under this license provided your use qualifies under the free usage criteria below:
 Development & Small Scale Use (Always Free)
 
 Development environments (testing, staging, CI/CD) - unlimited
@@ -26,8 +26,8 @@ Any managed service offerings or commercial redistribution
 
 Prohibited Uses Without Commercial License
 
-Managed service offerings (offering VEXDB as a service to third parties)
-Consulting services where VEXDB is the primary deliverable
+Managed service offerings (offering VXDB as a service to third parties)
+Consulting services where VXDB is the primary deliverable
 Embedding in commercial products sold to customers
 Production use exceeding the thresholds above
 
@@ -77,7 +77,7 @@ Advanced analytics and monitoring dashboards
 
 Competitive Protections
 Cloud Provider Restrictions
-Major cloud providers (AWS, Google, Azure, Alibaba) cannot offer VEXDB as a managed service without explicit partnership agreement.
+Major cloud providers (AWS, Google, Azure, Alibaba) cannot offer VXDB as a managed service without explicit partnership agreement.
 Modification Rights
 You may modify the software, but modified versions:
 

@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"vexdb/internal/search/api"
-	"vexdb/internal/search/auth"
-	"vexdb/internal/search/config"
-	"vexdb/internal/search/response"
-	"vexdb/internal/search/testutil"
-	"vexdb/internal/types"
+	"vxdb/internal/search/api"
+	"vxdb/internal/search/auth"
+	"vxdb/internal/search/config"
+	"vxdb/internal/search/response"
+	"vxdb/internal/search/testutil"
+	"vxdb/internal/types"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"

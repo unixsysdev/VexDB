@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/types"
+	"vxdb/internal/types"
 )
 
 // MockSearchService implements a mock search service for testing

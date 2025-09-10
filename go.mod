@@ -1,4 +1,4 @@
-module vexdb
+module vxdb
 
 go 1.23.0
 

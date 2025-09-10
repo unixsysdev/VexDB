@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # VexDB Insert Service
-  vexinsert:
+  # VxDB Insert Service
+  vxinsert:
     build:
       context: .
-      dockerfile: cmd/vexinsert/Dockerfile
-    container_name: vexinsert
+      dockerfile: cmd/vxinsert/Dockerfile
+    container_name: vxinsert
     restart: unless-stopped
     ports:
       - "8080:8080"    # HTTP API
@@ -18,20 +18,20 @@ services:
       - "7946:7946"    # Gossip
       - "7947:7947"    # Serf
     volumes:
-      - vexinsert_data:/var/lib/vexdb/data
-      - vexinsert_wal:/var/lib/vexdb/wal
-      - vexinsert_snapshots:/var/lib/vexdb/snapshots
-      - vexinsert_buffer:/var/lib/vexdb/buffer
-      - vexinsert_logs:/var/log/vexdb
-      - ./configs/vexinsert-production.yaml:/etc/vexdb/config.yaml
-      - ./certs:/etc/vexdb/certs
+      - vxinsert_data:/var/lib/vxdb/data
+      - vxinsert_wal:/var/lib/vxdb/wal
+      - vxinsert_snapshots:/var/lib/vxdb/snapshots
+      - vxinsert_buffer:/var/lib/vxdb/buffer
+      - vxinsert_logs:/var/log/vxdb
+      - ./configs/vxinsert-production.yaml:/etc/vxdb/config.yaml
+      - ./certs:/etc/vxdb/certs
     environment:
-      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
     networks:
-      - vexdb_network
+      - vxdb_network
     depends_on:
-      - vexstorage
+      - vxstorage
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
@@ -39,12 +39,12 @@ services:
       retries: 3
       start_period: 5s
 
-  # VexDB Storage Service
-  vexstorage:
+  # VxDB Storage Service
+  vxstorage:
     build:
       context: .
-      dockerfile: cmd/vexstorage/Dockerfile
-    container_name: vexstorage
+      dockerfile: cmd/vxstorage/Dockerfile
+    container_name: vxstorage
     restart: unless-stopped
     ports:
       - "8082:8082"    # HTTP API
@@ -54,21 +54,21 @@ services:
       - "7948:7948"    # Gossip
       - "7949:7949"    # Serf
     volumes:
-      - vexstorage_data:/var/lib/vexdb/data
-      - vexstorage_wal:/var/lib/vexdb/wal
-      - vexstorage_snapshots:/var/lib/vexdb/snapshots
-      - vexstorage_storage:/var/lib/vexdb/storage
-      - vexstorage_temp:/var/lib/vexdb/temp
-      - vexstorage_manifest:/var/lib/vexdb/manifest
-      - vexstorage_backups:/var/lib/vexdb/backups
-      - vexstorage_logs:/var/log/vexdb
-      - ./configs/vexstorage-production.yaml:/etc/vexdb/config.yaml
-      - ./certs:/etc/vexdb/certs
+      - vxstorage_data:/var/lib/vxdb/data
+      - vxstorage_wal:/var/lib/vxdb/wal
+      - vxstorage_snapshots:/var/lib/vxdb/snapshots
+      - vxstorage_storage:/var/lib/vxdb/storage
+      - vxstorage_temp:/var/lib/vxdb/temp
+      - vxstorage_manifest:/var/lib/vxdb/manifest
+      - vxstorage_backups:/var/lib/vxdb/backups
+      - vxstorage_logs:/var/log/vxdb
+      - ./configs/vxstorage-production.yaml:/etc/vxdb/config.yaml
+      - ./certs:/etc/vxdb/certs
     environment:
-      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
     networks:
-      - vexdb_network
+      - vxdb_network
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
@@ -76,12 +76,12 @@ services:
       retries: 3
       start_period: 5s
 
-  # VexDB Search Service
-  vexsearch:
+  # VxDB Search Service
+  vxsearch:
     build:
       context: .
-      dockerfile: cmd/vexsearch/Dockerfile
-    container_name: vexsearch
+      dockerfile: cmd/vxsearch/Dockerfile
+    container_name: vxsearch
     restart: unless-stopped
     ports:
       - "8083:8083"    # HTTP API
@@ -91,20 +91,20 @@ services:
       - "7950:7950"    # Gossip
       - "7951:7951"    # Serf
     volumes:
-      - vexsearch_data:/var/lib/vexdb/data
-      - vexsearch_wal:/var/lib/vexdb/wal
-      - vexsearch_snapshots:/var/lib/vexdb/snapshots
-      - vexsearch_cache:/var/lib/vexdb/cache
-      - vexsearch_logs:/var/log/vexdb
-      - ./configs/vexsearch-production.yaml:/etc/vexdb/config.yaml
-      - ./certs:/etc/vexdb/certs
+      - vxsearch_data:/var/lib/vxdb/data
+      - vxsearch_wal:/var/lib/vxdb/wal
+      - vxsearch_snapshots:/var/lib/vxdb/snapshots
+      - vxsearch_cache:/var/lib/vxdb/cache
+      - vxsearch_logs:/var/log/vxdb
+      - ./configs/vxsearch-production.yaml:/etc/vxdb/config.yaml
+      - ./certs:/etc/vxdb/certs
     environment:
-      - VEXDB_CONFIG_FILE=/etc/vexdb/config.yaml
+      - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
     networks:
-      - vexdb_network
+      - vxdb_network
     depends_on:
-      - vexstorage
+      - vxstorage
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
@@ -130,7 +130,7 @@ services:
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
     networks:
-      - vexdb_network
+      - vxdb_network
 
   # Grafana for visualization
   grafana:
@@ -147,7 +147,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
-      - vexdb_network
+      - vxdb_network
     depends_on:
       - prometheus
 
@@ -163,7 +163,7 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
-      - vexdb_network
+      - vxdb_network
 
   # Redis for caching (optional)
   redis:
@@ -176,7 +176,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     networks:
-      - vexdb_network
+      - vxdb_network
 
   # Nginx reverse proxy (optional)
   nginx:
@@ -191,53 +191,53 @@ services:
       - ./configs/nginx/conf.d:/etc/nginx/conf.d
       - ./certs:/etc/nginx/certs
     networks:
-      - vexdb_network
+      - vxdb_network
     depends_on:
-      - vexinsert
-      - vexstorage
-      - vexsearch
+      - vxinsert
+      - vxstorage
+      - vxsearch
 
 volumes:
-  # VexDB Insert Service volumes
-  vexinsert_data:
+  # VxDB Insert Service volumes
+  vxinsert_data:
     driver: local
-  vexinsert_wal:
+  vxinsert_wal:
     driver: local
-  vexinsert_snapshots:
+  vxinsert_snapshots:
     driver: local
-  vexinsert_buffer:
+  vxinsert_buffer:
     driver: local
-  vexinsert_logs:
-    driver: local
-
-  # VexDB Storage Service volumes
-  vexstorage_data:
-    driver: local
-  vexstorage_wal:
-    driver: local
-  vexstorage_snapshots:
-    driver: local
-  vexstorage_storage:
-    driver: local
-  vexstorage_temp:
-    driver: local
-  vexstorage_manifest:
-    driver: local
-  vexstorage_backups:
-    driver: local
-  vexstorage_logs:
+  vxinsert_logs:
     driver: local
 
-  # VexDB Search Service volumes
-  vexsearch_data:
+  # VxDB Storage Service volumes
+  vxstorage_data:
     driver: local
-  vexsearch_wal:
+  vxstorage_wal:
     driver: local
-  vexsearch_snapshots:
+  vxstorage_snapshots:
     driver: local
-  vexsearch_cache:
+  vxstorage_storage:
     driver: local
-  vexsearch_logs:
+  vxstorage_temp:
+    driver: local
+  vxstorage_manifest:
+    driver: local
+  vxstorage_backups:
+    driver: local
+  vxstorage_logs:
+    driver: local
+
+  # VxDB Search Service volumes
+  vxsearch_data:
+    driver: local
+  vxsearch_wal:
+    driver: local
+  vxsearch_snapshots:
+    driver: local
+  vxsearch_cache:
+    driver: local
+  vxsearch_logs:
     driver: local
 
   # Monitoring volumes
@@ -249,7 +249,7 @@ volumes:
     driver: local
 
 networks:
-  vexdb_network:
+  vxdb_network:
     driver: bridge
     ipam:
       config:

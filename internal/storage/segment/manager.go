@@ -1,30 +1,30 @@
-// Package segment provides segment management functionality for VexDB
+// Package segment provides segment management functionality for VxDB
 package segment
 
 import (
-    "context"
-    "sync"
+	"context"
+	"sync"
 
-    "vexdb/internal/config"
-    "vexdb/internal/metrics"
-    "vexdb/internal/storage/compression"
-    "vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/metrics"
+	"vxdb/internal/storage/compression"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )
 
 // Manager manages all segments in the storage system
 type Manager struct {
-    config      *config.Config
-	logger      *zap.Logger
-	metrics     *metrics.Collector
-	compressor  *compression.Compressor
-	
-	segments    map[string]*Segment
-	manifest    *Manifest
-	
-	mu          sync.RWMutex
-	started     bool
+	config     *config.Config
+	logger     *zap.Logger
+	metrics    *metrics.Collector
+	compressor *compression.Compressor
+
+	segments map[string]*Segment
+	manifest *Manifest
+
+	mu      sync.RWMutex
+	started bool
 }
 
 // NewManager creates a new segment manager
@@ -47,13 +47,15 @@ func NewManager(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collect
 
 // initializeManifest initializes the segment manifest
 func (m *Manager) initializeManifest() error {
-    // Initialize manifest (using default path and types)
-    m.manifest = NewManifest("./data/manifest.vex", 0, 0, *m.logger, nil)
-    // Load or create
-    if err := m.manifest.Load(); err != nil {
-        m.logger.Warn("Failed to load manifest, creating new one", zap.Error(err))
-        if err := m.manifest.Create(); err != nil { return err }
-    }
+	// Initialize manifest (using default path and types)
+	m.manifest = NewManifest("./data/manifest.vx", 0, 0, *m.logger, nil)
+	// Load or create
+	if err := m.manifest.Load(); err != nil {
+		m.logger.Warn("Failed to load manifest, creating new one", zap.Error(err))
+		if err := m.manifest.Create(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -77,7 +79,7 @@ func (m *Manager) Start(ctx context.Context) error {
 			m.logger.Error("Failed to create segment", zap.String("segment_id", info.ID), zap.Error(err))
 			continue
 		}
-		
+
 		m.segments[info.ID] = segment
 	}
 
@@ -126,7 +128,7 @@ func (m *Manager) CreateSegment(clusterID uint32) (*Segment, error) {
 
 	// Generate segment ID
 	segmentID := generateSegmentID(clusterID)
-	
+
 	// Create segment info
 	info := &SegmentInfo{
 		ID:        segmentID,

@@ -7,17 +7,17 @@ import (
 	"syscall"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/storage"
+	"vxdb/internal/config"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/storage"
 
 	"go.uber.org/zap"
 )
 
 func main() {
 	var configPath string
-	flag.StringVar(&configPath, "config", "configs/vexstorage-production.yaml", "Path to configuration file")
+	flag.StringVar(&configPath, "config", "configs/vxstorage-production.yaml", "Path to configuration file")
 	flag.Parse()
 
 	logger, err := logging.NewLogger()

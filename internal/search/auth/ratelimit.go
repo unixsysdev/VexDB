@@ -1,9 +1,9 @@
 package auth
 
 import (
-    "context"
-    "sync"
-    "time"
+	"context"
+	"sync"
+	"time"
 )
 
 // RateLimiter implements a token bucket rate limiter
@@ -154,14 +154,14 @@ func (rl *RateLimiter) cleanup() {
 	for range ticker.C {
 		rl.mu.Lock()
 		now := time.Now()
-		
+
 		// Remove buckets that haven't been accessed in a long time
 		for identifier, b := range rl.buckets {
 			if now.Sub(b.lastCheck) > rl.cleanupInterval*2 {
 				delete(rl.buckets, identifier)
 			}
 		}
-		
+
 		rl.mu.Unlock()
 	}
 }
@@ -334,14 +334,14 @@ func (rl *SlidingWindowRateLimiter) cleanup() {
 				delete(rl.requests, identifier)
 			}
 		}
-		
+
 		rl.mu.Unlock()
 	}
 }
 
 // SlidingWindowStats represents sliding window rate limiter statistics
 type SlidingWindowStats struct {
-	TotalIdentifiers int                                      `json:"total_identifiers"`
+	TotalIdentifiers int                                     `json:"total_identifiers"`
 	Identifiers      map[string]SlidingWindowIdentifierStats `json:"identifiers"`
 }
 

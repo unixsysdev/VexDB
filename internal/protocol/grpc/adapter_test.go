@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"vexdb/internal/metrics"
+	"vxdb/internal/metrics"
 )
 
 // getFreePort returns an available TCP port for testing.

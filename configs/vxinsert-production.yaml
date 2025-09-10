@@ -1,4 +1,4 @@
-# VexDB Insert Service Production Configuration
+# VxDB Insert Service Production Configuration
 # This configuration is optimized for production environments
 
 # Server configuration
@@ -17,7 +17,7 @@ logging:
   format: "json"  # json, console
   output: "stdout"  # stdout, stderr, or file path
   file:
-    path: "/var/log/vexdb/vexinsert.log"
+    path: "/var/log/vxdb/vxinsert.log"
     max_size: 100  # MB
     max_backups: 10
     max_age: 30  # days
@@ -39,7 +39,7 @@ metrics:
   host: "0.0.0.0"
   port: 9091
   path: "/metrics"
-  namespace: "vexdb"
+  namespace: "vxdb"
   subsystem: "insert"
   buckets: [0.001, 0.01, 0.1, 1.0, 10.0, 60.0]
   enable_profiling: false
@@ -48,7 +48,7 @@ metrics:
 # Tracing configuration
 tracing:
   enabled: true
-  service_name: "vexinsert"
+  service_name: "vxinsert"
   endpoint: "http://jaeger:14268/api/traces"
   sampling_rate: 0.1  # 10% sampling in production
   batch_size: 512
@@ -85,11 +85,11 @@ dashboard:
 
 # Cluster configuration
 cluster:
-  name: "vexdb-cluster"
+  name: "vxdb-cluster"
   node_id: ""  # Auto-generated if empty
-  data_dir: "/var/lib/vexdb/data"
-  wal_dir: "/var/lib/vexdb/wal"
-  snapshot_dir: "/var/lib/vexdb/snapshots"
+  data_dir: "/var/lib/vxdb/data"
+  wal_dir: "/var/lib/vxdb/wal"
+  snapshot_dir: "/var/lib/vxdb/snapshots"
   join: []  # List of existing nodes to join
   bootstrap_expect: 3  # Expected number of nodes in cluster
   retry_join:
@@ -145,9 +145,9 @@ protocols:
     max_header_bytes: 1048576  # 1MB
     tls:
       enabled: true
-      cert_file: "/etc/vexdb/certs/vexinsert.crt"
-      key_file: "/etc/vexdb/certs/vexinsert.key"
-      ca_file: "/etc/vexdb/certs/ca.crt"
+      cert_file: "/etc/vxdb/certs/vxinsert.crt"
+      key_file: "/etc/vxdb/certs/vxinsert.key"
+      ca_file: "/etc/vxdb/certs/ca.crt"
       client_auth: false
       min_version: "1.2"
       max_version: "1.3"
@@ -188,9 +188,9 @@ protocols:
     enable_compression: true
     tls:
       enabled: true
-      cert_file: "/etc/vexdb/certs/vexinsert.crt"
-      key_file: "/etc/vexdb/certs/vexinsert.key"
-      ca_file: "/etc/vexdb/certs/ca.crt"
+      cert_file: "/etc/vxdb/certs/vxinsert.crt"
+      key_file: "/etc/vxdb/certs/vxinsert.key"
+      ca_file: "/etc/vxdb/certs/ca.crt"
       client_auth: false
       min_version: "1.2"
       max_version: "1.3"
@@ -213,9 +213,9 @@ protocols:
     connection_timeout: 30s
     tls:
       enabled: true
-      cert_file: "/etc/vexdb/certs/vexinsert.crt"
-      key_file: "/etc/vexdb/certs/vexinsert.key"
-      ca_file: "/etc/vexdb/certs/ca.crt"
+      cert_file: "/etc/vxdb/certs/vxinsert.crt"
+      key_file: "/etc/vxdb/certs/vxinsert.key"
+      ca_file: "/etc/vxdb/certs/ca.crt"
       client_auth: false
       min_version: "1.2"
       max_version: "1.3"
@@ -249,9 +249,9 @@ protocols:
     tcp_keepalive: 300s
     tls:
       enabled: true
-      cert_file: "/etc/vexdb/certs/vexinsert.crt"
-      key_file: "/etc/vexdb/certs/vexinsert.key"
-      ca_file: "/etc/vexdb/certs/ca.crt"
+      cert_file: "/etc/vxdb/certs/vxinsert.crt"
+      key_file: "/etc/vxdb/certs/vxinsert.key"
+      ca_file: "/etc/vxdb/certs/ca.crt"
       client_auth: false
       min_version: "1.2"
       max_version: "1.3"
@@ -325,8 +325,8 @@ auth:
     secret: ""  # JWT secret key
     algorithm: "HS256"
     expiration: 24h
-    issuer: "vexdb"
-    audience: "vexdb-clients"
+    issuer: "vxdb"
+    audience: "vxdb-clients"
   rate_limit:
     enabled: true
     requests_per_second: 1000
@@ -347,7 +347,7 @@ buffer:
     level: 6
   persistence:
     enabled: true
-    path: "/var/lib/vexdb/buffer"
+    path: "/var/lib/vxdb/buffer"
     sync_interval: 5s
     max_file_size: 104857600  # 100MB
     max_files: 10
@@ -423,16 +423,16 @@ performance:
   mutex_profile: false
   trace_profile: false
   profile_duration: 30s
-  profile_path: "/var/log/vexdb/profile"
+  profile_path: "/var/log/vxdb/profile"
 
 # Security configuration
 security:
   enabled: true
   tls:
     enabled: true
-    cert_file: "/etc/vexdb/certs/vexinsert.crt"
-    key_file: "/etc/vexdb/certs/vexinsert.key"
-    ca_file: "/etc/vexdb/certs/ca.crt"
+    cert_file: "/etc/vxdb/certs/vxinsert.crt"
+    key_file: "/etc/vxdb/certs/vxinsert.key"
+    ca_file: "/etc/vxdb/certs/ca.crt"
     client_auth: false
     min_version: "1.2"
     max_version: "1.3"
@@ -441,10 +441,10 @@ security:
   encryption:
     enabled: false
     algorithm: "aes-256-gcm"
-    key_file: "/etc/vexdb/encryption.key"
+    key_file: "/etc/vxdb/encryption.key"
   audit:
     enabled: true
-    log_file: "/var/log/vexdb/audit.log"
+    log_file: "/var/log/vxdb/audit.log"
     max_size: 100  # MB
     max_backups: 10
     max_age: 30  # days

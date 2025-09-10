@@ -9,80 +9,80 @@ import (
 type SearchServiceConfig struct {
 	// Server configuration
 	Server ServerConfig `yaml:"server" json:"server"`
-	
+
 	// Search engine configuration
 	Engine EngineConfig `yaml:"engine" json:"engine"`
-	
+
 	// API configuration
 	API APIConfig `yaml:"api" json:"api"`
-	
+
 	// Authentication configuration
 	Auth AuthConfig `yaml:"auth" json:"auth"`
-	
+
 	// Rate limiting configuration
 	RateLimit RateLimitConfig `yaml:"rate_limit" json:"rate_limit"`
-	
+
 	// Metrics configuration
 	Metrics MetricsConfig `yaml:"metrics" json:"metrics"`
-	
+
 	// Logging configuration
 	Logging LoggingConfig `yaml:"logging" json:"logging"`
-	
+
 	// Health check configuration
 	Health HealthConfig `yaml:"health" json:"health"`
 }
 
 // ServerConfig represents server-specific configuration
 type ServerConfig struct {
-	Host         string        `yaml:"host" json:"host"`
-	Port         int           `yaml:"port" json:"port"`
-	ReadTimeout  time.Duration `yaml:"read_timeout" json:"read_timeout"`
-	WriteTimeout time.Duration `yaml:"write_timeout" json:"write_timeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
-	MaxHeaderBytes int         `yaml:"max_header_bytes" json:"max_header_bytes"`
+	Host           string        `yaml:"host" json:"host"`
+	Port           int           `yaml:"port" json:"port"`
+	ReadTimeout    time.Duration `yaml:"read_timeout" json:"read_timeout"`
+	WriteTimeout   time.Duration `yaml:"write_timeout" json:"write_timeout"`
+	IdleTimeout    time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
+	MaxHeaderBytes int           `yaml:"max_header_bytes" json:"max_header_bytes"`
 }
 
 // EngineConfig represents search engine configuration
 type EngineConfig struct {
-	MaxResults      int     `yaml:"max_results" json:"max_results"`
-	DefaultK        int     `yaml:"default_k" json:"default_k"`
-	DistanceType    string  `yaml:"distance_type" json:"distance_type"`
-	EnableCache     bool    `yaml:"enable_cache" json:"enable_cache"`
-	CacheSize       int     `yaml:"cache_size" json:"cache_size"`
-	CacheTTL        time.Duration `yaml:"cache_ttl" json:"cache_ttl"`
-	ParallelSearch  bool    `yaml:"parallel_search" json:"parallel_search"`
-	MaxWorkers      int     `yaml:"max_workers" json:"max_workers"`
+	MaxResults     int           `yaml:"max_results" json:"max_results"`
+	DefaultK       int           `yaml:"default_k" json:"default_k"`
+	DistanceType   string        `yaml:"distance_type" json:"distance_type"`
+	EnableCache    bool          `yaml:"enable_cache" json:"enable_cache"`
+	CacheSize      int           `yaml:"cache_size" json:"cache_size"`
+	CacheTTL       time.Duration `yaml:"cache_ttl" json:"cache_ttl"`
+	ParallelSearch bool          `yaml:"parallel_search" json:"parallel_search"`
+	MaxWorkers     int           `yaml:"max_workers" json:"max_workers"`
 }
 
 // APIConfig represents API-specific configuration
 type APIConfig struct {
 	// HTTP configuration
 	HTTP HTTPConfig `yaml:"http" json:"http"`
-	
+
 	// gRPC configuration
 	GRPC GRPCConfig `yaml:"grpc" json:"grpc"`
-	
+
 	// Response formatting
 	Response ResponseConfig `yaml:"response" json:"response"`
 }
 
 // HTTPConfig represents HTTP API configuration
 type HTTPConfig struct {
-	Enabled            bool          `yaml:"enabled" json:"enabled"`
-	BasePath           string        `yaml:"base_path" json:"base_path"`
-	CORS               CORSConfig    `yaml:"cors" json:"cors"`
-	RequestSizeLimit   int64         `yaml:"request_size_limit" json:"request_size_limit"`
-	EnableCompression  bool          `yaml:"enable_compression" json:"enable_compression"`
-	CompressionLevel   int           `yaml:"compression_level" json:"compression_level"`
-	TLS                *TLSConfig    `yaml:"tls" json:"tls"`
+	Enabled           bool       `yaml:"enabled" json:"enabled"`
+	BasePath          string     `yaml:"base_path" json:"base_path"`
+	CORS              CORSConfig `yaml:"cors" json:"cors"`
+	RequestSizeLimit  int64      `yaml:"request_size_limit" json:"request_size_limit"`
+	EnableCompression bool       `yaml:"enable_compression" json:"enable_compression"`
+	CompressionLevel  int        `yaml:"compression_level" json:"compression_level"`
+	TLS               *TLSConfig `yaml:"tls" json:"tls"`
 }
 
 // GRPCConfig represents gRPC API configuration
 type GRPCConfig struct {
-	Enabled            bool          `yaml:"enabled" json:"enabled"`
-	MaxMessageSize     int           `yaml:"max_message_size" json:"max_message_size"`
-	MaxConcurrentStreams int         `yaml:"max_concurrent_streams" json:"max_concurrent_streams"`
-	Keepalive          KeepaliveConfig `yaml:"keepalive" json:"keepalive"`
+	Enabled              bool            `yaml:"enabled" json:"enabled"`
+	MaxMessageSize       int             `yaml:"max_message_size" json:"max_message_size"`
+	MaxConcurrentStreams int             `yaml:"max_concurrent_streams" json:"max_concurrent_streams"`
+	Keepalive            KeepaliveConfig `yaml:"keepalive" json:"keepalive"`
 }
 
 // CORSConfig represents CORS configuration
@@ -113,12 +113,12 @@ type ResponseConfig struct {
 
 // AuthConfig represents authentication configuration
 type AuthConfig struct {
-	Enabled      bool         `yaml:"enabled" json:"enabled"`
-	Type         string       `yaml:"type" json:"type"` // "none", "basic", "bearer", "api_key"
-	APIKeys      []string     `yaml:"api_keys" json:"api_keys"`
-	BasicAuth    BasicAuthConfig `yaml:"basic_auth" json:"basic_auth"`
-	BearerAuth   BearerAuthConfig `yaml:"bearer_auth" json:"bearer_auth"`
-	RateLimitBy  string       `yaml:"rate_limit_by" json:"rate_limit_by"` // "ip", "user", "api_key"
+	Enabled     bool             `yaml:"enabled" json:"enabled"`
+	Type        string           `yaml:"type" json:"type"` // "none", "basic", "bearer", "api_key"
+	APIKeys     []string         `yaml:"api_keys" json:"api_keys"`
+	BasicAuth   BasicAuthConfig  `yaml:"basic_auth" json:"basic_auth"`
+	BearerAuth  BearerAuthConfig `yaml:"bearer_auth" json:"bearer_auth"`
+	RateLimitBy string           `yaml:"rate_limit_by" json:"rate_limit_by"` // "ip", "user", "api_key"
 }
 
 // BasicAuthConfig represents basic authentication configuration
@@ -134,13 +134,13 @@ type BearerAuthConfig struct {
 
 // RateLimitConfig represents rate limiting configuration
 type RateLimitConfig struct {
-	Enabled      bool    `yaml:"enabled" json:"enabled"`
-	RequestsPerSecond float64 `yaml:"requests_per_second" json:"requests_per_second"`
-	BurstSize      int     `yaml:"burst_size" json:"burst_size"`
-	CleanupInterval time.Duration `yaml:"cleanup_interval" json:"cleanup_interval"`
-	ByIP           bool    `yaml:"by_ip" json:"by_ip"`
-	ByUser         bool    `yaml:"by_user" json:"by_user"`
-	ByAPIKey       bool    `yaml:"by_api_key" json:"by_api_key"`
+	Enabled           bool          `yaml:"enabled" json:"enabled"`
+	RequestsPerSecond float64       `yaml:"requests_per_second" json:"requests_per_second"`
+	BurstSize         int           `yaml:"burst_size" json:"burst_size"`
+	CleanupInterval   time.Duration `yaml:"cleanup_interval" json:"cleanup_interval"`
+	ByIP              bool          `yaml:"by_ip" json:"by_ip"`
+	ByUser            bool          `yaml:"by_user" json:"by_user"`
+	ByAPIKey          bool          `yaml:"by_api_key" json:"by_api_key"`
 }
 
 // MetricsConfig represents metrics configuration
@@ -177,11 +177,11 @@ type TLSConfig struct {
 func DefaultSearchServiceConfig() *SearchServiceConfig {
 	return &SearchServiceConfig{
 		Server: ServerConfig{
-			Host:         "0.0.0.0",
-			Port:         8080,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  120 * time.Second,
+			Host:           "0.0.0.0",
+			Port:           8080,
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			IdleTimeout:    120 * time.Second,
 			MaxHeaderBytes: 1048576, // 1MB
 		},
 		Engine: EngineConfig{
@@ -196,11 +196,11 @@ func DefaultSearchServiceConfig() *SearchServiceConfig {
 		},
 		API: APIConfig{
 			HTTP: HTTPConfig{
-				Enabled:          true,
-				BasePath:         "/api/v1",
-				RequestSizeLimit: 10485760, // 10MB
+				Enabled:           true,
+				BasePath:          "/api/v1",
+				RequestSizeLimit:  10485760, // 10MB
 				EnableCompression: true,
-				CompressionLevel: 6,
+				CompressionLevel:  6,
 				CORS: CORSConfig{
 					Enabled:        true,
 					AllowedOrigins: []string{"*"},
@@ -232,15 +232,15 @@ func DefaultSearchServiceConfig() *SearchServiceConfig {
 			RateLimitBy: "ip",
 		},
 		RateLimit: RateLimitConfig{
-			Enabled:         false,
+			Enabled:           false,
 			RequestsPerSecond: 100.0,
-			BurstSize:       200,
-			CleanupInterval: 1 * time.Minute,
-			ByIP:            true,
+			BurstSize:         200,
+			CleanupInterval:   1 * time.Minute,
+			ByIP:              true,
 		},
 		Metrics: MetricsConfig{
 			Enabled:   true,
-			Namespace: "vexdb",
+			Namespace: "vxdb",
 			Subsystem: "search",
 			Path:      "/metrics",
 		},

@@ -7,9 +7,9 @@ import (
 	"math/rand"
 	"time"
 
-	"vexdb/internal/logging"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/logging"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 )
 
 var (

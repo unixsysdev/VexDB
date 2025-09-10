@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	cfg "vexdb/internal/config"
+	cfg "vxdb/internal/config"
 )
 
 func TestLoadConfigUnknownService(t *testing.T) {

@@ -1,16 +1,16 @@
 package auth
 
 import (
-    "context"
-    "crypto/subtle"
-    "encoding/base64"
-    "fmt"
-    "net/http"
-    "strings"
-    "time"
+	"context"
+	"crypto/subtle"
+	"encoding/base64"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
 
-    "vexdb/internal/search/config"
 	"go.uber.org/zap"
+	"vxdb/internal/search/config"
 )
 
 // Middleware provides authentication middleware for the search service
@@ -217,9 +217,9 @@ func (m *Middleware) sendUnauthorized(w http.ResponseWriter, message string) {
 	w.Header().Set("WWW-Authenticate", m.getAuthenticateHeader())
 	w.WriteHeader(http.StatusUnauthorized)
 
-    // Simple JSON encoding - in production, use proper JSON marshaling
-    jsonResponse := fmt.Sprintf(`{"success":false,"error":"unauthorized","message":"%s","timestamp":"%s"}`,
-        message, time.Now().Format(time.RFC3339))
+	// Simple JSON encoding - in production, use proper JSON marshaling
+	jsonResponse := fmt.Sprintf(`{"success":false,"error":"unauthorized","message":"%s","timestamp":"%s"}`,
+		message, time.Now().Format(time.RFC3339))
 
 	w.Write([]byte(jsonResponse))
 }
@@ -228,13 +228,13 @@ func (m *Middleware) sendUnauthorized(w http.ResponseWriter, message string) {
 func (m *Middleware) getAuthenticateHeader() string {
 	switch m.config.Type {
 	case "basic":
-		return `Basic realm="VexDB Search Service"`
+		return `Basic realm="VxDB Search Service"`
 	case "bearer":
-		return `Bearer realm="VexDB Search Service"`
+		return `Bearer realm="VxDB Search Service"`
 	case "api_key":
-		return `ApiKey realm="VexDB Search Service"`
+		return `ApiKey realm="VxDB Search Service"`
 	default:
-		return `Basic realm="VexDB Search Service"`
+		return `Basic realm="VxDB Search Service"`
 	}
 }
 
@@ -248,7 +248,7 @@ type RateLimitMiddleware struct {
 // NewRateLimitMiddleware creates a new rate limiting middleware
 func NewRateLimitMiddleware(cfg *config.RateLimitConfig, logger *zap.Logger) *RateLimitMiddleware {
 	rateLimit := NewRateLimiter(cfg.RequestsPerSecond, cfg.BurstSize, cfg.CleanupInterval)
-	
+
 	return &RateLimitMiddleware{
 		config:    cfg,
 		logger:    logger,
@@ -267,7 +267,7 @@ func (m *RateLimitMiddleware) RateLimitMiddleware(next http.Handler) http.Handle
 
 		// Get identifier for rate limiting
 		identifier := m.getIdentifier(r)
-		
+
 		// Check rate limit
 		if !m.rateLimit.Allow(identifier) {
 			m.logger.Warn("Rate limit exceeded", zap.String("identifier", identifier))
@@ -321,9 +321,9 @@ func (m *RateLimitMiddleware) sendRateLimitExceeded(w http.ResponseWriter) {
 	w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(m.config.CleanupInterval).Unix()))
 	w.WriteHeader(http.StatusTooManyRequests)
 
-    // Simple JSON encoding - in production, use proper JSON marshaling
-    jsonResponse := fmt.Sprintf(`{"success":false,"error":"rate_limit_exceeded","message":"Rate limit exceeded. Please try again later.","timestamp":"%s"}`,
-        time.Now().Format(time.RFC3339))
+	// Simple JSON encoding - in production, use proper JSON marshaling
+	jsonResponse := fmt.Sprintf(`{"success":false,"error":"rate_limit_exceeded","message":"Rate limit exceeded. Please try again later.","timestamp":"%s"}`,
+		time.Now().Format(time.RFC3339))
 
 	w.Write([]byte(jsonResponse))
 }
@@ -377,7 +377,7 @@ func (m *CORSMiddleware) CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", m.getAllowedOrigin(r.Header.Get("Origin")))
 		w.Header().Set("Access-Control-Allow-Methods", strings.Join(m.config.AllowedMethods, ", "))
 		w.Header().Set("Access-Control-Allow-Headers", strings.Join(m.config.AllowedHeaders, ", "))
-		
+
 		if m.config.AllowCredentials {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}

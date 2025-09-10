@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"vexdb/internal/config"
-	"vexdb/internal/metrics"
-	"vexdb/internal/types"
+	"vxdb/internal/config"
+	"vxdb/internal/metrics"
+	"vxdb/internal/types"
 
 	"go.uber.org/zap"
 )

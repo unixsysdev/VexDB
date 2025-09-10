@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"vexdb/internal/metrics"
+	"vxdb/internal/metrics"
 )
 
 func TestDefaultMonitorConfig(t *testing.T) {
