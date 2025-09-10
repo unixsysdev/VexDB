@@ -2,7 +2,7 @@
 # This Makefile provides convenient commands for building, testing, and deploying VxDB
 
 # Variables
-GO_VERSION := 1.21
+GO_VERSION := 1.23
 DOCKER_REGISTRY := ghcr.io
 IMAGE_NAME := vxdb
 NAMESPACE := vxdb

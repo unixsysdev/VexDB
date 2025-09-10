@@ -14,7 +14,6 @@ services:
       - "9092:9092"    # Dashboard
       - "8081:8081"    # WebSocket
       - "9093:9093"    # gRPC
-      - "6379:6379"    # Redis protocol
       - "7946:7946"    # Gossip
       - "7947:7947"    # Serf
     volumes:
@@ -112,91 +111,6 @@ services:
       retries: 3
       start_period: 5s
 
-  # Prometheus for metrics collection
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - vxdb_network
-
-  # Grafana for visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./configs/grafana/datasources:/etc/grafana/provisioning/datasources
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    networks:
-      - vxdb_network
-    depends_on:
-      - prometheus
-
-  # Jaeger for distributed tracing
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
-    restart: unless-stopped
-    ports:
-      - "16686:16686"  # UI
-      - "14268:14268"  # HTTP collector
-      - "14250:14250"  # gRPC collector
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-    networks:
-      - vxdb_network
-
-  # Redis for caching (optional)
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    restart: unless-stopped
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-    networks:
-      - vxdb_network
-
-  # Nginx reverse proxy (optional)
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./configs/nginx/conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
-    networks:
-      - vxdb_network
-    depends_on:
-      - vxinsert
-      - vxstorage
-      - vxsearch
-
 volumes:
   # VxDB Insert Service volumes
   vxinsert_data:
@@ -238,14 +152,6 @@ volumes:
   vxsearch_cache:
     driver: local
   vxsearch_logs:
-    driver: local
-
-  # Monitoring volumes
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
-  redis_data:
     driver: local
 
 networks:

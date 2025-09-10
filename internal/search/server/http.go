@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"vxdb/internal/metrics"
@@ -70,9 +72,14 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 	if s.config.API.HTTP.TLS != nil && s.config.API.HTTP.TLS.Enabled {
 		tlsConfig, err := s.setupTLS()
 		if err != nil {
-			return fmt.Errorf("failed to setup TLS: %w", err)
+			if errors.Is(err, os.ErrNotExist) {
+				s.logger.Warn("TLS disabled; certificate files not found", zap.Error(err))
+			} else {
+				return fmt.Errorf("failed to setup TLS: %w", err)
+			}
+		} else {
+			s.server.TLSConfig = tlsConfig
 		}
-		s.server.TLSConfig = tlsConfig
 	}
 
 	// Start server in background

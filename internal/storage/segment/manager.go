@@ -3,6 +3,8 @@ package segment
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"vxdb/internal/config"
@@ -47,9 +49,19 @@ func NewManager(cfg *config.Config, logger *zap.Logger, metrics *metrics.Collect
 
 // initializeManifest initializes the segment manifest
 func (m *Manager) initializeManifest() error {
-	// Initialize manifest (using default path and types)
-	m.manifest = NewManifest("./data/manifest.vx", 0, 0, *m.logger, nil)
-	// Load or create
+	// Determine data directory; allow override for tests via VXDB_DATA_DIR
+	dataDir := os.Getenv("VXDB_DATA_DIR")
+	if dataDir == "" {
+		dataDir = "/var/lib/vxdb/data"
+	}
+
+	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+		return err
+	}
+
+	manifestPath := filepath.Join(dataDir, "manifest.vx")
+	m.manifest = NewManifest(manifestPath, 0, 0, *m.logger, nil)
+
 	if err := m.manifest.Load(); err != nil {
 		m.logger.Warn("Failed to load manifest, creating new one", zap.Error(err))
 		if err := m.manifest.Create(); err != nil {

@@ -370,9 +370,14 @@ func (e *SearchEngine) initializeIndices() error {
 	// Always initialize linear search as the basic index
 	e.indices[IndexTypeLinear] = e.linearSearch
 
-	// Initialize other indices based on configuration
-	// For now, we only have linear search implemented
-	// Other indices (IVF, HNSW, PQ, LSH) will be added in future iterations
+	// Initialize IVF index with default Go implementation
+	ivfIndex, err := NewIVFIndex(e.config, e.logger, e.metrics, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create ivf index: %w", err)
+	}
+	e.indices[IndexTypeIVF] = ivfIndex
+
+	// Other indices (HNSW, PQ, LSH) can be added here in the future
 
 	return nil
 }
@@ -554,6 +559,10 @@ func (e *SearchEngine) AddVectors(vectors []*types.Vector) error {
 
 	if !exists {
 		return fmt.Errorf("%w: %s", ErrIndexNotReady, activeIndex)
+	}
+
+	if !index.IsReady() {
+		return index.Build(vectors)
 	}
 
 	return index.Update(vectors)
@@ -798,7 +807,7 @@ func (e *SearchEngine) GetIndexTypeInfo(indexType IndexType) map[string]interfac
 		info["performance"] = "Fast, sublinear"
 		info["memory_usage"] = "Medium"
 		info["build_time"] = "Moderate"
-		info["implemented"] = false
+		info["implemented"] = true
 	case IndexTypeHNSW:
 		info["name"] = "HNSW"
 		info["description"] = "Hierarchical Navigable Small World graphs"
