@@ -143,6 +143,7 @@ func (s *searchServer) searchAll(ctx context.Context, req *pb.SearchRequest) ([]
 		if r.err != nil {
 			return nil, r.err
 		}
+
 		for _, res := range r.res {
 			if res.GetVector() == nil {
 				continue
@@ -156,6 +157,7 @@ func (s *searchServer) searchAll(ctx context.Context, req *pb.SearchRequest) ([]
 	all := make([]*pb.SearchResult, 0, len(merged))
 	for _, res := range merged {
 		all = append(all, res)
+
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Distance < all[j].Distance })
 	if req.K > 0 && len(all) > int(req.K) {
