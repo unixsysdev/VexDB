@@ -8,7 +8,7 @@ services:
       dockerfile: cmd/vxinsert/Dockerfile
     container_name: vxinsert
     restart: unless-stopped
-    command: ["./vxinsert", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
+    command: ["./vxinsert", "--config=/etc/vxdb/config.yaml", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8080:8080"    # HTTP API
       - "9091:9091"    # Metrics
@@ -24,7 +24,6 @@ services:
       - vxinsert_buffer:/var/lib/vxdb/buffer
       - vxinsert_logs:/var/log/vxdb
       - ./configs/vxinsert-production.yaml:/etc/vxdb/config.yaml
-      - ./certs:/etc/vxdb/certs
     environment:
       - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
@@ -64,7 +63,6 @@ services:
       - vxstorage1_backups:/var/lib/vxdb/backups
       - vxstorage1_logs:/var/log/vxdb
       - ./configs/vxstorage-production.yaml:/etc/vxdb/config.yaml
-      - ./certs:/etc/vxdb/certs
     environment:
       - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
@@ -100,7 +98,6 @@ services:
       - vxstorage2_backups:/var/lib/vxdb/backups
       - vxstorage2_logs:/var/log/vxdb
       - ./configs/vxstorage-production.yaml:/etc/vxdb/config.yaml
-      - ./certs:/etc/vxdb/certs
     environment:
       - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
@@ -120,7 +117,7 @@ services:
       dockerfile: cmd/vxsearch/Dockerfile
     container_name: vxsearch
     restart: unless-stopped
-    command: ["./vxsearch", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
+    command: ["./vxsearch", "--config=/etc/vxdb/config.yaml", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8083:8083"    # HTTP API
       - "9106:9097"    # Metrics
@@ -135,7 +132,6 @@ services:
       - vxsearch_cache:/var/lib/vxdb/cache
       - vxsearch_logs:/var/log/vxdb
       - ./configs/vxsearch-production.yaml:/etc/vxdb/config.yaml
-      - ./certs:/etc/vxdb/certs
     environment:
       - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
       - GIN_MODE=release
