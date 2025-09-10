@@ -1307,84 +1307,85 @@ var File_vxdb_proto protoreflect.FileDescriptor
 
 const file_vxdb_proto_rawDesc = "" +
 	"\n" +
-	"\vvxdb.proto\x12\x05vxdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfb\x01\n" +
+	"\n" +
+	"vxdb.proto\x12\x04vxdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfa\x01\n" +
 	"\x06Vector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04data\x18\x02 \x03(\x02R\x04data\x127\n" +
-	"\bmetadata\x18\x03 \x03(\v2\x1b.vxdb.Vector.MetadataEntryR\bmetadata\x12\x1d\n" +
+	"\x04data\x18\x02 \x03(\x02R\x04data\x126\n" +
+	"\bmetadata\x18\x03 \x03(\v2\x1a.vxdb.Vector.MetadataEntryR\bmetadata\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x04 \x01(\rR\tclusterId\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"6\n" +
-	"\vVectorBatch\x12'\n" +
-	"\avectors\x18\x01 \x03(\v2\r.vxdb.VectorR\avectors\"o\n" +
-	"\rInsertRequest\x12'\n" +
-	"\x06vector\x18\x01 \x01(\v2\r.vxdb.VectorH\x00R\x06vector\x12*\n" +
-	"\x05batch\x18\x02 \x01(\v2\x12.vxdb.VectorBatchH\x00R\x05batchB\t\n" +
-	"\arequest\"\xe1\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"5\n" +
+	"\vVectorBatch\x12&\n" +
+	"\avectors\x18\x01 \x03(\v2\f.vxdb.VectorR\avectors\"m\n" +
+	"\rInsertRequest\x12&\n" +
+	"\x06vector\x18\x01 \x01(\v2\f.vxdb.VectorH\x00R\x06vector\x12)\n" +
+	"\x05batch\x18\x02 \x01(\v2\x11.vxdb.VectorBatchH\x00R\x05batchB\t\n" +
+	"\arequest\"\xe0\x01\n" +
 	"\x0eInsertResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x1d\n" +
 	"\n" +
-	"vector_ids\x18\x03 \x03(\tR\tvectorIds\x12?\n" +
-	"\bmetadata\x18\x04 \x03(\v2#.vxdb.InsertResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"vector_ids\x18\x03 \x03(\tR\tvectorIds\x12>\n" +
+	"\bmetadata\x18\x04 \x03(\v2\".vxdb.InsertResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe0\x02\n" +
-	"\rSearchRequest\x120\n" +
-	"\fquery_vector\x18\x01 \x01(\v2\r.vxdb.VectorR\vqueryVector\x12\f\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xde\x02\n" +
+	"\rSearchRequest\x12/\n" +
+	"\fquery_vector\x18\x01 \x01(\v2\f.vxdb.VectorR\vqueryVector\x12\f\n" +
 	"\x01k\x18\x02 \x01(\x05R\x01k\x12\x1f\n" +
 	"\vcluster_ids\x18\x03 \x03(\tR\n" +
-	"clusterIds\x12Q\n" +
-	"\x0fmetadata_filter\x18\x04 \x03(\v2(.vxdb.SearchRequest.MetadataFilterEntryR\x0emetadataFilter\x12)\n" +
+	"clusterIds\x12P\n" +
+	"\x0fmetadata_filter\x18\x04 \x03(\v2'.vxdb.SearchRequest.MetadataFilterEntryR\x0emetadataFilter\x12)\n" +
 	"\x10include_metadata\x18\x05 \x01(\bR\x0fincludeMetadata\x12-\n" +
 	"\x12distance_threshold\x18\x06 \x01(\x02R\x11distanceThreshold\x1aA\n" +
 	"\x13MetadataFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9f\x01\n" +
-	"\fSearchResult\x12%\n" +
-	"\x06vector\x18\x01 \x01(\v2\r.vxdb.VectorR\x06vector\x12\x1a\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9e\x01\n" +
+	"\fSearchResult\x12$\n" +
+	"\x06vector\x18\x01 \x01(\v2\f.vxdb.VectorR\x06vector\x12\x1a\n" +
 	"\bdistance\x18\x02 \x01(\x02R\bdistance\x12\x14\n" +
 	"\x05score\x18\x03 \x01(\x02R\x05score\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x04 \x01(\tR\tclusterId\x12\x17\n" +
-	"\anode_id\x18\x05 \x01(\tR\x06nodeId\"\x96\x02\n" +
+	"\anode_id\x18\x05 \x01(\tR\x06nodeId\"\x94\x02\n" +
 	"\x0eSearchResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12-\n" +
-	"\aresults\x18\x03 \x03(\v2\x13.vxdb.SearchResultR\aresults\x12#\n" +
-	"\rtotal_results\x18\x04 \x01(\x03R\ftotalResults\x12?\n" +
-	"\bmetadata\x18\x05 \x03(\v2#.vxdb.SearchResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12,\n" +
+	"\aresults\x18\x03 \x03(\v2\x12.vxdb.SearchResultR\aresults\x12#\n" +
+	"\rtotal_results\x18\x04 \x01(\x03R\ftotalResults\x12>\n" +
+	"\bmetadata\x18\x05 \x03(\v2\".vxdb.SearchResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc4\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc3\x01\n" +
 	"\rDeleteRequest\x12\x1d\n" +
 	"\n" +
-	"vector_ids\x18\x01 \x03(\tR\tvectorIds\x12Q\n" +
-	"\x0fmetadata_filter\x18\x02 \x03(\v2(.vxdb.DeleteRequest.MetadataFilterEntryR\x0emetadataFilter\x1aA\n" +
+	"vector_ids\x18\x01 \x03(\tR\tvectorIds\x12P\n" +
+	"\x0fmetadata_filter\x18\x02 \x03(\v2'.vxdb.DeleteRequest.MetadataFilterEntryR\x0emetadataFilter\x1aA\n" +
 	"\x13MetadataFilterEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe7\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe6\x01\n" +
 	"\x0eDeleteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12#\n" +
-	"\rdeleted_count\x18\x03 \x01(\x03R\fdeletedCount\x12?\n" +
-	"\bmetadata\x18\x04 \x03(\v2#.vxdb.DeleteResponse.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rdeleted_count\x18\x03 \x01(\x03R\fdeletedCount\x12>\n" +
+	"\bmetadata\x18\x04 \x03(\v2\".vxdb.DeleteResponse.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf5\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf4\x01\n" +
 	"\vClusterInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bnode_ids\x18\x02 \x03(\tR\anodeIds\x12!\n" +
 	"\fvector_count\x18\x03 \x01(\x04R\vvectorCount\x12\x1d\n" +
 	"\n" +
-	"size_bytes\x18\x04 \x01(\x04R\tsizeBytes\x12<\n" +
-	"\bmetadata\x18\x05 \x03(\v2 .vxdb.ClusterInfo.MetadataEntryR\bmetadata\x1a;\n" +
+	"size_bytes\x18\x04 \x01(\x04R\tsizeBytes\x12;\n" +
+	"\bmetadata\x18\x05 \x03(\v2\x1f.vxdb.ClusterInfo.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdc\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdb\x02\n" +
 	"\bNodeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x12\n" +
@@ -1395,27 +1396,27 @@ const file_vxdb_proto_rawDesc = "" +
 	"\fvector_count\x18\x06 \x01(\x04R\vvectorCount\x12!\n" +
 	"\fmemory_usage\x18\a \x01(\x04R\vmemoryUsage\x12\x1d\n" +
 	"\n" +
-	"disk_usage\x18\b \x01(\x04R\tdiskUsage\x129\n" +
-	"\bmetadata\x18\t \x03(\v2\x1d.vxdb.NodeInfo.MetadataEntryR\bmetadata\x1a;\n" +
+	"disk_usage\x18\b \x01(\x04R\tdiskUsage\x128\n" +
+	"\bmetadata\x18\t \x03(\v2\x1c.vxdb.NodeInfo.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb9\x02\n" +
-	"\rClusterStatus\x12.\n" +
-	"\bclusters\x18\x01 \x03(\v2\x12.vxdb.ClusterInfoR\bclusters\x12%\n" +
-	"\x05nodes\x18\x02 \x03(\v2\x0f.vxdb.NodeInfoR\x05nodes\x12%\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xb6\x02\n" +
+	"\rClusterStatus\x12-\n" +
+	"\bclusters\x18\x01 \x03(\v2\x11.vxdb.ClusterInfoR\bclusters\x12$\n" +
+	"\x05nodes\x18\x02 \x03(\v2\x0e.vxdb.NodeInfoR\x05nodes\x12%\n" +
 	"\x0etotal_clusters\x18\x03 \x01(\rR\rtotalClusters\x12-\n" +
-	"\x12replication_factor\x18\x04 \x01(\rR\x11replicationFactor\x12>\n" +
-	"\bmetadata\x18\x05 \x03(\v2\".vxdb.ClusterStatus.MetadataEntryR\bmetadata\x1a;\n" +
+	"\x12replication_factor\x18\x04 \x01(\rR\x11replicationFactor\x12=\n" +
+	"\bmetadata\x18\x05 \x03(\v2!.vxdb.ClusterStatus.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"0\n" +
 	"\x12HealthCheckRequest\x12\x1a\n" +
-	"\bdetailed\x18\x01 \x01(\bR\bdetailed\"\x9a\x02\n" +
+	"\bdetailed\x18\x01 \x01(\bR\bdetailed\"\x99\x02\n" +
 	"\x13HealthCheckResponse\x12\x18\n" +
 	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\x12A\n" +
-	"\adetails\x18\x04 \x03(\v2'.vxdb.HealthCheckResponse.DetailsEntryR\adetails\x128\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12@\n" +
+	"\adetails\x18\x04 \x03(\v2&.vxdb.HealthCheckResponse.DetailsEntryR\adetails\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a:\n" +
 	"\fDetailsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1425,91 +1426,91 @@ const file_vxdb_proto_rawDesc = "" +
 	"metricType\x12\x1d\n" +
 	"\n" +
 	"cluster_id\x18\x02 \x01(\tR\tclusterId\x12\x17\n" +
-	"\anode_id\x18\x03 \x01(\tR\x06nodeId\"\xf9\x02\n" +
+	"\anode_id\x18\x03 \x01(\tR\x06nodeId\"\xf7\x02\n" +
 	"\x0fMetricsResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12=\n" +
-	"\ametrics\x18\x03 \x03(\v2#.vxdb.MetricsResponse.MetricsEntryR\ametrics\x12@\n" +
-	"\bmetadata\x18\x04 \x03(\v2$.vxdb.MetricsResponse.MetadataEntryR\bmetadata\x128\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12<\n" +
+	"\ametrics\x18\x03 \x03(\v2\".vxdb.MetricsResponse.MetricsEntryR\ametrics\x12?\n" +
+	"\bmetadata\x18\x04 \x03(\v2#.vxdb.MetricsResponse.MetadataEntryR\bmetadata\x128\n" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x1a:\n" +
 	"\fMetricsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd8\x01\n" +
-	"\x13ConfigUpdateRequest\x12T\n" +
-	"\x0econfig_updates\x18\x01 \x03(\v2-.vxdb.ConfigUpdateRequest.ConfigUpdatesEntryR\rconfigUpdates\x12)\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd7\x01\n" +
+	"\x13ConfigUpdateRequest\x12S\n" +
+	"\x0econfig_updates\x18\x01 \x03(\v2,.vxdb.ConfigUpdateRequest.ConfigUpdatesEntryR\rconfigUpdates\x12)\n" +
 	"\x10restart_required\x18\x02 \x01(\bR\x0frestartRequired\x1a@\n" +
 	"\x12ConfigUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x80\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xfe\x02\n" +
 	"\x14ConfigUpdateResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\x12X\n" +
-	"\x0fapplied_updates\x18\x03 \x03(\v2/.vxdb.ConfigUpdateResponse.AppliedUpdatesEntryR\x0eappliedUpdates\x12U\n" +
-	"\x0efailed_updates\x18\x04 \x03(\v2..vxdb.ConfigUpdateResponse.FailedUpdatesEntryR\rfailedUpdates\x1aA\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12W\n" +
+	"\x0fapplied_updates\x18\x03 \x03(\v2..vxdb.ConfigUpdateResponse.AppliedUpdatesEntryR\x0eappliedUpdates\x12T\n" +
+	"\x0efailed_updates\x18\x04 \x03(\v2-.vxdb.ConfigUpdateResponse.FailedUpdatesEntryR\rfailedUpdates\x1aA\n" +
 	"\x13AppliedUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
 	"\x12FailedUpdatesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x9c\x06\n" +
-	"\x0eStorageService\x12;\n" +
-	"\fInsertVector\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse\x12E\n" +
-	"\x12InsertVectorStream\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse(\x010\x01\x125\n" +
-	"\x06Search\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12?\n" +
-	"\fSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x12<\n" +
-	"\rDeleteVectors\x12\x14.vxdb.DeleteRequest\x1a\x15.vxdb.DeleteResponse\x12F\n" +
-	"\x13DeleteVectorsStream\x12\x14.vxdb.DeleteRequest\x1a\x15.vxdb.DeleteResponse(\x010\x01\x128\n" +
-	"\x0eGetClusterInfo\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012\x86\x06\n" +
+	"\x0eStorageService\x129\n" +
+	"\fInsertVector\x12\x13.vxdb.InsertRequest\x1a\x14.vxdb.InsertResponse\x12C\n" +
+	"\x12InsertVectorStream\x12\x13.vxdb.InsertRequest\x1a\x14.vxdb.InsertResponse(\x010\x01\x123\n" +
+	"\x06Search\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse\x12=\n" +
+	"\fSearchStream\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse(\x010\x01\x12:\n" +
+	"\rDeleteVectors\x12\x13.vxdb.DeleteRequest\x1a\x14.vxdb.DeleteResponse\x12D\n" +
+	"\x13DeleteVectorsStream\x12\x13.vxdb.DeleteRequest\x1a\x14.vxdb.DeleteResponse(\x010\x01\x126\n" +
+	"\x0eGetClusterInfo\x12\x11.vxdb.ClusterInfo\x1a\x11.vxdb.ClusterInfo\x12?\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x13.vxdb.ClusterStatus\x12B\n" +
+	"\vHealthCheck\x12\x18.vxdb.HealthCheckRequest\x1a\x19.vxdb.HealthCheckResponse\x129\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\x9b\x05\n" +
-	"\rInsertService\x12;\n" +
-	"\fInsertVector\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse\x12E\n" +
-	"\x12InsertVectorStream\x12\x14.vxdb.InsertRequest\x1a\x15.vxdb.InsertResponse(\x010\x01\x128\n" +
-	"\vInsertBatch\x12\x12.vxdb.VectorBatch\x1a\x15.vxdb.InsertResponse\x12B\n" +
-	"\x11InsertBatchStream\x12\x12.vxdb.VectorBatch\x1a\x15.vxdb.InsertResponse(\x010\x01\x128\n" +
-	"\x13GetClusterForVector\x12\r.vxdb.Vector\x1a\x12.vxdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
+	"GetMetrics\x12\x14.vxdb.MetricsRequest\x1a\x15.vxdb.MetricsResponse\x12E\n" +
+	"\fUpdateConfig\x12\x19.vxdb.ConfigUpdateRequest\x1a\x1a.vxdb.ConfigUpdateResponse\x12?\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1a.vxdb.ConfigUpdateResponse2\x89\x05\n" +
+	"\rInsertService\x129\n" +
+	"\fInsertVector\x12\x13.vxdb.InsertRequest\x1a\x14.vxdb.InsertResponse\x12C\n" +
+	"\x12InsertVectorStream\x12\x13.vxdb.InsertRequest\x1a\x14.vxdb.InsertResponse(\x010\x01\x126\n" +
+	"\vInsertBatch\x12\x11.vxdb.VectorBatch\x1a\x14.vxdb.InsertResponse\x12@\n" +
+	"\x11InsertBatchStream\x12\x11.vxdb.VectorBatch\x1a\x14.vxdb.InsertResponse(\x010\x01\x126\n" +
+	"\x13GetClusterForVector\x12\f.vxdb.Vector\x1a\x11.vxdb.ClusterInfo\x12?\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x13.vxdb.ClusterStatus\x12B\n" +
+	"\vHealthCheck\x12\x18.vxdb.HealthCheckRequest\x1a\x19.vxdb.HealthCheckResponse\x129\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\xa1\x05\n" +
-	"\rSearchService\x125\n" +
-	"\x06Search\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12?\n" +
-	"\fSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x12A\n" +
-	"\x12MultiClusterSearch\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse\x12K\n" +
-	"\x18MultiClusterSearchStream\x12\x14.vxdb.SearchRequest\x1a\x15.vxdb.SearchResponse(\x010\x01\x128\n" +
-	"\x0eGetClusterInfo\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12@\n" +
-	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x14.vxdb.ClusterStatus\x12D\n" +
-	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
+	"GetMetrics\x12\x14.vxdb.MetricsRequest\x1a\x15.vxdb.MetricsResponse\x12E\n" +
+	"\fUpdateConfig\x12\x19.vxdb.ConfigUpdateRequest\x1a\x1a.vxdb.ConfigUpdateResponse\x12?\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1a.vxdb.ConfigUpdateResponse2\x8f\x05\n" +
+	"\rSearchService\x123\n" +
+	"\x06Search\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse\x12=\n" +
+	"\fSearchStream\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse(\x010\x01\x12?\n" +
+	"\x12MultiClusterSearch\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse\x12I\n" +
+	"\x18MultiClusterSearchStream\x12\x13.vxdb.SearchRequest\x1a\x14.vxdb.SearchResponse(\x010\x01\x126\n" +
+	"\x0eGetClusterInfo\x12\x11.vxdb.ClusterInfo\x1a\x11.vxdb.ClusterInfo\x12?\n" +
+	"\x10GetClusterStatus\x12\x16.google.protobuf.Empty\x1a\x13.vxdb.ClusterStatus\x12B\n" +
+	"\vHealthCheck\x12\x18.vxdb.HealthCheckRequest\x1a\x19.vxdb.HealthCheckResponse\x129\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponse2\xa2\x06\n" +
-	"\fAdminService\x12+\n" +
-	"\aAddNode\x12\x0f.vxdb.NodeInfo\x1a\x0f.vxdb.NodeInfo\x125\n" +
+	"GetMetrics\x12\x14.vxdb.MetricsRequest\x1a\x15.vxdb.MetricsResponse\x12E\n" +
+	"\fUpdateConfig\x12\x19.vxdb.ConfigUpdateRequest\x1a\x1a.vxdb.ConfigUpdateResponse\x12?\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1a.vxdb.ConfigUpdateResponse2\x91\x06\n" +
+	"\fAdminService\x12)\n" +
+	"\aAddNode\x12\x0e.vxdb.NodeInfo\x1a\x0e.vxdb.NodeInfo\x124\n" +
 	"\n" +
-	"RemoveNode\x12\x0f.vxdb.NodeInfo\x1a\x16.google.protobuf.Empty\x12.\n" +
+	"RemoveNode\x12\x0e.vxdb.NodeInfo\x1a\x16.google.protobuf.Empty\x12,\n" +
 	"\n" +
-	"UpdateNode\x12\x0f.vxdb.NodeInfo\x1a\x0f.vxdb.NodeInfo\x127\n" +
-	"\rCreateCluster\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12;\n" +
-	"\rDeleteCluster\x12\x12.vxdb.ClusterInfo\x1a\x16.google.protobuf.Empty\x127\n" +
-	"\rUpdateCluster\x12\x12.vxdb.ClusterInfo\x1a\x12.vxdb.ClusterInfo\x12>\n" +
+	"UpdateNode\x12\x0e.vxdb.NodeInfo\x1a\x0e.vxdb.NodeInfo\x125\n" +
+	"\rCreateCluster\x12\x11.vxdb.ClusterInfo\x1a\x11.vxdb.ClusterInfo\x12:\n" +
+	"\rDeleteCluster\x12\x11.vxdb.ClusterInfo\x1a\x16.google.protobuf.Empty\x125\n" +
+	"\rUpdateCluster\x12\x11.vxdb.ClusterInfo\x1a\x11.vxdb.ClusterInfo\x12>\n" +
 	"\fBackupSystem\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12?\n" +
 	"\rRestoreSystem\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12@\n" +
-	"\x0eCompactStorage\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12D\n" +
-	"\vHealthCheck\x12\x19.vxdb.HealthCheckRequest\x1a\x1a.vxdb.HealthCheckResponse\x12;\n" +
+	"\x0eCompactStorage\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12B\n" +
+	"\vHealthCheck\x12\x18.vxdb.HealthCheckRequest\x1a\x19.vxdb.HealthCheckResponse\x129\n" +
 	"\n" +
-	"GetMetrics\x12\x15.vxdb.MetricsRequest\x1a\x16.vxdb.MetricsResponse\x12G\n" +
-	"\fUpdateConfig\x12\x1a.vxdb.ConfigUpdateRequest\x1a\x1b.vxdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vxdb.ConfigUpdateResponseB\x1eZ\x1cgithub.com/vxdb/vxdb/protob\x06proto3"
+	"GetMetrics\x12\x14.vxdb.MetricsRequest\x1a\x15.vxdb.MetricsResponse\x12E\n" +
+	"\fUpdateConfig\x12\x19.vxdb.ConfigUpdateRequest\x1a\x1a.vxdb.ConfigUpdateResponse\x12?\n" +
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1a.vxdb.ConfigUpdateResponseB\x1cZ\x1agithub.com/vxdb/vxdb/protob\x06proto3"
 
 var (
 	file_vxdb_proto_rawDescOnce sync.Once
