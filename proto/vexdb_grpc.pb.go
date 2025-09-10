@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v3.21.12
-// source: proto/vexdb.proto
+// source: vexdb.proto
 
 package proto
 
@@ -535,7 +535,7 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/vexdb.proto",
+	Metadata: "vexdb.proto",
 }
 
 const (
@@ -982,7 +982,7 @@ var InsertService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/vexdb.proto",
+	Metadata: "vexdb.proto",
 }
 
 const (
@@ -1429,7 +1429,7 @@ var SearchService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "proto/vexdb.proto",
+	Metadata: "vexdb.proto",
 }
 
 const (
@@ -2001,5 +2001,5 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/vexdb.proto",
+	Metadata: "vexdb.proto",
 }

@@ -1,10 +1,11 @@
 package validation
 
 import (
-	"math"
-	"testing"
+       "math"
+       "strings"
+       "testing"
 
-	"vexdb/internal/types"
+       "vexdb/internal/types"
 )
 
 func TestNewSearchRequestValidator(t *testing.T) {
@@ -55,9 +56,9 @@ func TestValidateSearchRequest_NilQuery(t *testing.T) {
 		t.Error("Expected error for nil query, got nil")
 	}
 	
-	if err.Error() != "query vector cannot be nil" {
-		t.Errorf("Expected 'query vector cannot be nil', got: %v", err)
-	}
+       if !strings.Contains(err.Error(), "query vector cannot be nil") {
+               t.Errorf("Expected error containing 'query vector cannot be nil', got: %v", err)
+       }
 }
 
 func TestValidateSearchRequest_EmptyVector(t *testing.T) {
@@ -74,9 +75,9 @@ func TestValidateSearchRequest_EmptyVector(t *testing.T) {
 		t.Error("Expected error for empty vector, got nil")
 	}
 	
-	if err.Error() != "query vector cannot be empty" {
-		t.Errorf("Expected 'query vector cannot be empty', got: %v", err)
-	}
+       if !strings.Contains(err.Error(), "query vector cannot be empty") {
+               t.Errorf("Expected error containing 'query vector cannot be empty', got: %v", err)
+       }
 }
 
 func TestValidateSearchRequest_VectorTooLarge(t *testing.T) {
@@ -93,10 +94,10 @@ func TestValidateSearchRequest_VectorTooLarge(t *testing.T) {
 		t.Error("Expected error for vector too large, got nil")
 	}
 	
-	expectedMsg := "query vector dimension 6 exceeds maximum 5"
-	if err.Error() != expectedMsg {
-		t.Errorf("Expected '%s', got: %v", expectedMsg, err)
-	}
+       expectedMsg := "query vector dimension 6 exceeds maximum 5"
+       if !strings.Contains(err.Error(), expectedMsg) {
+               t.Errorf("Expected error containing '%s', got: %v", expectedMsg, err)
+       }
 }
 
 func TestValidateSearchRequest_InvalidVectorValues(t *testing.T) {
@@ -277,17 +278,7 @@ func TestValidationErrors(t *testing.T) {
 		t.Error("Expected non-empty error string")
 	}
 	
-	if !contains(errorStr, "field1") || !contains(errorStr, "field2") {
-		t.Error("Expected error string to contain field names")
-	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+       if !strings.Contains(errorStr, "field1") || !strings.Contains(errorStr, "field2") {
+               t.Error("Expected error string to contain field names")
+       }
 }

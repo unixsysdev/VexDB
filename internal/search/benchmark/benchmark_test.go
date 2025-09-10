@@ -1,16 +1,16 @@
 package benchmark
 
 import (
-	"context"
-	"fmt"
-	"math/rand"
-	"testing"
-	"time"
+       "fmt"
+       "math"
+       "math/rand"
+       "testing"
+       "time"
 
-	"vexdb/internal/search/config"
-	"vexdb/internal/search/response"
-	"vexdb/internal/search/validation"
-	"vexdb/internal/types"
+       "vexdb/internal/search/config"
+       "vexdb/internal/search/response"
+       "vexdb/internal/search/validation"
+       "vexdb/internal/types"
 )
 
 // BenchmarkSearchValidation benchmarks the search validation performance
@@ -88,10 +88,10 @@ func BenchmarkResponseFormatting(b *testing.B) {
 	for name, results := range resultSets {
 		b.Run(fmt.Sprintf("ResultSet_%s", name), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				response := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
-				if response == nil {
-					b.Fatal("Expected response to be created")
-				}
+                               resp := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
+                               if resp == nil {
+                                       b.Fatal("Expected response to be created")
+                               }
 			}
 		})
 	}
@@ -138,10 +138,10 @@ func BenchmarkResponseFormattingWithMetadata(b *testing.B) {
 		b.Run(fmt.Sprintf("Config_%s", name), func(b *testing.B) {
 			formatter := response.NewFormatter(config)
 			for i := 0; i < b.N; i++ {
-				response := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
-				if response == nil {
-					b.Fatal("Expected response to be created")
-				}
+                               resp := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
+                               if resp == nil {
+                                       b.Fatal("Expected response to be created")
+                               }
 			}
 		})
 	}
@@ -174,10 +174,10 @@ func BenchmarkBatchResponseFormatting(b *testing.B) {
 			}
 			
 			for i := 0; i < b.N; i++ {
-				response := formatter.FormatBatchResponse(allResults, queries, 10, queryIDs, stats)
-				if response == nil {
-					b.Fatal("Expected batch response to be created")
-				}
+                               resp := formatter.FormatBatchResponse(allResults, queries, 10, queryIDs, stats)
+                               if resp == nil {
+                                       b.Fatal("Expected batch response to be created")
+                               }
 			}
 		})
 	}
@@ -195,11 +195,11 @@ func BenchmarkJSONSerialization(b *testing.B) {
 		ExecutionTime:   50 * time.Millisecond,
 	}
 	
-	response := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
+       resp := formatter.FormatSearchResponse(results, query, 100, "benchmark-query", stats)
 	
 	b.Run("CompactJSON", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			jsonData, err := formatter.ToJSON(response)
+               jsonData, err := formatter.ToJSON(resp)
 			if err != nil {
 				b.Fatalf("JSON serialization failed: %v", err)
 			}
@@ -209,11 +209,11 @@ func BenchmarkJSONSerialization(b *testing.B) {
 		}
 	})
 	
-	prettyFormatter := response.NewFormatter(&response.ResponseConfig{PrettyPrint: true})
+       prettyFormatter := response.NewFormatter(&response.ResponseConfig{PrettyPrint: true})
 	
 	b.Run("PrettyJSON", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			jsonData, err := prettyFormatter.ToJSON(response)
+               jsonData, err := prettyFormatter.ToJSON(resp)
 			if err != nil {
 				b.Fatalf("JSON serialization failed: %v", err)
 			}
@@ -226,11 +226,11 @@ func BenchmarkJSONSerialization(b *testing.B) {
 
 // BenchmarkConfigurationValidation benchmarks configuration validation performance
 func BenchmarkConfigurationValidation(b *testing.B) {
-	config := config.DefaultSearchServiceConfig()
+       cfg := config.DefaultSearchServiceConfig()
 	
-	b.Run("DefaultConfig", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			err := config.Validate()
+       b.Run("DefaultConfig", func(b *testing.B) {
+               for i := 0; i < b.N; i++ {
+                       err := cfg.Validate()
 			if err != nil {
 				b.Fatalf("Configuration validation failed: %v", err)
 			}
@@ -238,19 +238,19 @@ func BenchmarkConfigurationValidation(b *testing.B) {
 	})
 	
 	// Test with various modifications
-	invalidConfigs := map[string]*config.SearchServiceConfig{
-		"invalid_host": func() *config.SearchServiceConfig {
-			c := *config
+       invalidConfigs := map[string]*config.SearchServiceConfig{
+               "invalid_host": func() *config.SearchServiceConfig {
+                       c := *cfg
 			c.Server.Host = ""
 			return &c
 		}(),
-		"invalid_port": func() *config.SearchServiceConfig {
-			c := *config
+               "invalid_port": func() *config.SearchServiceConfig {
+                       c := *cfg
 			c.Server.Port = 0
 			return &c
 		}(),
-		"invalid_engine": func() *config.SearchServiceConfig {
-			c := *config
+               "invalid_engine": func() *config.SearchServiceConfig {
+                       c := *cfg
 			c.Engine.MaxResults = -1
 			return &c
 		}(),

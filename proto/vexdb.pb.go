@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.8
 // 	protoc        v3.21.12
-// source: proto/vexdb.proto
+// source: vexdb.proto
 
 package proto
 
@@ -37,7 +37,7 @@ type Vector struct {
 
 func (x *Vector) Reset() {
 	*x = Vector{}
-	mi := &file_proto_vexdb_proto_msgTypes[0]
+	mi := &file_vexdb_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -49,7 +49,7 @@ func (x *Vector) String() string {
 func (*Vector) ProtoMessage() {}
 
 func (x *Vector) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[0]
+	mi := &file_vexdb_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -62,7 +62,7 @@ func (x *Vector) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Vector.ProtoReflect.Descriptor instead.
 func (*Vector) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{0}
+	return file_vexdb_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Vector) GetId() string {
@@ -110,7 +110,7 @@ type VectorBatch struct {
 
 func (x *VectorBatch) Reset() {
 	*x = VectorBatch{}
-	mi := &file_proto_vexdb_proto_msgTypes[1]
+	mi := &file_vexdb_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +122,7 @@ func (x *VectorBatch) String() string {
 func (*VectorBatch) ProtoMessage() {}
 
 func (x *VectorBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[1]
+	mi := &file_vexdb_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -135,7 +135,7 @@ func (x *VectorBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VectorBatch.ProtoReflect.Descriptor instead.
 func (*VectorBatch) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{1}
+	return file_vexdb_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *VectorBatch) GetVectors() []*Vector {
@@ -159,7 +159,7 @@ type InsertRequest struct {
 
 func (x *InsertRequest) Reset() {
 	*x = InsertRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[2]
+	mi := &file_vexdb_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -171,7 +171,7 @@ func (x *InsertRequest) String() string {
 func (*InsertRequest) ProtoMessage() {}
 
 func (x *InsertRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[2]
+	mi := &file_vexdb_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -184,7 +184,7 @@ func (x *InsertRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertRequest.ProtoReflect.Descriptor instead.
 func (*InsertRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{2}
+	return file_vexdb_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *InsertRequest) GetRequest() isInsertRequest_Request {
@@ -241,7 +241,7 @@ type InsertResponse struct {
 
 func (x *InsertResponse) Reset() {
 	*x = InsertResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[3]
+	mi := &file_vexdb_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -253,7 +253,7 @@ func (x *InsertResponse) String() string {
 func (*InsertResponse) ProtoMessage() {}
 
 func (x *InsertResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[3]
+	mi := &file_vexdb_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -266,7 +266,7 @@ func (x *InsertResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertResponse.ProtoReflect.Descriptor instead.
 func (*InsertResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{3}
+	return file_vexdb_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *InsertResponse) GetSuccess() bool {
@@ -312,7 +312,7 @@ type SearchRequest struct {
 
 func (x *SearchRequest) Reset() {
 	*x = SearchRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[4]
+	mi := &file_vexdb_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +324,7 @@ func (x *SearchRequest) String() string {
 func (*SearchRequest) ProtoMessage() {}
 
 func (x *SearchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[4]
+	mi := &file_vexdb_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +337,7 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
 func (*SearchRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{4}
+	return file_vexdb_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SearchRequest) GetQueryVector() *Vector {
@@ -396,7 +396,7 @@ type SearchResult struct {
 
 func (x *SearchResult) Reset() {
 	*x = SearchResult{}
-	mi := &file_proto_vexdb_proto_msgTypes[5]
+	mi := &file_vexdb_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +408,7 @@ func (x *SearchResult) String() string {
 func (*SearchResult) ProtoMessage() {}
 
 func (x *SearchResult) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[5]
+	mi := &file_vexdb_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +421,7 @@ func (x *SearchResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResult.ProtoReflect.Descriptor instead.
 func (*SearchResult) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{5}
+	return file_vexdb_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SearchResult) GetVector() *Vector {
@@ -473,7 +473,7 @@ type SearchResponse struct {
 
 func (x *SearchResponse) Reset() {
 	*x = SearchResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[6]
+	mi := &file_vexdb_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +485,7 @@ func (x *SearchResponse) String() string {
 func (*SearchResponse) ProtoMessage() {}
 
 func (x *SearchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[6]
+	mi := &file_vexdb_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +498,7 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
 func (*SearchResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{6}
+	return file_vexdb_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SearchResponse) GetSuccess() bool {
@@ -547,7 +547,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[7]
+	mi := &file_vexdb_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -559,7 +559,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[7]
+	mi := &file_vexdb_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -572,7 +572,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{7}
+	return file_vexdb_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteRequest) GetVectorIds() []string {
@@ -602,7 +602,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[8]
+	mi := &file_vexdb_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -614,7 +614,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[8]
+	mi := &file_vexdb_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -627,7 +627,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{8}
+	return file_vexdb_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DeleteResponse) GetSuccess() bool {
@@ -672,7 +672,7 @@ type ClusterInfo struct {
 
 func (x *ClusterInfo) Reset() {
 	*x = ClusterInfo{}
-	mi := &file_proto_vexdb_proto_msgTypes[9]
+	mi := &file_vexdb_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -684,7 +684,7 @@ func (x *ClusterInfo) String() string {
 func (*ClusterInfo) ProtoMessage() {}
 
 func (x *ClusterInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[9]
+	mi := &file_vexdb_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +697,7 @@ func (x *ClusterInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterInfo.ProtoReflect.Descriptor instead.
 func (*ClusterInfo) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{9}
+	return file_vexdb_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ClusterInfo) GetId() string {
@@ -753,7 +753,7 @@ type NodeInfo struct {
 
 func (x *NodeInfo) Reset() {
 	*x = NodeInfo{}
-	mi := &file_proto_vexdb_proto_msgTypes[10]
+	mi := &file_vexdb_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -765,7 +765,7 @@ func (x *NodeInfo) String() string {
 func (*NodeInfo) ProtoMessage() {}
 
 func (x *NodeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[10]
+	mi := &file_vexdb_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -778,7 +778,7 @@ func (x *NodeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeInfo.ProtoReflect.Descriptor instead.
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{10}
+	return file_vexdb_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *NodeInfo) GetId() string {
@@ -858,7 +858,7 @@ type ClusterStatus struct {
 
 func (x *ClusterStatus) Reset() {
 	*x = ClusterStatus{}
-	mi := &file_proto_vexdb_proto_msgTypes[11]
+	mi := &file_vexdb_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -870,7 +870,7 @@ func (x *ClusterStatus) String() string {
 func (*ClusterStatus) ProtoMessage() {}
 
 func (x *ClusterStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[11]
+	mi := &file_vexdb_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -883,7 +883,7 @@ func (x *ClusterStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterStatus.ProtoReflect.Descriptor instead.
 func (*ClusterStatus) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{11}
+	return file_vexdb_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ClusterStatus) GetClusters() []*ClusterInfo {
@@ -931,7 +931,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[12]
+	mi := &file_vexdb_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -943,7 +943,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[12]
+	mi := &file_vexdb_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -956,7 +956,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{12}
+	return file_vexdb_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *HealthCheckRequest) GetDetailed() bool {
@@ -980,7 +980,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[13]
+	mi := &file_vexdb_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -992,7 +992,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[13]
+	mi := &file_vexdb_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1005,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{13}
+	return file_vexdb_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *HealthCheckResponse) GetHealthy() bool {
@@ -1055,7 +1055,7 @@ type MetricsRequest struct {
 
 func (x *MetricsRequest) Reset() {
 	*x = MetricsRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[14]
+	mi := &file_vexdb_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1067,7 +1067,7 @@ func (x *MetricsRequest) String() string {
 func (*MetricsRequest) ProtoMessage() {}
 
 func (x *MetricsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[14]
+	mi := &file_vexdb_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1080,7 +1080,7 @@ func (x *MetricsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetricsRequest.ProtoReflect.Descriptor instead.
 func (*MetricsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{14}
+	return file_vexdb_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MetricsRequest) GetMetricType() string {
@@ -1118,7 +1118,7 @@ type MetricsResponse struct {
 
 func (x *MetricsResponse) Reset() {
 	*x = MetricsResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[15]
+	mi := &file_vexdb_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1130,7 +1130,7 @@ func (x *MetricsResponse) String() string {
 func (*MetricsResponse) ProtoMessage() {}
 
 func (x *MetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[15]
+	mi := &file_vexdb_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1143,7 +1143,7 @@ func (x *MetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetricsResponse.ProtoReflect.Descriptor instead.
 func (*MetricsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{15}
+	return file_vexdb_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *MetricsResponse) GetSuccess() bool {
@@ -1192,7 +1192,7 @@ type ConfigUpdateRequest struct {
 
 func (x *ConfigUpdateRequest) Reset() {
 	*x = ConfigUpdateRequest{}
-	mi := &file_proto_vexdb_proto_msgTypes[16]
+	mi := &file_vexdb_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1204,7 @@ func (x *ConfigUpdateRequest) String() string {
 func (*ConfigUpdateRequest) ProtoMessage() {}
 
 func (x *ConfigUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[16]
+	mi := &file_vexdb_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1217,7 @@ func (x *ConfigUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigUpdateRequest.ProtoReflect.Descriptor instead.
 func (*ConfigUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{16}
+	return file_vexdb_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ConfigUpdateRequest) GetConfigUpdates() map[string]string {
@@ -1247,7 +1247,7 @@ type ConfigUpdateResponse struct {
 
 func (x *ConfigUpdateResponse) Reset() {
 	*x = ConfigUpdateResponse{}
-	mi := &file_proto_vexdb_proto_msgTypes[17]
+	mi := &file_vexdb_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1259,7 +1259,7 @@ func (x *ConfigUpdateResponse) String() string {
 func (*ConfigUpdateResponse) ProtoMessage() {}
 
 func (x *ConfigUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_vexdb_proto_msgTypes[17]
+	mi := &file_vexdb_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1272,7 +1272,7 @@ func (x *ConfigUpdateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigUpdateResponse.ProtoReflect.Descriptor instead.
 func (*ConfigUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_proto_vexdb_proto_rawDescGZIP(), []int{17}
+	return file_vexdb_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ConfigUpdateResponse) GetSuccess() bool {
@@ -1303,11 +1303,11 @@ func (x *ConfigUpdateResponse) GetFailedUpdates() map[string]string {
 	return nil
 }
 
-var File_proto_vexdb_proto protoreflect.FileDescriptor
+var File_vexdb_proto protoreflect.FileDescriptor
 
-const file_proto_vexdb_proto_rawDesc = "" +
+const file_vexdb_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/vexdb.proto\x12\x05vexdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfb\x01\n" +
+	"\vvexdb.proto\x12\x05vexdb\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"\xfb\x01\n" +
 	"\x06Vector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04data\x18\x02 \x03(\x02R\x04data\x127\n" +
@@ -1509,22 +1509,22 @@ const file_proto_vexdb_proto_rawDesc = "" +
 	"\n" +
 	"GetMetrics\x12\x15.vexdb.MetricsRequest\x1a\x16.vexdb.MetricsResponse\x12G\n" +
 	"\fUpdateConfig\x12\x1a.vexdb.ConfigUpdateRequest\x1a\x1b.vexdb.ConfigUpdateResponse\x12@\n" +
-	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponseB\x1eZ\x1cvexdb/protob\x06proto3"
+	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1b.vexdb.ConfigUpdateResponseB\x1eZ\x1cgithub.com/vexdb/vexdb/protob\x06proto3"
 
 var (
-	file_proto_vexdb_proto_rawDescOnce sync.Once
-	file_proto_vexdb_proto_rawDescData []byte
+	file_vexdb_proto_rawDescOnce sync.Once
+	file_vexdb_proto_rawDescData []byte
 )
 
-func file_proto_vexdb_proto_rawDescGZIP() []byte {
-	file_proto_vexdb_proto_rawDescOnce.Do(func() {
-		file_proto_vexdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_vexdb_proto_rawDesc), len(file_proto_vexdb_proto_rawDesc)))
+func file_vexdb_proto_rawDescGZIP() []byte {
+	file_vexdb_proto_rawDescOnce.Do(func() {
+		file_vexdb_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_vexdb_proto_rawDesc), len(file_vexdb_proto_rawDesc)))
 	})
-	return file_proto_vexdb_proto_rawDescData
+	return file_vexdb_proto_rawDescData
 }
 
-var file_proto_vexdb_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
-var file_proto_vexdb_proto_goTypes = []any{
+var file_vexdb_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_vexdb_proto_goTypes = []any{
 	(*Vector)(nil),                // 0: vexdb.Vector
 	(*VectorBatch)(nil),           // 1: vexdb.VectorBatch
 	(*InsertRequest)(nil),         // 2: vexdb.InsertRequest
@@ -1561,7 +1561,7 @@ var file_proto_vexdb_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil), // 33: google.protobuf.Timestamp
 	(*emptypb.Empty)(nil),         // 34: google.protobuf.Empty
 }
-var file_proto_vexdb_proto_depIdxs = []int32{
+var file_vexdb_proto_depIdxs = []int32{
 	18, // 0: vexdb.Vector.metadata:type_name -> vexdb.Vector.MetadataEntry
 	33, // 1: vexdb.Vector.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 2: vexdb.VectorBatch.vectors:type_name -> vexdb.Vector
@@ -1685,12 +1685,12 @@ var file_proto_vexdb_proto_depIdxs = []int32{
 	0,  // [0:26] is the sub-list for field type_name
 }
 
-func init() { file_proto_vexdb_proto_init() }
-func file_proto_vexdb_proto_init() {
-	if File_proto_vexdb_proto != nil {
+func init() { file_vexdb_proto_init() }
+func file_vexdb_proto_init() {
+	if File_vexdb_proto != nil {
 		return
 	}
-	file_proto_vexdb_proto_msgTypes[2].OneofWrappers = []any{
+	file_vexdb_proto_msgTypes[2].OneofWrappers = []any{
 		(*InsertRequest_Vector)(nil),
 		(*InsertRequest_Batch)(nil),
 	}
@@ -1698,17 +1698,17 @@ func file_proto_vexdb_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_vexdb_proto_rawDesc), len(file_proto_vexdb_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_vexdb_proto_rawDesc), len(file_vexdb_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   4,
 		},
-		GoTypes:           file_proto_vexdb_proto_goTypes,
-		DependencyIndexes: file_proto_vexdb_proto_depIdxs,
-		MessageInfos:      file_proto_vexdb_proto_msgTypes,
+		GoTypes:           file_vexdb_proto_goTypes,
+		DependencyIndexes: file_vexdb_proto_depIdxs,
+		MessageInfos:      file_vexdb_proto_msgTypes,
 	}.Build()
-	File_proto_vexdb_proto = out.File
-	file_proto_vexdb_proto_goTypes = nil
-	file_proto_vexdb_proto_depIdxs = nil
+	File_vexdb_proto = out.File
+	file_vexdb_proto_goTypes = nil
+	file_vexdb_proto_depIdxs = nil
 }

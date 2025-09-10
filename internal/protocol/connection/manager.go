@@ -254,10 +254,10 @@ func (m *ConnectionManager) Stop() error {
 		return ErrManagerNotRunning
 	}
 
-	// Close all connections
-	if err := m.CloseAllConnections(); err != nil {
-		m.logger.Error("Failed to close all connections", zap.Error(err))
-	}
+        // Close all connections
+        if err := m.closeAllConnectionsLocked(); err != nil {
+                m.logger.Error("Failed to close all connections", zap.Error(err))
+        }
 
 	// Stop cleanup routine
 	close(m.cleanupChan)
@@ -451,19 +451,22 @@ func (m *ConnectionManager) CloseConnection(connID string) error {
 
 // CloseAllConnections closes all connections
 func (m *ConnectionManager) CloseAllConnections() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+        m.mu.Lock()
+        defer m.mu.Unlock()
+        return m.closeAllConnectionsLocked()
+}
 
-	if m.config.EnableLogging {
-		m.logger.Info("Closing all connections", zap.Int("count", len(m.connections)))
-	}
+// closeAllConnectionsLocked assumes the mutex is already held and marks all connections inactive.
+func (m *ConnectionManager) closeAllConnectionsLocked() error {
+        if m.config.EnableLogging {
+                m.logger.Info("Closing all connections", zap.Int("count", len(m.connections)))
+        }
 
-	// Mark all connections as inactive
-	for _, conn := range m.connections {
-		conn.Active = false
-	}
+        for _, conn := range m.connections {
+                conn.Active = false
+        }
 
-	return nil
+        return nil
 }
 
 // GetStats returns connection manager statistics
