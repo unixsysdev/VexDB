@@ -38,13 +38,13 @@ type SearchResponse struct {
 
 // SearchResult represents a formatted search result
 type SearchResult struct {
-	ID       string                 `json:"id"`
-	Vector   []float64              `json:"vector,omitempty"`
-	Distance float64                `json:"distance"`
-	Score    float64                `json:"score"`
-	Metadata map[string]string      `json:"metadata,omitempty"`
-	Cluster  string                 `json:"cluster,omitempty"`
-	Node     string                 `json:"node,omitempty"`
+	ID       string            `json:"id"`
+	Vector   []float64         `json:"vector,omitempty"`
+	Distance float64           `json:"distance"`
+	Score    float64           `json:"score"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+	Cluster  string            `json:"cluster,omitempty"`
+	Node     string            `json:"node,omitempty"`
 }
 
 // SearchStats represents search execution statistics
@@ -274,7 +274,7 @@ func calculateScore(distance float64) float64 {
 	if distance <= 0 {
 		return 1.0
 	}
-	
+
 	// Use exponential decay for score calculation
 	score := math.Exp(-distance / 10.0)
 	if score > 1.0 {
@@ -291,7 +291,7 @@ func getErrorMessage(err error) string {
 
 	// Map common errors to user-friendly messages
 	errMsg := err.Error()
-	
+
 	switch {
 	case contains(errMsg, "validation"):
 		return "Invalid request parameters"
@@ -332,7 +332,25 @@ func (f *Formatter) FormatBatchResponse(results [][]*types.SearchResult, queries
 
 	// Format individual search responses
 	for i, resultSet := range results {
-		searchResponse := f.FormatSearchResponse(resultSet, queries[i], k, queryIDs[i], stats[i])
+		var (
+			query   *types.Vector
+			queryID string
+			stat    *SearchStats
+		)
+
+		if len(queries) > i {
+			query = queries[i]
+		}
+
+		if len(queryIDs) > i {
+			queryID = queryIDs[i]
+		}
+
+		if len(stats) > i {
+			stat = stats[i]
+		}
+
+		searchResponse := f.FormatSearchResponse(resultSet, query, k, queryID, stat)
 		response.Results = append(response.Results, *searchResponse)
 	}
 
@@ -341,9 +359,9 @@ func (f *Formatter) FormatBatchResponse(results [][]*types.SearchResult, queries
 
 // BatchSearchResponse represents a batch search response
 type BatchSearchResponse struct {
-	Success   bool            `json:"success"`
-	Timestamp time.Time       `json:"timestamp"`
-	BatchSize int             `json:"batch_size"`
+	Success   bool             `json:"success"`
+	Timestamp time.Time        `json:"timestamp"`
+	BatchSize int              `json:"batch_size"`
 	Results   []SearchResponse `json:"results"`
 }
 
