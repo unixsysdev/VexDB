@@ -45,6 +45,9 @@ VxDB is a distributed, high-throughput streaming vector database designed for re
 - Multi-protocol ingestion: WebSocket, HTTP, Kafka, Redis, gRPC
 - Hash-based cluster assignment and deterministic replication
 - Streaming-optimized, concurrent ingestion
+- For writes, vxinsert forwards to the appropriate vxstorage nodes; the
+  storage service is responsible for synchronizing data across the cluster
+  according to its replication settings
 
 ### vxstorage (Storage & Indexing)
 - Append-only segment files, in-memory buffer for fast writes
