@@ -2,6 +2,8 @@ package search
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 
 	"vxdb/internal/metrics"
@@ -101,4 +103,42 @@ func TestIVFIndexCustomEngine(t *testing.T) {
 	if !eng.searched {
 		t.Fatalf("custom engine Search not called")
 	}
+}
+
+// Test that concurrent modifications do not cause data races or panic.
+func TestIVFConcurrentSearchAndModify(t *testing.T) {
+	ivf := newTestIVFIndex(t)
+	ivf.config.NumLists = 2
+
+	vectors := []*types.Vector{
+		{ID: "a", Data: []float32{0, 0}},
+		{ID: "b", Data: []float32{1, 1}},
+	}
+	if err := ivf.Build(vectors); err != nil {
+		t.Fatalf("Build error: %v", err)
+	}
+
+	q := &SearchQuery{QueryVector: &types.Vector{Data: []float32{0, 0}}, DistanceMetric: DistanceEuclidean}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			if _, err := ivf.Search(context.Background(), q); err != nil {
+				t.Errorf("Search error: %v", err)
+			}
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 100; i++ {
+			_ = ivf.Delete([]string{"a"})
+			_ = ivf.Update([]*types.Vector{{ID: fmt.Sprintf("c%d", i), Data: []float32{float32(i), float32(i)}}})
+		}
+	}()
+
+	wg.Wait()
 }

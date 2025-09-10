@@ -233,12 +233,14 @@ func (e *goIVFEngine) assign(v *types.Vector) int {
 }
 
 func (e *goIVFEngine) Search(ctx context.Context, query *SearchQuery, cfg *IVFConfig) ([]*SearchResult, error) {
+	// Hold the read lock for the duration of the search to prevent concurrent
+	// writers from mutating the maps while they are being accessed. Releasing
+	// the lock early (as done previously) could lead to a fatal "concurrent map
+	// read and map write" error if Update/Delete/Clear run concurrently.
 	e.mu.RLock()
-	centroids := e.centroids
-	lists := e.lists
-	e.mu.RUnlock()
+	defer e.mu.RUnlock()
 
-	if len(centroids) == 0 {
+	if len(e.centroids) == 0 {
 		return nil, ErrIVFNotBuilt
 	}
 
@@ -246,12 +248,12 @@ func (e *goIVFEngine) Search(ctx context.Context, query *SearchQuery, cfg *IVFCo
 		idx  int
 		dist float64
 	}
-	cds := make([]cd, len(centroids))
+	cds := make([]cd, len(e.centroids))
 	metric := cfg.DistanceMetric
 	if query.DistanceMetric != "" {
 		metric = query.DistanceMetric
 	}
-	for i, c := range centroids {
+	for i, c := range e.centroids {
 		d, err := query.QueryVector.Distance(c, string(metric))
 		if err != nil {
 			return nil, err
@@ -265,7 +267,7 @@ func (e *goIVFEngine) Search(ctx context.Context, query *SearchQuery, cfg *IVFCo
 	}
 	candidates := make([]*types.Vector, 0)
 	for i := 0; i < nprobe; i++ {
-		candidates = append(candidates, lists[cds[i].idx]...)
+		candidates = append(candidates, e.lists[cds[i].idx]...)
 	}
 
 	results := make([]*SearchResult, 0, len(candidates))
