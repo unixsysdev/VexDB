@@ -303,8 +303,8 @@ grpc:
 
 # Authentication configuration
 auth:
-  enabled: true
-  type: "api_key"  # none, basic, bearer, api_key
+  enabled: false
+  type: "none"  # none, basic, bearer, api_key
   api_keys: []  # List of valid API keys
   basic_auth:
     users: []  # List of username/password pairs

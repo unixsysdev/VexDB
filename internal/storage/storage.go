@@ -107,6 +107,12 @@ func (s *Storage) Start(ctx context.Context) error {
 
 	s.logger.Info("Starting storage engine")
 
+	if s.search != nil {
+		if err := s.search.Start(); err != nil {
+			return err
+		}
+	}
+
 	s.started = true
 	s.logger.Info("Storage engine started successfully")
 	return nil
