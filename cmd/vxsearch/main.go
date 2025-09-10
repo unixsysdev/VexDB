@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	pb "vxdb/proto"
 )
 
@@ -128,14 +129,15 @@ func (s *searchServer) searchAll(ctx context.Context, req *pb.SearchRequest) ([]
 	}
 	ch := make(chan result, len(s.clients))
 	for _, c := range s.clients {
-		go func(cli pb.StorageServiceClient) {
-			resp, err := cli.Search(ctx, req)
+		reqCopy := proto.Clone(req).(*pb.SearchRequest)
+		go func(cli pb.StorageServiceClient, r *pb.SearchRequest) {
+			resp, err := cli.Search(ctx, r)
 			if err != nil {
 				ch <- result{err: err}
 				return
 			}
 			ch <- result{res: resp.Results}
-		}(c)
+		}(c, reqCopy)
 	}
 	merged := make(map[string]*pb.SearchResult)
 	for i := 0; i < len(s.clients); i++ {
@@ -143,7 +145,6 @@ func (s *searchServer) searchAll(ctx context.Context, req *pb.SearchRequest) ([]
 		if r.err != nil {
 			return nil, r.err
 		}
-
 		for _, res := range r.res {
 			if res.GetVector() == nil {
 				continue
@@ -157,7 +158,6 @@ func (s *searchServer) searchAll(ctx context.Context, req *pb.SearchRequest) ([]
 	all := make([]*pb.SearchResult, 0, len(merged))
 	for _, res := range merged {
 		all = append(all, res)
-
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].Distance < all[j].Distance })
 	if req.K > 0 && len(all) > int(req.K) {

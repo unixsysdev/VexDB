@@ -123,7 +123,7 @@ services:
     command: ["./vxsearch", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8083:8083"    # HTTP API
-      - "9097:9097"    # Metrics
+      - "9106:9097"    # Metrics
       - "9098:9098"    # Dashboard
       - "9099:9099"    # gRPC
       - "7950:7950"    # Gossip
