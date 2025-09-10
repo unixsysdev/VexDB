@@ -17,10 +17,10 @@ func (m mapConfig) GetMetricsConfig() interface{}      { return nil }
 func newStorageMetrics() *metrics.StorageMetrics {
 	m, _ := metrics.NewMetrics(nil)
 	sm := metrics.NewStorageMetrics(m, "test")
-	sm.Errors = m.NewCounter("errors_total", "", []string{"a", "b", "c", "d"})
-	sm.HashingOperations = m.NewCounter("hash_ops", "", []string{"a", "b", "c", "d"})
-	sm.CacheHits = m.NewCounter("cache_hits", "", []string{"a", "b"})
-	sm.CacheMisses = m.NewCounter("cache_miss", "", []string{"a", "b", "c", "d"})
+	sm.Errors = m.NewCounter("errors_total", "", []string{"component", "error_type"})
+	sm.HashingOperations = m.NewCounter("hash_ops", "", []string{"component", "operation"})
+	sm.CacheHits = m.NewCounter("cache_hits", "", []string{"storage", "cache_type"})
+	sm.CacheMisses = m.NewCounter("cache_miss", "", []string{"storage", "cache_type"})
 	return sm
 }
 
