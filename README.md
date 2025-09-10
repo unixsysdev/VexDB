@@ -127,6 +127,19 @@ Run integration tests (requires additional services):
 go test -tags integration ./...
 ```
 
+## Code Graph
+
+A lightweight Go AST walker can generate a project-wide JSON graph of structs,
+functions (including their parameters and return types), and call
+relationships in this repository:
+
+```
+go run scripts/go_code_graph.go . > go_graph.json
+```
+
+The resulting file contains node and edge lists with function signatures and
+simple stats.
+
 ## Security
 - mTLS for inter-service
 - API key/token for client auth
