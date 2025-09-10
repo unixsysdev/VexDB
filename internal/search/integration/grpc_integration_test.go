@@ -3,6 +3,7 @@
 package integration
 
 import (
+
 	"context"
 	"fmt"
 	"net"
@@ -14,7 +15,8 @@ import (
 	"vexdb/internal/search/testutil"
 	"vexdb/internal/types"
 
-	pb "vexdb/proto"
+       pb "vexdb/proto"
+
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -31,6 +33,7 @@ func TestSearchServerIntegration(t *testing.T) {
 	// Setup
 	cfg := config.DefaultSearchServiceConfig()
 	logger := zap.NewNop()
+
 	mockService := testutil.NewMockSearchService()
 
 	// Create test results
@@ -61,10 +64,10 @@ func TestSearchServerIntegration(t *testing.T) {
 		},
 	}
 
-	mockService.SetSearchResults(testResults)
-
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -81,9 +84,9 @@ func TestSearchServerIntegration(t *testing.T) {
 
 	// Create client connection
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
-		return lis.Dial()
-	}), grpc.WithInsecure())
+       conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+               return lis.Dial()
+       }), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
@@ -325,6 +328,7 @@ func TestSearchServerStreaming(t *testing.T) {
 	// Create test results
 	testResults := []*types.SearchResult{
 		{
+
 			Vector: &types.Vector{
 				ID:   "stream-vector1",
 				Data: []float32{1.0, 2.0, 3.0},
@@ -340,10 +344,13 @@ func TestSearchServerStreaming(t *testing.T) {
 		},
 	}
 
+
 	mockService.SetSearchResults(testResults)
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -431,18 +438,22 @@ func TestSearchServerMultiClusterStreaming(t *testing.T) {
 	// Create test results
 	testResults := []*types.SearchResult{
 		{
+
 			Vector: &types.Vector{
 				ID:   "multi-stream-vector1",
 				Data: []float32{1.0, 2.0, 3.0},
 			},
 			Distance: 0.5,
 		},
+
 	}
 
 	mockService.SetSearchResults(testResults)
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -534,7 +545,9 @@ func TestSearchServerHealthCheck(t *testing.T) {
 	mockService := testutil.NewMockSearchService()
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -596,7 +609,9 @@ func TestSearchServerGetMetrics(t *testing.T) {
 	mockService := testutil.NewMockSearchService()
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -663,7 +678,9 @@ func TestSearchServerConfiguration(t *testing.T) {
 	mockService := testutil.NewMockSearchService()
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -691,7 +708,10 @@ func TestSearchServerConfiguration(t *testing.T) {
 	client := pb.NewSearchServiceClient(conn)
 
 	// Test get configuration
+
 	req := &emptypb.Empty{}
+
+
 	resp, err := client.GetConfig(ctx, req)
 	if err != nil {
 		t.Fatalf("Get config failed: %v", err)
@@ -736,7 +756,9 @@ func TestSearchServerErrorHandling(t *testing.T) {
 	mockService.SetFailureError(fmt.Errorf("search service unavailable"))
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -801,6 +823,7 @@ func TestSearchServerConcurrentRequests(t *testing.T) {
 	// Create test results
 	testResults := []*types.SearchResult{
 		{
+
 			Vector: &types.Vector{
 				ID:   "concurrent-vector",
 				Data: []float32{1.0, 2.0, 3.0},
@@ -809,10 +832,13 @@ func TestSearchServerConcurrentRequests(t *testing.T) {
 		},
 	}
 
+
 	mockService.SetSearchResults(testResults)
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
@@ -907,7 +933,9 @@ func TestSearchServerTimeout(t *testing.T) {
 	mockService.SetSearchDelay(2 * time.Second)
 
 	// Create gRPC server
+
 	server := searchgrpc.NewSearchServer(cfg, logger, nil, mockService)
+
 
 	// Create test listener
 	lis := bufconn.Listen(bufSize)
