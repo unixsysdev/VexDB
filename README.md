@@ -45,6 +45,9 @@ VxDB is a distributed, high-throughput streaming vector database designed for re
 - Multi-protocol ingestion: WebSocket, HTTP, Kafka, Redis, gRPC
 - Hash-based cluster assignment and deterministic replication
 - Streaming-optimized, concurrent ingestion
+- For writes, vxinsert forwards to the appropriate vxstorage nodes; the
+  storage service is responsible for synchronizing data across the cluster
+  according to its replication settings
 
 ### vxstorage (Storage & Indexing)
 - Append-only segment files, in-memory buffer for fast writes
@@ -123,6 +126,19 @@ Run integration tests (requires additional services):
 ```
 go test -tags integration ./...
 ```
+
+## Code Graph
+
+A lightweight Go AST walker can generate a project-wide JSON graph of structs,
+functions (including their parameters and return types), and call
+relationships in this repository:
+
+```
+go run scripts/go_code_graph.go . > go_graph.json
+```
+
+The resulting file contains node and edge lists with function signatures and
+simple stats.
 
 ## Security
 - mTLS for inter-service

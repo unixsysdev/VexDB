@@ -66,4 +66,4 @@ ENV GIN_MODE=release
 ENV VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
 
 # Run the application
-CMD ["./vxsearch", "--config", "/etc/vxdb/config.yaml"]
+CMD ["./vxsearch"]
