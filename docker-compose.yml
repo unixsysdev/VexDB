@@ -8,6 +8,7 @@ services:
       dockerfile: cmd/vxinsert/Dockerfile
     container_name: vxinsert
     restart: unless-stopped
+    command: ["./vxinsert", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8080:8080"    # HTTP API
       - "9091:9091"    # Metrics
@@ -30,7 +31,8 @@ services:
     networks:
       - vxdb_network
     depends_on:
-      - vxstorage
+      - vxstorage1
+      - vxstorage2
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
@@ -39,11 +41,11 @@ services:
       start_period: 5s
 
   # VxDB Storage Service
-  vxstorage:
+  vxstorage1:
     build:
       context: .
       dockerfile: cmd/vxstorage/Dockerfile
-    container_name: vxstorage
+    container_name: vxstorage1
     restart: unless-stopped
     ports:
       - "8082:8082"    # HTTP API
@@ -53,14 +55,50 @@ services:
       - "7948:7948"    # Gossip
       - "7949:7949"    # Serf
     volumes:
-      - vxstorage_data:/var/lib/vxdb/data
-      - vxstorage_wal:/var/lib/vxdb/wal
-      - vxstorage_snapshots:/var/lib/vxdb/snapshots
-      - vxstorage_storage:/var/lib/vxdb/storage
-      - vxstorage_temp:/var/lib/vxdb/temp
-      - vxstorage_manifest:/var/lib/vxdb/manifest
-      - vxstorage_backups:/var/lib/vxdb/backups
-      - vxstorage_logs:/var/log/vxdb
+      - vxstorage1_data:/var/lib/vxdb/data
+      - vxstorage1_wal:/var/lib/vxdb/wal
+      - vxstorage1_snapshots:/var/lib/vxdb/snapshots
+      - vxstorage1_storage:/var/lib/vxdb/storage
+      - vxstorage1_temp:/var/lib/vxdb/temp
+      - vxstorage1_manifest:/var/lib/vxdb/manifest
+      - vxstorage1_backups:/var/lib/vxdb/backups
+      - vxstorage1_logs:/var/log/vxdb
+      - ./configs/vxstorage-production.yaml:/etc/vxdb/config.yaml
+      - ./certs:/etc/vxdb/certs
+    environment:
+      - VXDB_CONFIG_FILE=/etc/vxdb/config.yaml
+      - GIN_MODE=release
+    networks:
+      - vxdb_network
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/health-check.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  vxstorage2:
+    build:
+      context: .
+      dockerfile: cmd/vxstorage/Dockerfile
+    container_name: vxstorage2
+    restart: unless-stopped
+    ports:
+      - "8084:8082"    # HTTP API
+      - "9104:9094"    # Metrics
+      - "9105:9095"    # Dashboard
+      - "9097:9096"    # gRPC
+      - "7952:7948"    # Gossip
+      - "7953:7949"    # Serf
+    volumes:
+      - vxstorage2_data:/var/lib/vxdb/data
+      - vxstorage2_wal:/var/lib/vxdb/wal
+      - vxstorage2_snapshots:/var/lib/vxdb/snapshots
+      - vxstorage2_storage:/var/lib/vxdb/storage
+      - vxstorage2_temp:/var/lib/vxdb/temp
+      - vxstorage2_manifest:/var/lib/vxdb/manifest
+      - vxstorage2_backups:/var/lib/vxdb/backups
+      - vxstorage2_logs:/var/log/vxdb
       - ./configs/vxstorage-production.yaml:/etc/vxdb/config.yaml
       - ./certs:/etc/vxdb/certs
     environment:
@@ -82,9 +120,10 @@ services:
       dockerfile: cmd/vxsearch/Dockerfile
     container_name: vxsearch
     restart: unless-stopped
+    command: ["./vxsearch", "--storage-addrs=vxstorage1:9096,vxstorage2:9096"]
     ports:
       - "8083:8083"    # HTTP API
-      - "9097:9097"    # Metrics
+      - "9106:9097"    # Metrics
       - "9098:9098"    # Dashboard
       - "9099:9099"    # gRPC
       - "7950:7950"    # Gossip
@@ -103,7 +142,8 @@ services:
     networks:
       - vxdb_network
     depends_on:
-      - vxstorage
+      - vxstorage1
+      - vxstorage2
     healthcheck:
       test: ["CMD", "/usr/local/bin/health-check.sh"]
       interval: 30s
@@ -125,21 +165,38 @@ volumes:
     driver: local
 
   # VxDB Storage Service volumes
-  vxstorage_data:
+  vxstorage1_data:
     driver: local
-  vxstorage_wal:
+  vxstorage1_wal:
     driver: local
-  vxstorage_snapshots:
+  vxstorage1_snapshots:
     driver: local
-  vxstorage_storage:
+  vxstorage1_storage:
     driver: local
-  vxstorage_temp:
+  vxstorage1_temp:
     driver: local
-  vxstorage_manifest:
+  vxstorage1_manifest:
     driver: local
-  vxstorage_backups:
+  vxstorage1_backups:
     driver: local
-  vxstorage_logs:
+  vxstorage1_logs:
+    driver: local
+
+  vxstorage2_data:
+    driver: local
+  vxstorage2_wal:
+    driver: local
+  vxstorage2_snapshots:
+    driver: local
+  vxstorage2_storage:
+    driver: local
+  vxstorage2_temp:
+    driver: local
+  vxstorage2_manifest:
+    driver: local
+  vxstorage2_backups:
+    driver: local
+  vxstorage2_logs:
     driver: local
 
   # VxDB Search Service volumes
