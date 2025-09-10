@@ -561,6 +561,10 @@ func (e *SearchEngine) AddVectors(vectors []*types.Vector) error {
 		return fmt.Errorf("%w: %s", ErrIndexNotReady, activeIndex)
 	}
 
+	if !index.IsReady() {
+		return index.Build(vectors)
+	}
+
 	return index.Update(vectors)
 }
 
